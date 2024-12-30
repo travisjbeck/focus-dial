@@ -8,7 +8,7 @@ Watch the build video ↓
 
 Tired of constant distractions, I built the Focus Dial—a DIY take on the failed TimeChi crowdfunding project. It helps me work in time blocks by activating a Do Not Disturb mode on my phone and integrates with Home Assistant via webhook triggers to set lighting scenes and block distracting apps at the network level during focus sessions.
 
-Build instructions → (coming soon)
+Build instructions → [Instructables](https://www.instructables.com/Focus-Dial-a-Digital-Distraction-Blocker/)
 
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
