@@ -1,0 +1,57 @@
+# Focus Dial Firmware Project Rules
+
+## Project Overview
+
+- **Purpose**: Firmware for the "Focus Dial" hardware.
+- **Functionality**: A timer device with a rotary dial input, OLED display, and LED indicators. Allows setting timers with configurable intervals. Features Bluetooth (likely for audio feedback/control) and Wi-Fi connectivity with webhook callback capabilities.
+- **Hardware**: Based on ESP32, specifically the Adafruit QT Py ESP32 board.
+- **Framework**: Arduino via PlatformIO.
+
+## Code Structure
+
+- **Main Source**: `firmware/src/`
+- **Entry Point**: `firmware/src/main.cpp`
+- **Libraries**: `firmware/lib/` (Project-specific libraries/components)
+- **Headers**: `firmware/include/`
+- **PlatformIO Config**: `platformio.ini` (Defines board, framework, dependencies)
+- **Dependencies**: Managed in `platformio.ini` under `lib_deps`. Includes libraries for buttons, encoder, display (SSD1306), LEDs (NeoPixel), Wi-Fi provisioning, and Bluetooth A2DP audio.
+- **Data/Assets**: `firmware/data/` (Likely for filesystem data, if used)
+- **Tests**: `firmware/test/`
+- **Partitions**: Custom flash partitioning defined in `firmware/partitions.csv`.
+
+## Architecture & Design
+
+- **Core Logic**: State machine pattern implemented in `firmware/src/StateMachine.cpp` and state implementations likely in `firmware/src/states/`.
+- **Controllers**: Separate classes handle specific hardware interactions:
+  - `DisplayController` (`firmware/src/controllers/DisplayController.cpp` - assumed path): Manages the OLED display.
+  - `LEDController` (`firmware/src/controllers/LEDController.cpp` - assumed path): Controls the NeoPixel LEDs.
+  - `InputController` (`firmware/src/controllers/InputController.cpp` - assumed path): Handles button presses and rotary encoder movements.
+  - `NetworkController` (`firmware/src/controllers/NetworkController.cpp` - assumed path): Manages Wi-Fi/Bluetooth connectivity and webhooks.
+- **Configuration**: Likely uses `#include "Config.h"` (seen in `main.cpp`) for hardware pins and settings. Potentially uses `Preferences` class (seen in `main.cpp`) for persistent storage.
+
+## Development & Maintenance
+
+- **Building/Uploading**: Use PlatformIO commands (e.g., `pio run`, `pio run -t upload`).
+- **Dependencies**: Add new libraries to `platformio.ini`.
+- **Adding Features**:
+  - For new states: Create a new state class (likely inheriting from a base state) in `firmware/src/states/` and integrate it into `StateMachine.cpp`.
+  - For new hardware interactions: Update the relevant controller or create a new one if necessary.
+  - For configuration changes: Update `Config.h` or relevant configuration files/mechanisms.
+- **Connectivity**:
+  - Wi-Fi setup is likely handled by the `WiFiProvisioner` library.
+  - Webhook logic resides within `NetworkController`.
+  - Bluetooth A2DP suggests audio output capabilities.
+- **Debugging**: Use `Serial.begin(115200)` and `Serial.print()` statements. Monitor output using PlatformIO's monitor (`pio device monitor`).
+
+## Key Files/Classes to Know
+
+- `platformio.ini`: Project configuration, dependencies.
+- `firmware/src/main.cpp`: Entry point, controller initialization, main loop.
+- `firmware/src/StateMachine.cpp`: Core application logic flow.
+- `firmware/src/controllers/`: Directory containing hardware interface classes.
+- `firmware/src/states/`: Directory containing different application states.
+- `Config.h` (Assumed): Hardware pin definitions and constants.
+
+## Feature Development Tracking
+
+- For the "Project Timekeeping" feature, refer to the detailed task list and track progress in `project-timekeeping.md`.
