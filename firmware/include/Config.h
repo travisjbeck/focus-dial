@@ -30,6 +30,6 @@
 #define MAX_TIMER 240    // min - Maximum timer (4 hours)
 
 #define SPLASH_DURATION 2 // sec - 2 seconds splash state
-#define CHANGE_TIMEOUT 5  // sec - 5 seconds adjust timeout
-#define SLEEP_TIMOUT 5    // min - 5 minutes to transition to sleep
+#define CHANGE_TIMEOUT 60 // sec - 5 seconds adjust timeout
+#define SLEEP_TIMOUT 10   // min - 5 minutes to transition to sleep
 #define PAUSE_TIMEOUT 10  // min - 10 minutes to cancel the timer if stayed paused
