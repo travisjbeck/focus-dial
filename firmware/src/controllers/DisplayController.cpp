@@ -577,10 +577,41 @@ void DisplayController::drawProjectSelectionScreen(const ProjectList &projects, 
   // Center the text horizontally and vertically below the title box
   int16_t x = (oled.width() - w) / 2;
   int16_t titleBoxBottom = boxY + th + boxPaddingY_Top + boxPaddingY_Bottom + 1;
-  int16_t y = titleBoxBottom + ((oled.height() - titleBoxBottom) / 2) + 8; // The +8 is to adjust for baseline
+  int16_t y = titleBoxBottom + ((oled.height() - titleBoxBottom - 12) / 2) + 8; // Adjusted to make room for pagination dots
 
   oled.setCursor(x, y);
   oled.print(name);
+
+  // --- Draw Pagination Dots ---
+  if (projects.size() > 1)
+  {
+    // Calculate total width of all dots and spacing
+    const int dotRadius = 2;
+    const int dotSpacing = 4;
+    const int dotDiameter = dotRadius * 2;
+    const int totalWidth = (projects.size() * dotDiameter) + ((projects.size() - 1) * dotSpacing);
+
+    // Calculate starting X position to center the dots
+    const int dotsStartX = (oled.width() - totalWidth) / 2;
+    const int dotsY = oled.height() - 7; // 7 pixels from bottom
+
+    // Draw all dots
+    for (int i = 0; i < projects.size(); i++)
+    {
+      int dotX = dotsStartX + (i * (dotDiameter + dotSpacing));
+
+      if (i == selectedIndex)
+      {
+        // Selected dot (filled)
+        oled.fillCircle(dotX + dotRadius, dotsY, dotRadius, SSD1306_WHITE);
+      }
+      else
+      {
+        // Unselected dot (outline)
+        oled.drawCircle(dotX + dotRadius, dotsY, dotRadius, SSD1306_WHITE);
+      }
+    }
+  }
 
   // Reset font for other screens
   oled.setFont();
