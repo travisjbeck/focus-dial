@@ -10,7 +10,10 @@ LEDController::LEDController(uint8_t ledPin, uint16_t numLeds, uint8_t brightnes
       lastUpdateTime(0),
       currentStep(0),
       currentCycle(0),
-      decayStarted(false) {}
+      decayStarted(false),
+      previewMode(false),
+      lastColor(0),
+      lastAnimation(None) {}
 
 void LEDController::begin()
 {
@@ -100,7 +103,8 @@ uint32_t LEDController::scaleColor(uint32_t color, uint8_t brightnessLevel)
 void LEDController::handleFillAndDecay()
 {
   // --- DEBUG: Simplify to just set all LEDs to animationColor ---
-  if (!decayStarted) { // Use decayStarted flag to run this only once
+  if (!decayStarted)
+  { // Use decayStarted flag to run this only once
     Serial.printf("LED DEBUG: Setting all LEDs to %06X\n", animationColor);
     leds.fill(animationColor); // Use the raw animationColor directly
     leds.show();
@@ -260,4 +264,87 @@ void LEDController::printDebugInfo()
 {
   Serial.printf("Anim: %d, Step: %d, Cycle: %d, PixelIdx: %d, Leds numb: %d, Brightness: %d, Color: 0x%06X, Dur: %lu, Speed: %lu, Cycles: %d, EndFilled: %d\n",
                 currentAnimation, currentStep, currentCycle, pixelIndex, numLeds, brightness, animationColor, animationDuration, animationSpeed, animationCycles, endFilled);
+}
+
+// Implement preview mode methods
+
+void LEDController::setPreviewMode(bool enabled)
+{
+  if (enabled && !previewMode)
+  {
+    // Entering preview mode
+    saveCurrentState();
+    previewMode = true;
+  }
+  else if (!enabled && previewMode)
+  {
+    // Exiting preview mode
+    previewMode = false;
+    restoreLastState();
+  }
+}
+
+void LEDController::setPreviewColor(const String &hexColor)
+{
+  // First, make sure we're in preview mode
+  if (!previewMode)
+  {
+    saveCurrentState();
+    previewMode = true;
+  }
+
+  // Set the color on the LEDs
+  uint32_t color = hexColorToUint32(hexColor);
+  setSolid(color);
+  Serial.printf("LED preview color set to: %s (0x%06X)\n", hexColor.c_str(), color);
+}
+
+void LEDController::resetPreviewColor()
+{
+  if (previewMode)
+  {
+    previewMode = false;
+    restoreLastState();
+    Serial.println("LED preview mode exited, restored previous state");
+  }
+}
+
+bool LEDController::isInPreviewMode() const
+{
+  return previewMode;
+}
+
+// Helper methods for saving and restoring state
+
+void LEDController::saveCurrentState()
+{
+  lastAnimation = currentAnimation;
+  lastColor = animationColor;
+  Serial.printf("Saved LED state: animation=%d, color=0x%06X\n",
+                lastAnimation, lastColor);
+}
+
+void LEDController::restoreLastState()
+{
+  Serial.printf("Restoring LED state: animation=%d, color=0x%06X\n",
+                lastAnimation, lastColor);
+
+  switch (lastAnimation)
+  {
+  case None:
+    turnOff();
+    break;
+  case FillAndDecay:
+    startFillAndDecay(lastColor, animationDuration);
+    break;
+  case Spinner:
+    setSpinner(lastColor, animationCycles);
+    break;
+  case Breath:
+    setBreath(lastColor, animationCycles, endFilled, animationSpeed);
+    break;
+  default:
+    setSolid(lastColor);
+    break;
+  }
 }

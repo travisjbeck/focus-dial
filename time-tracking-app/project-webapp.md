@@ -109,3 +109,31 @@ Create a web application (React SPA) to act as a dashboard and time-tracking sys
 - [ ] **Deployment:** Configure `pm2` for reliable server operation on the Pi.
 - [ ] **mDNS Setup:** Configure mDNS on the Pi (e.g., using `avahi-daemon`) to allow accessing the app via a local hostname like `http://focus-dial.app` or `http://tracker.local`.
 - [ ] **Data Backup Strategy:** Define a simple backup strategy for the database file on the Pi. 
+
+
+### Initial Setup Commands for Raspberry Pi
+
+
+# Update system packages
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js and npm
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Verify installation
+node -v
+npm -v
+
+# Install SQLite
+sudo apt install -y sqlite3
+
+# Install pm2 for process management
+sudo npm install -g pm2
+
+# Create project directory
+mkdir -p ~/focus-dial/time-tracking-app
+cd ~/focus-dial/time-tracking-app
+
+# Install Avahi for mDNS (allows access via focus-dial-app.local)
+sudo apt install -y avahi-daemon
