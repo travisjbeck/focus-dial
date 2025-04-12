@@ -1,17 +1,20 @@
 #pragma once
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 #include "State.h"
 #include "states/AdjustState.h"
 #include "states/DoneState.h"
 #include "states/IdleState.h"
 #include "states/PausedState.h"
+#include "states/ProjectSelectState.h"
 #include "states/ProvisionState.h"
 #include "states/ResetState.h"
 #include "states/SleepState.h"
 #include "states/StartupState.h"
 #include "states/TimerState.h"
-#include "states/ProjectSelectState.h"
 
 class StateMachine
 {
@@ -30,11 +33,11 @@ public:
   static DoneState doneState;
   static IdleState idleState;
   static PausedState pausedState;
+  static ProjectSelectState projectSelectState;
   static ProvisionState provisionState;
   static ResetState resetState;
   static StartupState startupState;
   static TimerState timerState;
-  static ProjectSelectState projectSelectState;
 
   // Methods to pass context between states
   void setPendingDuration(int duration);
@@ -45,6 +48,10 @@ public:
   String getPendingProjectName() const;
   String getPendingProjectColor() const;
   void clearPendingProject();
+
+  // New methods for LED color preview
+  bool isInIdleState() const;
+  void resetLEDColor();
 
 private:
   State *currentState;          // Pointer to the current state

@@ -33,12 +33,20 @@ public:
   void stopBluetooth();
   void sendWebhookAction(const String &action);
 
+  // New methods for WebSocket color preview
+  void handleColorPreview(const String &hexColor);
+  void handleColorReset();
+
 private:
   BluetoothA2DPSink a2dp_sink;
   Preferences preferences;
   WiFiProvisioner::WiFiProvisioner wifiProvisioner; // Instance of WiFiProvisioner
   AsyncWebServer _server;
   bool _webServerRunning;
+
+  // WebSocket server
+  AsyncWebSocket _ws;
+  unsigned long _lastWsCleanupTime;
 
   String webhookURL;
   bool btPaired; // Paired state loaded from NVS
@@ -56,6 +64,13 @@ private:
   void _startWebServer();
   void _stopWebServer();
   static void _onWiFiEvent(WiFiEvent_t event);
+
+  // WebSocket handlers
+  void _onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                         AwsEventType type, void *arg, uint8_t *data, size_t len);
+  void _handleWebSocketMessage(const String &message, uint32_t clientId);
+  void _cleanupWebSocketClients();
+  void _broadcastWebSocketMessage(const String &message);
 
   // --- API Route Handlers (Member Functions) ---
   void handleGetProjects(AsyncWebServerRequest *request);

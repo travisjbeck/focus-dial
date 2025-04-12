@@ -118,3 +118,18 @@ void StateMachine::clearPendingProject()
   pendingProjectName = "";
   pendingProjectColor = ""; // Reset pending details
 }
+
+// Check if the current state is IdleState
+bool StateMachine::isInIdleState() const
+{
+  return currentState == &idleState;
+}
+
+// Reset LED color by notifying IdleState to restore its default LED pattern
+void StateMachine::resetLEDColor()
+{
+  if (isInIdleState())
+  {
+    idleState.restoreDefaultLEDPattern();
+  }
+}

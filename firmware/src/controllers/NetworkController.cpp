@@ -12,12 +12,24 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 
+#include "controllers/LEDController.h"
+#include "managers/ProjectManager.h"
+#include "StateMachine.h"
+
 NetworkController *NetworkController::instance = nullptr;
+
+// Define WebSocket path
+#define WS_PATH "/ws"
+
+// Add explicit extern reference for ledController which is used in handleColorPreview
+extern LEDController ledController;
 
 NetworkController::NetworkController()
     : a2dp_sink(),
       _server(80),
       _webServerRunning(false),
+      _ws(WS_PATH), // Initialize WebSocket with path
+      _lastWsCleanupTime(0),
       btPaired(false),
       bluetoothActive(false),
       bluetoothAttempted(false),
@@ -118,6 +130,13 @@ void NetworkController::update()
   {
     // This cleanup seems to be handled internally by ESPAsyncWebServer library
     // No explicit cleanup needed in loop usually.
+  }
+
+  // Periodically clean up WebSocket clients (every 30 seconds)
+  if (millis() - _lastWsCleanupTime > 30000)
+  {
+    _cleanupWebSocketClients();
+    _lastWsCleanupTime = millis();
   }
 }
 
@@ -596,6 +615,14 @@ void NetworkController::_setupWebServerRoutes()
 
   // --- Define Specific API Routes FIRST ---
 
+  // Setup WebSocket handler
+  _ws.onEvent(std::bind(&NetworkController::_onWebSocketEvent, this,
+                        std::placeholders::_1, std::placeholders::_2,
+                        std::placeholders::_3, std::placeholders::_4,
+                        std::placeholders::_5, std::placeholders::_6));
+  _server.addHandler(&_ws);
+  Serial.println("WebSocket handler added at " WS_PATH);
+
   // Restore standard routes
   _server.on("/api/projects", HTTP_GET, std::bind(&NetworkController::handleGetProjects, this, std::placeholders::_1));
   Serial.println("Route registered: GET /api/projects");
@@ -664,6 +691,9 @@ void NetworkController::_startWebServer()
   _server.begin(); // Start the server
   _webServerRunning = true;
   Serial.println("Web Server started.");
+
+  // Initialize WebSocket cleanup time
+  _lastWsCleanupTime = millis();
 }
 
 void NetworkController::_stopWebServer()
@@ -959,5 +989,115 @@ void NetworkController::handleUpdateWebhook(AsyncWebServerRequest *request, uint
     {
       request->send(400, "application/json", "{\"error\":\"Invalid webhook URL format\"}");
     }
+  }
+}
+
+// Implement WebSocket event handler
+void NetworkController::_onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                                          AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    // Reset color when a client disconnects
+    handleColorReset();
+    break;
+  case WS_EVT_DATA:
+    // Handle data from the WebSocket client
+    if (len)
+    {
+      String message = String((char *)data, len);
+      _handleWebSocketMessage(message, client->id());
+    }
+    break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
+  }
+}
+
+// Implement the WebSocket message handler
+void NetworkController::_handleWebSocketMessage(const String &message, uint32_t clientId)
+{
+  Serial.printf("WebSocket message from client #%u: %s\n", clientId, message.c_str());
+
+  // Parse the message format: "action:value"
+  int separatorPos = message.indexOf(':');
+  if (separatorPos == -1)
+  {
+    Serial.println("Invalid WebSocket message format");
+    return;
+  }
+
+  String action = message.substring(0, separatorPos);
+  String value = message.substring(separatorPos + 1);
+
+  if (action == "preview-color")
+  {
+    handleColorPreview(value);
+  }
+  else if (action == "reset-color")
+  {
+    handleColorReset();
+  }
+  else
+  {
+    Serial.printf("Unknown WebSocket action: %s\n", action.c_str());
+  }
+}
+
+// Implement WebSocket client cleanup
+void NetworkController::_cleanupWebSocketClients()
+{
+  _ws.cleanupClients();
+  Serial.println("WebSocket clients cleaned up");
+}
+
+// Implement WebSocket broadcast
+void NetworkController::_broadcastWebSocketMessage(const String &message)
+{
+  _ws.textAll(message);
+}
+
+// Implement color preview handler that interfaces with the StateMachine
+void NetworkController::handleColorPreview(const String &hexColor)
+{
+  Serial.printf("Color preview requested: %s\n", hexColor.c_str());
+
+  // Check if we're in IdleState before allowing preview
+  if (stateMachine.isInIdleState())
+  {
+    // Use the ledController to update the LEDs
+    uint32_t color = LEDController::hexColorToUint32(hexColor);
+    ledController.setSolid(color);
+
+    Serial.printf("LED color preview set to: %s\n", hexColor.c_str());
+  }
+  else
+  {
+    Serial.println("Color preview ignored - not in idle state");
+  }
+}
+
+// Implement color reset handler
+void NetworkController::handleColorReset()
+{
+  Serial.println("Color reset requested");
+
+  // Only reset if in IdleState
+  if (stateMachine.isInIdleState())
+  {
+    // Signal to IdleState to restore its normal LED pattern
+    stateMachine.resetLEDColor();
+
+    Serial.println("LED color reset to default");
+  }
+  else
+  {
+    Serial.println("Color reset ignored - not in idle state");
   }
 }

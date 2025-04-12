@@ -5,33 +5,33 @@ StartupState::StartupState() : startEnter(0) {}
 
 void StartupState::enter()
 {
-    Serial.println("Entering Splash State");
+  Serial.println("Entering Splash State");
 
-    displayController.drawSplashScreen();
-    ledController.setSpinner(TEAL, -1);
+  displayController.drawSplashScreen();
+  ledController.setSpinner(TEAL, -1);
 
-    startEnter = millis();
+  startEnter = millis();
 }
 
 void StartupState::update()
 {
-    ledController.update();
+  ledController.update();
 
-    if (millis() - startEnter >= (SPLASH_DURATION * 1000))
+  if (millis() - startEnter >= (SPLASH_DURATION * 1000))
+  {
+    if (networkController.isWiFiProvisioned())
     {
-        if (networkController.isWiFiProvisioned())
-        {
-            stateMachine.changeState(&StateMachine::idleState); // Transition to Idle
-        }
-        else
-        {
-            stateMachine.changeState(&StateMachine::provisionState); // Trigger Provision
-        }
+      stateMachine.changeState(&StateMachine::idleState); // Transition to Idle
     }
+    else
+    {
+      stateMachine.changeState(&StateMachine::provisionState); // Trigger Provision
+    }
+  }
 }
 
 void StartupState::exit()
 {
-    ledController.turnOff();
-    Serial.println("Exiting Splash State");
+  ledController.turnOff();
+  Serial.println("Exiting Splash State");
 }

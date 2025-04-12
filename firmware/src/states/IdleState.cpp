@@ -92,3 +92,10 @@ int IdleState::getDefaultDuration() const
 {
   return defaultDuration;
 }
+
+void IdleState::restoreDefaultLEDPattern()
+{
+  Serial.println("IdleState: Restoring default LED pattern");
+  // Set the LEDs back to the regular idle state animation
+  ledController.setBreath(BLUE, -1, false, 5);
+}

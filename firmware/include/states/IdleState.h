@@ -12,6 +12,9 @@ public:
   void setTimer(int duration);
   int getDefaultDuration() const;
 
+  // New method for WebSocket color preview
+  void restoreDefaultLEDPattern();
+
 private:
   int defaultDuration;
   unsigned long lastActivity;

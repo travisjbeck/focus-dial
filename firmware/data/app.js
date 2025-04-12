@@ -1,9 +1,17 @@
 // Focus Dial Project Management app.js
 
+// Add WebSocket connection variables
+let ws = null;
+let isWsConnected = false;
+let colorPreviewTimeout = null;
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM fully loaded');
   fetchAndRenderProjects();
   fetchWebhookUrl();
+
+  // Initialize WebSocket connection
+  setupWebSocket();
 
   const form = document.getElementById('add-project-form');
   if (form) {
@@ -25,9 +33,109 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update hex value when color changes
     colorInput.addEventListener('input', () => {
       colorHexValue.textContent = colorInput.value;
+
+      // Send color update to device via WebSocket
+      sendColorUpdate(colorInput.value);
+    });
+
+    // When the color picker is closed, reset the LED color
+    colorInput.addEventListener('change', () => {
+      // Send reset command after color is selected (the change event)
+      sendResetColorUpdate();
     });
   }
 });
+
+// WebSocket setup function
+function setupWebSocket() {
+  // Close any existing connection
+  if (ws) {
+    ws.close();
+  }
+
+  // Create WebSocket URL based on current location
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+  console.log('Connecting WebSocket to:', wsUrl);
+
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log('WebSocket connection established');
+    isWsConnected = true;
+  };
+
+  ws.onclose = () => {
+    console.log('WebSocket connection closed');
+    isWsConnected = false;
+
+    // Attempt to reconnect after a delay
+    setTimeout(() => {
+      if (!isWsConnected) {
+        console.log('Attempting to reconnect WebSocket...');
+        setupWebSocket();
+      }
+    }, 5000); // Retry after 5 seconds
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    // Don't close here, the onclose handler will be called
+  };
+
+  ws.onmessage = (event) => {
+    console.log('WebSocket message received:', event.data);
+    // Handle any messages from the server if needed
+  };
+}
+
+// Function to send color update via WebSocket, with debounce
+function sendColorUpdate(colorHex) {
+  if (!isWsConnected) {
+    console.log('WebSocket not connected, cannot send color update');
+    return;
+  }
+
+  // Clear any pending timeout
+  if (colorPreviewTimeout) {
+    clearTimeout(colorPreviewTimeout);
+  }
+
+  // Debounce the color updates to prevent flooding the device
+  colorPreviewTimeout = setTimeout(() => {
+    // Format: "action:value"
+    const message = `preview-color:${colorHex}`;
+    try {
+      ws.send(message);
+      console.log('Sent color preview:', colorHex);
+    } catch (error) {
+      console.error('Error sending color preview:', error);
+    }
+  }, 50); // 50ms debounce
+}
+
+// Function to send reset command
+function sendResetColorUpdate() {
+  if (!isWsConnected) {
+    console.log('WebSocket not connected, cannot send reset');
+    return;
+  }
+
+  // Clear any pending color updates
+  if (colorPreviewTimeout) {
+    clearTimeout(colorPreviewTimeout);
+  }
+
+  // Send reset command
+  const message = 'reset-color:';
+  try {
+    ws.send(message);
+    console.log('Sent color reset');
+  } catch (error) {
+    console.error('Error sending color reset:', error);
+  }
+}
 
 const apiBaseUrl = '/api/projects';
 const projectListDiv = document.getElementById('project-list');
@@ -289,14 +397,65 @@ function handleEditClick(index) {
   if (editColorInput && editColorHex) {
     editColorInput.addEventListener('input', () => {
       editColorHex.textContent = editColorInput.value;
+
+      // Send color update to device via WebSocket
+      sendColorUpdate(editColorInput.value);
+    });
+
+    // When the color picker is closed, reset the LED color
+    editColorInput.addEventListener('change', () => {
+      // Send reset command after color is selected (the change event)
+      sendResetColorUpdate();
     });
   }
+}
+
+// Add WebSocket cleanup to handleCancelClick and handleSaveClick
+function handleCancelClick(index) {
+  console.log(`Cancel clicked for index: ${index}`);
+  const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
+  if (!row) return;
+
+  // Reset the LED color when cancelling edit
+  sendResetColorUpdate();
+
+  // Retrieve original values
+  const originalName = row.dataset.originalName;
+  const originalColor = row.dataset.originalColor;
+
+  // Revert cells (re-render like in renderProjectList)
+  row.cells[0].innerHTML = `
+    <span class="color-preview" style="background-color: ${escapeHtml(originalColor)};"></span>
+    ${escapeHtml(originalName)}
+  `;
+  row.cells[1].innerHTML = `
+    <code class="color-hex">${escapeHtml(originalColor)}</code>
+  `;
+  row.cells[2].innerHTML = `
+    <button class="btn edit-btn" onclick="handleEditClick(${index})">
+      <i data-lucide="edit-2" class="icon"></i>
+      Edit
+    </button>
+    <button class="btn delete-btn" onclick="handleDeleteClick(${index})">
+      <i data-lucide="trash-2" class="icon"></i>
+      Delete
+    </button>
+  `;
+
+  // Initialize Lucide icons in the newly added content
+  lucide.createIcons();
+
+  row.classList.remove('editing');
+  showMessage('Edit cancelled.', '');
 }
 
 async function handleSaveClick(index) {
   console.log(`Save clicked for index: ${index}`);
   const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
   if (!row) return;
+
+  // Reset the LED color when saving
+  sendResetColorUpdate();
 
   const nameInput = row.querySelector('.edit-name');
   const colorInput = row.querySelector('.edit-color');
@@ -338,41 +497,6 @@ async function handleSaveClick(index) {
     console.error('Error updating project:', error);
     showMessage(`Error: ${error.message}`, 'error');
   }
-}
-
-function handleCancelClick(index) {
-  console.log(`Cancel clicked for index: ${index}`);
-  const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
-  if (!row) return;
-
-  // Retrieve original values
-  const originalName = row.dataset.originalName;
-  const originalColor = row.dataset.originalColor;
-
-  // Revert cells (re-render like in renderProjectList)
-  row.cells[0].innerHTML = `
-    <span class="color-preview" style="background-color: ${escapeHtml(originalColor)};"></span>
-    ${escapeHtml(originalName)}
-  `;
-  row.cells[1].innerHTML = `
-    <code class="color-hex">${escapeHtml(originalColor)}</code>
-  `;
-  row.cells[2].innerHTML = `
-    <button class="btn edit-btn" onclick="handleEditClick(${index})">
-      <i data-lucide="edit-2" class="icon"></i>
-      Edit
-    </button>
-    <button class="btn delete-btn" onclick="handleDeleteClick(${index})">
-      <i data-lucide="trash-2" class="icon"></i>
-      Delete
-    </button>
-  `;
-
-  // Initialize Lucide icons in the newly added content
-  lucide.createIcons();
-
-  row.classList.remove('editing');
-  showMessage('Edit cancelled.', '');
 }
 
 // --- Delete --- 

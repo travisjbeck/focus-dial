@@ -19,6 +19,12 @@ public:
   void turnOff();
   void printDebugInfo();
 
+  // New preview mode methods
+  void setPreviewMode(bool enabled);
+  void setPreviewColor(const String &hexColor);
+  void resetPreviewColor();
+  bool isInPreviewMode() const;
+
   // Add color conversion utility
   static inline uint32_t hexColorToUint32(const String &hexColor)
   {
@@ -62,6 +68,11 @@ private:
   bool endFilled;
   bool decayStarted;
 
+  // Preview mode variables
+  bool previewMode;
+  uint32_t lastColor;
+  AnimationType lastAnimation;
+
   // Animation handling methods
   void handleFillAndDecay();
   void handleSpinner();
@@ -72,4 +83,8 @@ private:
 
   // Helper to scale color by brightness
   uint32_t scaleColor(uint32_t color, uint8_t brightness);
+
+  // Save/restore state before/after preview
+  void saveCurrentState();
+  void restoreLastState();
 };
