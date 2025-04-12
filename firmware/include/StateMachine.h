@@ -11,30 +11,48 @@
 #include "states/SleepState.h"
 #include "states/StartupState.h"
 #include "states/TimerState.h"
+#include "states/ProjectSelectState.h"
 
-class StateMachine {
+class StateMachine
+{
 public:
-    StateMachine();
-    ~StateMachine();
+  StateMachine();
+  ~StateMachine();
 
-    void changeState(State* newState);
-    void update();
+  // Public methods for initialization and control
+  void begin(); // Ensure begin is declared
+  void update();
+  void changeState(State *newState);
 
-    // Static states
-    static AdjustState adjustState;
-    static SleepState sleepState;
-    static DoneState doneState;
-    static IdleState idleState;
-    static PausedState pausedState;
-    static ProvisionState provisionState;
-    static ResetState resetState;
-    static StartupState startupState;
-    static TimerState timerState;
+  // Static states
+  static AdjustState adjustState;
+  static SleepState sleepState;
+  static DoneState doneState;
+  static IdleState idleState;
+  static PausedState pausedState;
+  static ProvisionState provisionState;
+  static ResetState resetState;
+  static StartupState startupState;
+  static TimerState timerState;
+  static ProjectSelectState projectSelectState;
+
+  // Methods to pass context between states
+  void setPendingDuration(int duration);
+  int getPendingDuration();
+
+  // Methods to pass selected project info
+  void setPendingProject(const String &name, const String &color);
+  String getPendingProjectName() const;
+  String getPendingProjectColor() const;
+  void clearPendingProject();
 
 private:
-    State* currentState;            // Pointer to the current state
-    SemaphoreHandle_t stateMutex;   // Mutex to protect transitions
-    bool transition = false;
+  State *currentState;          // Pointer to the current state
+  SemaphoreHandle_t stateMutex; // Mutex to protect transitions
+  bool transition = false;
+  int pendingDuration;        // To pass duration from AdjustState to TimerState
+  String pendingProjectName;  // To pass project name to TimerState/Webhook
+  String pendingProjectColor; // To pass project color to TimerState
 };
 
-extern StateMachine stateMachine;  // Global instance of the StateMachine
+extern StateMachine stateMachine; // Global instance of the StateMachine

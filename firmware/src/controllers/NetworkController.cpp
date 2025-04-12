@@ -1,16 +1,23 @@
 #include "Config.h"
 #include "controllers/NetworkController.h"
+#include "Controllers.h"
+#include <ArduinoJson.h>
+#include <LittleFS.h>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <BluetoothA2DPSink.h>
 #include <esp_bt.h>
+#include <ESPAsyncWebServer.h>
+#include <ESPmDNS.h>
 
 NetworkController *NetworkController::instance = nullptr;
 
 NetworkController::NetworkController()
     : a2dp_sink(),
+      _server(80),
+      _webServerRunning(false),
       btPaired(false),
       bluetoothActive(false),
       bluetoothAttempted(false),
@@ -20,361 +27,408 @@ NetworkController::NetworkController()
       webhookTaskHandle(nullptr),
       provisioningMode(false)
 {
-
-    instance = this;
+  instance = this;
 }
 
 void NetworkController::begin()
 {
-    WiFiProvisionerSettings();
+  Serial.println("NetworkController::begin() called.");
+  WiFi.onEvent(_onWiFiEvent);
 
-    if (isWiFiProvisioned())
-    {
-        Serial.println("Stored WiFi credentials found. Connecting...");
-        wifiProvisioner.connectToWiFi();
-    }
+  WiFiProvisionerSettings();
 
-    // Load bluetooth paired state from nvs
-    preferences.begin("network", true);
-    btPaired = preferences.getBool("bt_paired", false);
+  bool provisioned = isWiFiProvisioned();
+  Serial.printf("isWiFiProvisioned() returned: %s\n", provisioned ? "true" : "false");
+
+  if (provisioned)
+  {
+    Serial.println("Attempting WiFi connection (WiFi.begin())...");
+    WiFi.begin();
+  }
+  else
+  {
+    Serial.println("No WiFi credentials stored. Skipping WiFi.begin().");
+  }
+
+  // Load bluetooth paired state from nvs
+  preferences.begin("network", true);
+  btPaired = preferences.getBool("bt_paired", false);
+  preferences.end();
+
+  if (btPaired)
+  {
+    Serial.println("Previously paired with a device. Initializing Bluetooth.");
+    initializeBluetooth(); // Initialize Bluetooth if previously paired
+  }
+  else
+  {
+    Serial.println("No previous Bluetooth pairing found. Skipping Bluetooth initialization.");
+  }
+
+  // Load Webhook URL from NVS under the "focusdial" namespace
+  preferences.begin("focusdial", true); // Start read-only
+  webhookURL = preferences.getString("webhook_url", "");
+  preferences.end();
+
+  // --- Validate loaded URL ---
+  bool urlInvalid = false;
+  String lowerCaseUrl = webhookURL;
+  lowerCaseUrl.toLowerCase();
+  if (!webhookURL.isEmpty() && lowerCaseUrl.startsWith("http://https://"))
+  {
+    Serial.println("WARNING: Invalid 'http://HTTPS://' prefix found in stored webhook URL. Clearing.");
+    urlInvalid = true;
+  }
+  // Add any other simple validation checks needed here (e.g., minimum length)
+  // if (!webhookURL.isEmpty() && webhookURL.length() < 10) {
+  //   Serial.println("WARNING: Stored webhook URL seems too short. Clearing.");
+  //   urlInvalid = true;
+  // }
+
+  if (urlInvalid)
+  {
+    webhookURL = "";                       // Clear in memory
+    preferences.begin("focusdial", false); // Re-open read-write
+    preferences.remove("webhook_url");     // Remove from NVS
     preferences.end();
+    Serial.println("Cleared invalid webhook URL from NVS.");
+  }
+  // --- End Validation ---
 
-    if (btPaired)
-    {
-        Serial.println("Previously paired with a device. Initializing Bluetooth.");
-        initializeBluetooth(); // Initialize Bluetooth if previously paired
-    }
-    else
-    {
-        Serial.println("No previous Bluetooth pairing found. Skipping Bluetooth initialization.");
-    }
+  if (!webhookURL.isEmpty())
+  {
+    Serial.println("Loaded Webhook URL: " + webhookURL);
+  }
 
-    // Load Webhook URL from NVS under the "focusdial" namespace
-    preferences.begin("focusdial", true);
-    webhookURL = preferences.getString("webhook_url", "");
-    preferences.end();
+  if (webhookQueue == nullptr)
+  {
+    webhookQueue = xQueueCreate(5, sizeof(char *));
+  }
 
-    if (!webhookURL.isEmpty())
-    {
-        Serial.println("Loaded Webhook URL: " + webhookURL);
-    }
-
-    if (webhookQueue == nullptr)
-    {
-        webhookQueue = xQueueCreate(5, sizeof(char *));
-    }
-
-    if (webhookTaskHandle == nullptr)
-    {
-        xTaskCreatePinnedToCore(webhookTask, "Webhook Task", 4096, this, 0, &webhookTaskHandle, 1);
-        Serial.println("Persistent webhook task started.");
-    }
+  if (webhookTaskHandle == nullptr)
+  {
+    xTaskCreatePinnedToCore(webhookTask, "Webhook Task", 4096, this, 0, &webhookTaskHandle, 1);
+    Serial.println("Persistent webhook task started.");
+  }
 }
 
 void NetworkController::update()
 {
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        WiFi.reconnect();
-    }
+  if (_webServerRunning)
+  {
+    // This cleanup seems to be handled internally by ESPAsyncWebServer library
+    // No explicit cleanup needed in loop usually.
+  }
 }
 
 bool NetworkController::isWiFiProvisioned()
 {
-    // Check for stored WiFi credentials
-    preferences.begin("network", true);
-    String storedSSID = preferences.getString("ssid", "");
-    preferences.end();
+  // Check for stored WiFi credentials
+  preferences.begin("network", true);
+  String storedSSID = preferences.getString("ssid", "");
+  preferences.end();
 
-    return !storedSSID.isEmpty(); // Return true if credentials are found
+  return !storedSSID.isEmpty(); // Return true if credentials are found
 }
 
 bool NetworkController::isWiFiConnected()
 {
-    return (WiFi.status() == WL_CONNECTED);
+  return (WiFi.status() == WL_CONNECTED);
 }
 
 bool NetworkController::isBluetoothPaired()
 {
-    return btPaired;
+  return btPaired;
 }
 
 void NetworkController::startProvisioning()
 {
-    Serial.println("Starting provisioning mode...");
-    btPaired = false;        // Reset paired state for new provisioning
-    bluetoothActive = true;  // Enable Bluetooth for pairing
-    provisioningMode = true; // Indicate we are in provisioning mode
-    initializeBluetooth();
-    wifiProvisioner.setupAccessPointAndServer();
+  Serial.println("Starting provisioning mode...");
+  btPaired = false;        // Reset paired state for new provisioning
+  bluetoothActive = true;  // Enable Bluetooth for pairing
+  provisioningMode = true; // Indicate we are in provisioning mode
+  initializeBluetooth();
+  wifiProvisioner.setupAccessPointAndServer();
 }
 
 void NetworkController::stopProvisioning()
 {
-    Serial.println("Stopping provisioning mode...");
-    bluetoothActive = false;  // Disable Bluetooth after provisioning
-    provisioningMode = false; // Exit provisioning mode
-    stopBluetooth();
+  Serial.println("Stopping provisioning mode...");
+  bluetoothActive = false;  // Disable Bluetooth after provisioning
+  provisioningMode = false; // Exit provisioning mode
+  stopBluetooth();
 }
 
 void NetworkController::reset()
 {
-    wifiProvisioner.resetCredentials();
-    if (btPaired)
-    {
-        a2dp_sink.clean_last_connection();
-        saveBluetoothPairedState(false);
-    }
-    Serial.println("Reset complete. WiFi credentials and paired state cleared.");
+  wifiProvisioner.resetCredentials();
+  if (btPaired)
+  {
+    a2dp_sink.clean_last_connection();
+    saveBluetoothPairedState(false);
+  }
+  Serial.println("Reset complete. WiFi credentials and paired state cleared.");
 }
 
 void NetworkController::initializeBluetooth()
 {
-    if (bluetoothTaskHandle == nullptr)
-    {
+  if (bluetoothTaskHandle == nullptr)
+  {
 
-        // Configure the A2DP sink with empty callbacks to use it for the trigger only
-        a2dp_sink.set_stream_reader(nullptr, false);
-        a2dp_sink.set_raw_stream_reader(nullptr);
-        a2dp_sink.set_on_volumechange(nullptr);
-        a2dp_sink.set_avrc_connection_state_callback(nullptr);
-        a2dp_sink.set_avrc_metadata_callback(nullptr);
-        a2dp_sink.set_avrc_rn_playstatus_callback(nullptr);
-        a2dp_sink.set_avrc_rn_track_change_callback(nullptr);
-        a2dp_sink.set_avrc_rn_play_pos_callback(nullptr);
-        a2dp_sink.set_spp_active(false);
-        a2dp_sink.set_output_active(false);
-        a2dp_sink.set_rssi_active(false);
+    // Configure the A2DP sink with empty callbacks to use it for the trigger only
+    a2dp_sink.set_stream_reader(nullptr, false);
+    a2dp_sink.set_raw_stream_reader(nullptr);
+    a2dp_sink.set_on_volumechange(nullptr);
+    a2dp_sink.set_avrc_connection_state_callback(nullptr);
+    a2dp_sink.set_avrc_metadata_callback(nullptr);
+    a2dp_sink.set_avrc_rn_playstatus_callback(nullptr);
+    a2dp_sink.set_avrc_rn_track_change_callback(nullptr);
+    a2dp_sink.set_avrc_rn_play_pos_callback(nullptr);
+    a2dp_sink.set_spp_active(false);
+    a2dp_sink.set_output_active(false);
+    a2dp_sink.set_rssi_active(false);
 
-        a2dp_sink.set_on_connection_state_changed(btConnectionStateCallback, this);
+    a2dp_sink.set_on_connection_state_changed(btConnectionStateCallback, this);
 
-        Serial.println("Bluetooth A2DP Sink configured.");
+    Serial.println("Bluetooth A2DP Sink configured.");
 
-        // Create task for handling Bluetooth
-        xTaskCreate(bluetoothTask, "Bluetooth Task", 4096, this, 0, &bluetoothTaskHandle);
-    }
+    // Create task for handling Bluetooth
+    xTaskCreate(bluetoothTask, "Bluetooth Task", 4096, this, 0, &bluetoothTaskHandle);
+  }
 }
 
 void NetworkController::startBluetooth()
 {
-    if (btPaired)
-    { // Only start if paired
-        bluetoothActive = true;
-    }
+  if (btPaired)
+  { // Only start if paired
+    bluetoothActive = true;
+  }
 }
 
 void NetworkController::stopBluetooth()
 {
-    bluetoothActive = false; // Stop Bluetooth activity
+  bluetoothActive = false; // Stop Bluetooth activity
 }
 
 void NetworkController::btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj)
 {
-    auto *self = static_cast<NetworkController *>(obj);
+  auto *self = static_cast<NetworkController *>(obj);
 
-    if (state == ESP_A2D_CONNECTION_STATE_CONNECTED)
-    {
-        Serial.println("Bluetooth device connected.");
+  if (state == ESP_A2D_CONNECTION_STATE_CONNECTED)
+  {
+    Serial.println("Bluetooth device connected.");
 
-        // Save paired state only in provisioning mode
-        if (self->provisioningMode)
-        {
-            self->saveBluetoothPairedState(true);
-            self->btPaired = true;
-            Serial.println("Paired state saved during provisioning.");
-        }
-    }
-    else if (state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
+    // Save paired state only in provisioning mode
+    if (self->provisioningMode)
     {
-        Serial.println("Bluetooth device disconnected.");
-        // No need to set flags; task loop will handle reconnection logic based on is_connected()
+      self->saveBluetoothPairedState(true);
+      self->btPaired = true;
+      Serial.println("Paired state saved during provisioning.");
     }
+  }
+  else if (state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
+  {
+    Serial.println("Bluetooth device disconnected.");
+    // No need to set flags; task loop will handle reconnection logic based on is_connected()
+  }
 }
 
 void NetworkController::saveBluetoothPairedState(bool paired)
 {
-    preferences.begin("network", false);
-    preferences.putBool("bt_paired", paired);
-    preferences.end();
-    btPaired = paired;
-    Serial.println("Bluetooth pairing state saved in NVS.");
+  preferences.begin("network", false);
+  preferences.putBool("bt_paired", paired);
+  preferences.end();
+  btPaired = paired;
+  Serial.println("Bluetooth pairing state saved in NVS.");
 }
 
 void NetworkController::bluetoothTask(void *param)
 {
-    NetworkController *self = static_cast<NetworkController *>(param);
+  NetworkController *self = static_cast<NetworkController *>(param);
 
-    while (true)
+  while (true)
+  {
+    // If in provisioning mode, start Bluetooth only once
+    if (self->provisioningMode)
     {
-        // If in provisioning mode, start Bluetooth only once
-        if (self->provisioningMode)
-        {
-            if (!self->bluetoothAttempted)
-            {
-                Serial.println("Starting Bluetooth for provisioning...");
-                self->a2dp_sink.start("Focus Dial", true);
-                self->bluetoothAttempted = true; // Mark as attempted to prevent repeated starts
-            }
-        }
-        else
-        {
-            // Normal operation mode
-            if (self->bluetoothActive && !self->bluetoothAttempted)
-            {
-                Serial.println("Starting Bluetooth...");
-                self->a2dp_sink.start("Focus Dial", true); // Auto-reconnect enabled
-                self->bluetoothAttempted = true;
-                self->lastBluetoothtAttempt = millis(); // Record the time of the start attempt
-            }
-
-            // If Bluetooth is active but not connected, attempt reconnect every 2 seconds
-            if (self->bluetoothActive && !self->a2dp_sink.is_connected() && (millis() - self->lastBluetoothtAttempt >= 2000))
-            {
-                Serial.println("Attempting Bluetooth reconnect...");
-                self->a2dp_sink.start("Focus Dial", true);
-                self->lastBluetoothtAttempt = millis(); // Update last attempt time
-            }
-
-            // If Bluetooth is not supposed to be active but is connected, disconnect
-            if (!self->bluetoothActive && self->a2dp_sink.is_connected())
-            {
-                Serial.println("Stopping Bluetooth...");
-                self->a2dp_sink.disconnect();
-                self->bluetoothAttempted = false; // Allow re-attempt later
-            }
-        }
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+      if (!self->bluetoothAttempted)
+      {
+        Serial.println("Starting Bluetooth for provisioning...");
+        self->a2dp_sink.start("Focus Dial", true);
+        self->bluetoothAttempted = true; // Mark as attempted to prevent repeated starts
+      }
     }
+    else
+    {
+      // Normal operation mode
+      if (self->bluetoothActive && !self->bluetoothAttempted)
+      {
+        Serial.println("Starting Bluetooth...");
+        self->a2dp_sink.start("Focus Dial", true); // Auto-reconnect enabled
+        self->bluetoothAttempted = true;
+        self->lastBluetoothtAttempt = millis(); // Record the time of the start attempt
+      }
+
+      // If Bluetooth is active but not connected, attempt reconnect every 2 seconds
+      if (self->bluetoothActive && !self->a2dp_sink.is_connected() && (millis() - self->lastBluetoothtAttempt >= 2000))
+      {
+        Serial.println("Attempting Bluetooth reconnect...");
+        self->a2dp_sink.start("Focus Dial", true);
+        self->lastBluetoothtAttempt = millis(); // Update last attempt time
+      }
+
+      // If Bluetooth is not supposed to be active but is connected, disconnect
+      if (!self->bluetoothActive && self->a2dp_sink.is_connected())
+      {
+        Serial.println("Stopping Bluetooth...");
+        self->a2dp_sink.disconnect();
+        self->bluetoothAttempted = false; // Allow re-attempt later
+      }
+    }
+
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
 }
 
 void NetworkController::sendWebhookAction(const String &action)
 {
-    if (webhookQueue == nullptr)
-    {
-        webhookQueue = xQueueCreate(5, sizeof(char *));
-    }
+  if (!isWiFiConnected() || webhookURL.isEmpty())
+  {
+    Serial.println("Webhook skipped: WiFi disconnected or URL not set.");
+    return;
+  }
 
-    char *actionCopy = strdup(action.c_str());
-    if (actionCopy == nullptr)
-    {
-        Serial.println("Failed to allocate memory for webhook action.");
-        return;
-    }
-
-    if (xQueueSend(webhookQueue, &actionCopy, 0) == pdPASS)
-    {
-        Serial.println("Webhook action enqueued: " + String(actionCopy));
-    }
-    else
-    {
-        Serial.println("Failed to enqueue webhook action: Queue is full.");
-        free(actionCopy); // Free the memory if not enqueued
-    }
+  char *actionToSend = strdup(action.c_str());
+  if (xQueueSend(webhookQueue, &actionToSend, (TickType_t)0) != pdPASS)
+  {
+    Serial.println("Failed to queue webhook action - queue full?");
+    free(actionToSend);
+  }
 }
 
 void NetworkController::webhookTask(void *param)
 {
-    NetworkController *self = static_cast<NetworkController *>(param);
-    char *action;
+  NetworkController *self = static_cast<NetworkController *>(param);
+  char *action;
 
-    while (true)
+  while (true)
+  {
+    // Wait for a webhook action to arrive in the queue
+    if (xQueueReceive(self->webhookQueue, &action, portMAX_DELAY) == pdPASS)
     {
-        // Wait for a webhook action to arrive in the queue
-        if (xQueueReceive(self->webhookQueue, &action, portMAX_DELAY) == pdPASS)
-        {
-            Serial.println("Processing webhook action: " + String(action));
+      Serial.println("Processing webhook action: " + String(action));
 
-            // Send the webhook request and check the response
-            bool success = self->sendWebhookRequest(String(action));
-            if (success)
-            {
-                Serial.println("Webhook action sent successfully.");
-            }
-            else
-            {
-                Serial.println("Failed to send webhook action.");
-            }
+      // Send the webhook request and check the response
+      bool success = self->sendWebhookRequest(String(action));
+      if (success)
+      {
+        Serial.println("Webhook action sent successfully.");
+      }
+      else
+      {
+        Serial.println("Failed to send webhook action.");
+      }
 
-            free(action); // Free the allocated memory for action
+      free(action); // Free the allocated memory for action
 
-            Serial.println("Finished processing webhook action.");
-        }
-
-        // Small delay to yield
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+      Serial.println("Finished processing webhook action.");
     }
+
+    // Small delay to yield
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
 }
 
 bool NetworkController::sendWebhookRequest(const String &action)
 {
-    if (webhookURL.isEmpty())
+  if (webhookURL.isEmpty())
+  {
+    Serial.println("Webhook URL is not set. Cannot send action.");
+    return false;
+  }
+
+  std::unique_ptr<WiFiClient> client;
+  if (webhookURL.startsWith("https://"))
+  {
+    client.reset(new WiFiClientSecure());
+    if (!client)
     {
-        Serial.println("Webhook URL is not set. Cannot send action.");
-        return false;
+      Serial.println("Memory allocation for WiFiClientSecure failed.");
+      return false;
+    }
+    static_cast<WiFiClientSecure *>(client.get())->setInsecure(); // Not verifying server certificate
+  }
+  else
+  {
+    client.reset(new WiFiClient());
+    if (!client)
+    {
+      Serial.println("Memory allocation for WiFiClient failed.");
+      return false;
+    }
+  }
+
+  HTTPClient http;
+  bool result = false;
+
+  if (http.begin(*client, webhookURL))
+  {
+    http.addHeader("Content-Type", "application/json");
+
+    // Parse the action string (format: "action|projectName" or just "action")
+    String actualAction = action;
+    String projectName = "";
+    int separatorIndex = action.indexOf('|');
+    if (separatorIndex != -1)
+    {
+      actualAction = action.substring(0, separatorIndex);
+      projectName = action.substring(separatorIndex + 1);
     }
 
-    std::unique_ptr<WiFiClient> client;
-    if (webhookURL.startsWith("https://"))
+    // Construct JSON payload
+    JsonDocument doc;
+    doc["action"] = actualAction;
+    if (!projectName.isEmpty())
     {
-        client.reset(new WiFiClientSecure());
-        if (!client)
-        {
-            Serial.println("Memory allocation for WiFiClientSecure failed.");
-            return false;
-        }
-        static_cast<WiFiClientSecure *>(client.get())->setInsecure(); // Not verifying server certificate
+      doc["project"] = projectName;
+    }
+
+    String jsonPayload;
+    serializeJson(doc, jsonPayload);
+
+    Serial.printf("Sending webhook payload: %s\n", jsonPayload.c_str());
+
+    // Send the POST request
+    int httpResponseCode = http.POST(jsonPayload);
+
+    if (httpResponseCode > 0)
+    {
+      String response = http.getString();
+      Serial.println("HTTP Response code: " + String(httpResponseCode));
+      Serial.println("Response: " + response);
+      result = true;
     }
     else
     {
-        client.reset(new WiFiClient());
-        if (!client)
-        {
-            Serial.println("Memory allocation for WiFiClient failed.");
-            return false;
-        }
+      Serial.println("Error in sending POST: " + String(httpResponseCode));
     }
 
-    HTTPClient http;
-    bool result = false;
+    http.end(); // Close the connection
+  }
+  else
+  {
+    Serial.println("Unable to connect to server.");
+  }
 
-    if (http.begin(*client, webhookURL))
-    {
-        http.addHeader("Content-Type", "application/json");
-
-        String jsonPayload = "{\"action\":\"" + action + "\"}";
-
-        // Send the POST request
-        int httpResponseCode = http.POST(jsonPayload);
-
-        if (httpResponseCode > 0)
-        {
-            String response = http.getString();
-            Serial.println("HTTP Response code: " + String(httpResponseCode));
-            Serial.println("Response: " + response);
-            result = true;
-        }
-        else
-        {
-            Serial.println("Error in sending POST: " + String(httpResponseCode));
-        }
-
-        http.end(); // Close the connection
-    }
-    else
-    {
-        Serial.println("Unable to connect to server.");
-    }
-
-    return result;
+  return result;
 }
 
 void NetworkController::WiFiProvisionerSettings()
 {
-    wifiProvisioner.enableSerialDebug(true);
-    wifiProvisioner.AP_NAME = "Focus Dial";
-    wifiProvisioner.SVG_LOGO =
-        R"rawliteral(
+  wifiProvisioner.enableSerialDebug(true);
+  wifiProvisioner.AP_NAME = "Focus Dial";
+  wifiProvisioner.SVG_LOGO =
+      R"rawliteral(
         <svg width="297" height="135" viewBox="0 0 99 45" xmlns="http://www.w3.org/2000/svg" style="margin:1rem auto;">
             <g fill="currentColor">
                 <path d="m54 15h3v3h-3z"/>
@@ -412,100 +466,498 @@ void NetworkController::WiFiProvisionerSettings()
             }
         </style>)rawliteral";
 
-    wifiProvisioner.HTML_TITLE = "Focus Dial - Provisioning";
-    wifiProvisioner.PROJECT_TITLE = " Focus Dial — Setup";
-    wifiProvisioner.PROJECT_INFO = R"rawliteral(
+  wifiProvisioner.HTML_TITLE = "Focus Dial - Provisioning";
+  wifiProvisioner.PROJECT_TITLE = " Focus Dial — Setup";
+  wifiProvisioner.PROJECT_INFO = R"rawliteral(
             1. Connect to Bluetooth if you want to use the phone automation trigger.
             2. Select a WiFi network to save and allow Focus Dial to trigger webhook automations.
             3. Enter the webhook URL below to trigger it when a focus session starts.)rawliteral";
 
-    wifiProvisioner.FOOTER_INFO = R"rawliteral(
+  wifiProvisioner.FOOTER_INFO = R"rawliteral(
         Focus Dial - Made by <a href="https://youtube.com/@salimbenbouz" target="_blank">Salim Benbouziyane</a>)rawliteral";
 
-    wifiProvisioner.CONNECTION_SUCCESSFUL =
-        "Provision Complete. Focus Dial will now start and status led will turn to blue.";
+  wifiProvisioner.CONNECTION_SUCCESSFUL =
+      "Provision Complete. Focus Dial will now start and status led will turn to blue.";
 
-    wifiProvisioner.RESET_CONFIRMATION_TEXT =
-        "This will erase all settings and require re-provisioning. Confirm on the device.";
+  wifiProvisioner.RESET_CONFIRMATION_TEXT =
+      "This will erase all settings and require re-provisioning. Confirm on the device.";
 
-    wifiProvisioner.setShowInputField(true);
-    wifiProvisioner.INPUT_TEXT = "Webhook URL to Trigger Automation:";
-    wifiProvisioner.INPUT_PLACEHOLDER = "e.g., https://example.com/webhook";
-    wifiProvisioner.INPUT_INVALID_LENGTH = "The URL appears incomplete. Please enter the valid URL to trigger the automation.";
-    wifiProvisioner.INPUT_NOT_VALID = "The URL entered is not valid. Please verify it and try again.";
+  wifiProvisioner.setShowInputField(true);
+  wifiProvisioner.INPUT_TEXT = "Webhook URL to Trigger Automation:";
+  wifiProvisioner.INPUT_PLACEHOLDER = "e.g., https://example.com/webhook";
+  wifiProvisioner.INPUT_INVALID_LENGTH = "The URL appears incomplete. Please enter the valid URL to trigger the automation.";
+  wifiProvisioner.INPUT_NOT_VALID = "The URL entered is not valid. Please verify it and try again.";
 
-    // Set the static methods as callbacks
-    wifiProvisioner.setInputCheckCallback(validateInputCallback);
-    wifiProvisioner.setFactoryResetCallback(factoryResetCallback);
+  // Set the static methods as callbacks
+  wifiProvisioner.setInputCheckCallback(validateInputCallback);
+  wifiProvisioner.setFactoryResetCallback(factoryResetCallback);
 }
 
 // Static method for input validation callback
 bool NetworkController::validateInputCallback(const String &input)
 {
-    if (instance)
-    {
-        return instance->validateInput(input);
-    }
-    return false;
+  if (instance)
+  {
+    return instance->validateInput(input);
+  }
+  return false;
 }
 
 // Static method for factory reset callback
 void NetworkController::factoryResetCallback()
 {
-    if (instance)
-    {
-        instance->handleFactoryReset();
-    }
+  if (instance)
+  {
+    instance->handleFactoryReset();
+  }
 }
 
 bool NetworkController::validateInput(const String &input)
 {
-    String modifiedInput = input;
+  // Tolerate leading/trailing whitespace
+  String modifiedInput = input;
+  modifiedInput.trim();
 
-    // Check if URL starts with "http://" or "https://"
-    if (!(modifiedInput.startsWith("http://") || modifiedInput.startsWith("https://")))
+  // Don't save if input is empty after trimming
+  if (modifiedInput.isEmpty())
+  {
+    Serial.println("Webhook URL is empty, clearing saved URL.");
+    if (preferences.begin("focusdial", false))
     {
-        // If none supplied assume "http://"
-        modifiedInput = "http://" + modifiedInput;
-        Serial.println("Protocol missing, defaulting to http://");
+      preferences.remove("webhook_url");
+      preferences.end();
+      webhookURL = "";
     }
+    return true; // Allow saving an empty URL
+  }
 
-    // Basic validation
-    int protocolEnd = modifiedInput.indexOf("://") + 3;
-    int dotPosition = modifiedInput.indexOf('.', protocolEnd);
+  // Check if URL *already* starts with "http://" or "https://" (case-insensitive)
+  String lowerCaseInput = modifiedInput;
+  lowerCaseInput.toLowerCase(); // Modify in place
+  bool hasProtocol = lowerCaseInput.startsWith("http://") || lowerCaseInput.startsWith("https://");
 
-    bool isValid = (dotPosition != -1);
+  if (!hasProtocol)
+  {
+    // If no protocol, assume "http://"
+    modifiedInput = "http://" + modifiedInput;
+    Serial.println("Protocol missing, defaulting to http://");
+  }
 
-    Serial.print("Validating input: ");
-    Serial.println(modifiedInput);
+  // Basic validation: check for :// and at least one dot after that.
+  int protocolEnd = modifiedInput.indexOf("://");
+  int dotPosition = -1;
+  if (protocolEnd != -1)
+  {
+    dotPosition = modifiedInput.indexOf('.', protocolEnd + 3);
+  }
 
-    // Save URL to NVS here if valid
-    if (isValid)
-    {
-        Serial.println("URL is valid. Saving to NVS...");
+  bool isValid = (protocolEnd != -1 && dotPosition != -1 && dotPosition > protocolEnd + 3);
 
-        if (preferences.begin("focusdial", false))
-        { // false means open for writing
-            preferences.putString("webhook_url", modifiedInput);
-            preferences.end();
-            webhookURL = modifiedInput;
-            Serial.println("Webhook URL saved: " + webhookURL);
-        }
-        else
-        {
-            Serial.println("Failed to open NVS for writing.");
-        }
+  Serial.print("Validating input: ");
+  Serial.println(modifiedInput);
+
+  // Save URL to NVS here if valid
+  if (isValid)
+  {
+    Serial.println("URL is valid. Saving to NVS...");
+
+    if (preferences.begin("focusdial", false))
+    { // false means open for writing
+      preferences.putString("webhook_url", modifiedInput);
+      preferences.end();
+      webhookURL = modifiedInput;
+      Serial.println("Webhook URL saved: " + webhookURL);
     }
     else
     {
-        Serial.println("Invalid URL. Not saving to NVS.");
+      Serial.println("Failed to open NVS for writing.");
     }
+  }
+  else
+  {
+    Serial.println("Invalid URL. Not saving to NVS.");
+  }
 
-    return isValid;
+  return isValid;
 }
 
 void NetworkController::handleFactoryReset()
 {
-    Serial.println("Factory reset initiated.");
-    reset();
+  Serial.println("Factory reset initiated.");
+  _stopWebServer();
+  reset();
+}
+
+// --- Web Server Management ---
+
+void NetworkController::_setupWebServerRoutes()
+{
+  Serial.println("_setupWebServerRoutes: Configuring routes...");
+
+  // --- Define Specific API Routes FIRST ---
+
+  // Restore standard routes
+  _server.on("/api/projects", HTTP_GET, std::bind(&NetworkController::handleGetProjects, this, std::placeholders::_1));
+  Serial.println("Route registered: GET /api/projects");
+  _server.on("/api/projects", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, std::bind(&NetworkController::handleAddProject, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
+  Serial.println("Route registered: POST /api/projects");
+
+  // Add new route for UPDATE via POST
+  _server.on("/api/updateProject", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, std::bind(&NetworkController::handleUpdateProjectPostRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
+  Serial.println("Route registered: POST /api/updateProject"); // New route
+
+  // Route for DELETE via POST
+  _server.on("/api/deleteProject", HTTP_POST, std::bind(&NetworkController::handleDeleteProjectPostRequest, this, std::placeholders::_1));
+  Serial.println("Route registered: POST /api/deleteProject");
+
+  // Webhook API endpoints
+  _server.on("/api/webhook", HTTP_GET, std::bind(&NetworkController::handleGetWebhook, this, std::placeholders::_1));
+  Serial.println("Route registered: GET /api/webhook");
+  _server.on("/api/webhook", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, std::bind(&NetworkController::handleUpdateWebhook, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
+  Serial.println("Route registered: POST /api/webhook");
+
+  // --- Then Serve Static Files ---
+  _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+             { request->send(LittleFS, "/index.html", "text/html"); });
+  Serial.println("Route registered: GET / (index.html)");
+  _server.serveStatic("/", LittleFS, "/")
+      .setDefaultFile("index.html");
+  Serial.println("Route registered: serveStatic('/')");
+
+  // --- Not Found Handler (Must be Last) ---
+  _server.onNotFound([](AsyncWebServerRequest *request)
+                     {
+        Serial.printf("Not Found: %s %s\n", request->methodToString(), request->url().c_str());
+        request->send(404, "text/plain", "Not found"); });
+  Serial.println("Route registered: onNotFound");
+}
+
+void NetworkController::_startWebServer()
+{
+  if (_webServerRunning)
+    return; // Already running
+
+  Serial.println("Initializing LittleFS...");
+  if (!LittleFS.begin())
+  {
+    Serial.println("An Error has occurred while mounting LittleFS");
+    // Decide how to handle failure - maybe skip web server?
+    return;
+  }
+  Serial.println("LittleFS mounted successfully.");
+
+  Serial.println("Starting Web Server and mDNS...");
+
+  _setupWebServerRoutes(); // Configure routes
+
+  // Start mDNS
+  if (MDNS.begin("focus-dial"))
+  { // Hostname for .local access
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS responder started: http://focus-dial.local");
+  }
+  else
+  {
+    Serial.println("Error starting mDNS");
+  }
+
+  _server.begin(); // Start the server
+  _webServerRunning = true;
+  Serial.println("Web Server started.");
+}
+
+void NetworkController::_stopWebServer()
+{
+  if (!_webServerRunning)
+    return; // Already stopped
+
+  Serial.println("Stopping Web Server and mDNS...");
+  _server.end();
+  MDNS.end();
+  // No need to explicitly end LittleFS unless reformatting
+  _webServerRunning = false;
+  Serial.println("Web Server stopped.");
+}
+
+// Static WiFi Event Handler
+// NOTE: This runs in a different context, avoid complex operations or blocking calls.
+// Use the instance pointer carefully if needed for non-static member access.
+void NetworkController::_onWiFiEvent(WiFiEvent_t event)
+{
+// Use Arduino-ESP32 events for clarity if available, otherwise system events
+#ifdef ARDUINO_ARCH_ESP32
+  Serial.print("[WiFi-event] event: ");
+  Serial.println(WiFi.eventName(event));
+#else
+  Serial.printf("[WiFi-event] event: %d\n", event);
+#endif
+
+  switch (event)
+  {
+#ifdef ARDUINO_ARCH_ESP32
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+#else
+  case SYSTEM_EVENT_STA_GOT_IP:
+#endif
+    Serial.println("WiFi connected (SYSTEM_EVENT_STA_GOT_IP)");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    if (instance)
+    {
+      Serial.println("Calling _startWebServer()...");
+      instance->_startWebServer();
+    }
+    break;
+#ifdef ARDUINO_ARCH_ESP32
+  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+#else
+  case SYSTEM_EVENT_STA_DISCONNECTED:
+#endif
+    Serial.println("WiFi lost connection (SYSTEM_EVENT_STA_DISCONNECTED)");
+    if (instance)
+    {
+      Serial.println("Calling _stopWebServer()...");
+      instance->_stopWebServer();
+    }
+    // Optional: Add a reconnect attempt here? Be careful of loops.
+    // Serial.println("Attempting WiFi reconnect...");
+    // WiFi.begin();
+    break;
+  default:
+    // Optional: Log other events?
+    // Serial.printf("Unhandled WiFi Event: %d\n", event);
+    break;
+  }
+}
+
+// --- API Handler Implementations ---
+
+void NetworkController::handleGetProjects(AsyncWebServerRequest *request)
+{
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+
+  const auto &projects = getProjectManagerInstance().getProjects();
+  for (const auto &project : projects)
+  {
+    JsonObject obj = array.add<JsonObject>();
+    obj["name"] = project.name;
+    obj["color"] = project.color;
+  }
+
+  String responseJson;
+  serializeJson(doc, responseJson);
+  request->send(200, "application/json", responseJson);
+}
+
+void NetworkController::handleAddProject(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  if (index + len == total)
+  { // Process only when the full body is received
+    JsonDocument doc;
+    JsonDocument filter;
+    filter["name"] = true;
+    filter["color"] = true;
+    DeserializationError error = deserializeJson(doc, (const char *)data, len, DeserializationOption::Filter(filter));
+
+    if (error)
+    {
+      Serial.printf("POST /api/projects JSON Error: %s\n", error.c_str());
+      request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+      return;
+    }
+
+    if (!doc.is<JsonObject>() || !doc["name"].is<const char *>() || !doc["color"].is<const char *>())
+    {
+      Serial.println("POST /api/projects Error: Missing or invalid fields");
+      request->send(400, "application/json", "{\"error\":\"Missing or invalid 'name' or 'color' fields\"}");
+      return;
+    }
+
+    Project newProject;
+    newProject.name = doc["name"].as<String>();
+    newProject.color = doc["color"].as<String>();
+
+    if (getProjectManagerInstance().addProject(newProject))
+    {
+      JsonDocument responseDoc;
+      JsonArray array = responseDoc.to<JsonArray>();
+      const auto &projects = getProjectManagerInstance().getProjects();
+      for (const auto &p : projects)
+      {
+        JsonObject obj = array.add<JsonObject>();
+        obj["name"] = p.name;
+        obj["color"] = p.color;
+      }
+      String responseJson;
+      serializeJson(responseDoc, responseJson);
+      request->send(201, "application/json", responseJson);
+    }
+    else
+    {
+      Serial.println("POST /api/projects Error: projectManager.addProject failed");
+      request->send(400, "application/json", "{\"error\":\"Failed to add project (max reached or invalid data?)\"}");
+    }
+  }
+}
+
+void NetworkController::handleUpdateProjectPostRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  if (index + len == total)
+  { // Process only when full body is received
+    JsonDocument doc;
+    // Filter for expected fields
+    JsonDocument filter;
+    filter["index"] = true;
+    filter["name"] = true;
+    filter["color"] = true;
+    DeserializationError error = deserializeJson(doc, (const char *)data, len, DeserializationOption::Filter(filter));
+
+    if (error)
+    {
+      Serial.printf("POST /api/updateProject JSON Error: %s\n", error.c_str());
+      request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+      return;
+    }
+
+    // Validate fields exist and have roughly expected types
+    if (!doc.is<JsonObject>() ||
+        !doc["index"].is<int>() ||
+        !doc["name"].is<const char *>() ||
+        !doc["color"].is<const char *>())
+    {
+      Serial.println("POST /api/updateProject Error: Missing or invalid fields");
+      request->send(400, "application/json", "{\"error\":\"Missing or invalid 'index', 'name', or 'color' fields\"}");
+      return;
+    }
+
+    int projectIndex = doc["index"].as<int>();
+    Project updatedProject;
+    updatedProject.name = doc["name"].as<String>();
+    updatedProject.color = doc["color"].as<String>();
+
+    Serial.printf("POST /api/updateProject Request for index: %d, Name: %s, Color: %s\n",
+                  projectIndex, updatedProject.name.c_str(), updatedProject.color.c_str());
+
+    if (getProjectManagerInstance().updateProject(projectIndex, updatedProject))
+    {
+      Serial.printf("Project %d updated successfully.\n", projectIndex);
+      request->send(200, "application/json", "{\"message\":\"OK\"}");
+    }
+    else
+    {
+      Serial.printf("POST /api/updateProject Error: updateProject(%d) failed.\n", projectIndex);
+      // Check if index was the reason for failure
+      const auto &projects = getProjectManagerInstance().getProjects();
+      if (projectIndex < 0 || projectIndex >= projects.size())
+      {
+        request->send(404, "application/json", "{\"error\":\"Project index not found\"}");
+      }
+      else
+      {
+        request->send(400, "application/json", "{\"error\":\"Failed to update project (invalid data?)\"}");
+      }
+    }
+  }
+}
+
+void NetworkController::handleDeleteProjectPostRequest(AsyncWebServerRequest *request)
+{
+  int projectIndex = -1;
+  // Read index from POST body parameters
+  if (request->hasParam("index", true))
+  { // true specifies to check POST parameters
+    String indexStr = request->getParam("index", true)->value();
+    projectIndex = indexStr.toInt();
+  }
+  else
+  {
+    Serial.println("POST /api/deleteProject Error: Missing 'index' parameter in body");
+    request->send(400, "application/json", "{\"error\":\"Missing 'index' parameter in body\"}");
+    return;
+  }
+
+  Serial.printf("POST /api/deleteProject Request for index: %d\n", projectIndex);
+
+  const auto &projects = getProjectManagerInstance().getProjects();
+  Serial.printf("Currently %d projects in list before delete\n", projects.size());
+  for (size_t i = 0; i < projects.size(); i++)
+  {
+    Serial.printf("  Project[%d]: %s, %s\n", i, projects[i].name.c_str(), projects[i].color.c_str());
+  }
+
+  bool deleted = getProjectManagerInstance().deleteProject(projectIndex);
+  Serial.printf("deleteProject returned: %s\n", deleted ? "true" : "false");
+
+  const auto &updatedProjects = getProjectManagerInstance().getProjects();
+  Serial.printf("Now %d projects in list after delete\n", updatedProjects.size());
+  for (size_t i = 0; i < updatedProjects.size(); i++)
+  {
+    Serial.printf("  Project[%d]: %s, %s\n", i, updatedProjects[i].name.c_str(), updatedProjects[i].color.c_str());
+  }
+
+  if (deleted)
+  {
+    // Redirect back to the main page after successful deletion
+    request->redirect("/");
+  }
+  else
+  {
+    Serial.printf("POST /api/deleteProject Error: Index %d not found\n", projectIndex);
+    // Maybe return an error page or JSON instead of 404 if preferred
+    request->send(404, "application/json", "{\"error\":\"Project index not found\"}");
+  }
+}
+
+void NetworkController::handleNotFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
+
+void NetworkController::handleGetWebhook(AsyncWebServerRequest *request)
+{
+  JsonDocument doc;
+  doc["url"] = webhookURL;
+
+  String responseJson;
+  serializeJson(doc, responseJson);
+  request->send(200, "application/json", responseJson);
+}
+
+void NetworkController::handleUpdateWebhook(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+{
+  if (index + len == total)
+  { // Process only when the full body is received
+    JsonDocument doc;
+    JsonDocument filter;
+    filter["url"] = true;
+    DeserializationError error = deserializeJson(doc, (const char *)data, len, DeserializationOption::Filter(filter));
+
+    if (error)
+    {
+      Serial.printf("POST /api/webhook JSON Error: %s\n", error.c_str());
+      request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+      return;
+    }
+
+    if (!doc.is<JsonObject>() || !doc["url"].is<const char *>())
+    {
+      Serial.println("POST /api/webhook Error: Missing or invalid fields");
+      request->send(400, "application/json", "{\"error\":\"Missing or invalid 'url' field\"}");
+      return;
+    }
+
+    String newWebhookURL = doc["url"].as<String>();
+
+    // Validate the URL
+    if (validateInput(newWebhookURL))
+    {
+      // URL is valid and saved in validateInput method
+      request->send(200, "application/json", "{\"message\":\"Webhook URL updated successfully\"}");
+    }
+    else
+    {
+      request->send(400, "application/json", "{\"error\":\"Invalid webhook URL format\"}");
+    }
+  }
 }

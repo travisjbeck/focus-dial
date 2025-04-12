@@ -5,16 +5,17 @@
 class TimerState : public State
 {
 public:
-    TimerState();
+  TimerState();
 
-    void enter() override;
-    void update() override;
-    void exit() override;
+  void enter() override;
+  void update() override;
+  void exit() override;
 
-    void setTimer(int duration, unsigned long elapsedTime);
+  void setTimer(int duration, unsigned long elapsedTime);
 
 private:
-    int duration;
-    unsigned long startTime;
-    unsigned long elapsedTime;
+  unsigned long startTime;
+  int duration;              // Total duration in minutes
+  unsigned long elapsedTime; // Elapsed time in seconds
+  uint32_t currentLedColor;  // Store the color for this timer session
 };

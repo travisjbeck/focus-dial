@@ -1,0 +1,26 @@
+#ifndef PROJECT_DATA_H
+#define PROJECT_DATA_H
+
+#include <Arduino.h>
+#include <vector>
+
+// Maximum number of projects that can be stored
+const int MAX_PROJECTS = 20;
+
+// NVS key for storing the JSON string representing the list of projects
+extern const char *NVS_PROJECTS_KEY;
+
+// NVS key for storing the index of the last selected project
+extern const char *NVS_LAST_PROJECT_KEY;
+
+// Represents a single project with a name and associated color (hex string)
+struct Project
+{
+  String name;
+  String color; // Expected format: "#RRGGBB"
+};
+
+// Type alias for a list of projects
+using ProjectList = std::vector<Project>;
+
+#endif // PROJECT_DATA_H

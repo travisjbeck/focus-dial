@@ -5,9 +5,9 @@
 class ResetState : public State
 {
 public:
-    void enter() override;
-    void update() override;
-    void exit() override;
+  void enter() override;
+  void update() override;
+  void exit() override;
 
-    unsigned long resetStartTime = 0;
+  unsigned long resetStartTime = 0;
 };

@@ -1,4 +1,4 @@
-#include "controllers/LedController.h"
+#include "controllers/LEDController.h"
 
 #define LED_OFFSET -1 // Offset to align 12 o'clock position
 
@@ -46,7 +46,9 @@ void LEDController::startFillAndDecay(uint32_t color, uint32_t totalDuration)
   currentStep = 0;
   pixelIndex = 0;
   brightnessLevel = brightness;
+  decayStarted = false;
   lastUpdateTime = millis();
+  Serial.printf("LED: Starting FillAndDecay. Color: %06X, Duration: %lu ms\n", color, totalDuration);
 }
 
 void LEDController::setSpinner(uint32_t color, int cycles)
@@ -97,6 +99,16 @@ uint32_t LEDController::scaleColor(uint32_t color, uint8_t brightnessLevel)
 
 void LEDController::handleFillAndDecay()
 {
+  // --- DEBUG: Simplify to just set all LEDs to animationColor ---
+  if (!decayStarted) { // Use decayStarted flag to run this only once
+    Serial.printf("LED DEBUG: Setting all LEDs to %06X\n", animationColor);
+    leds.fill(animationColor); // Use the raw animationColor directly
+    leds.show();
+    decayStarted = true; // Set flag so it doesn't repeat
+  }
+  // Do nothing else, just keep the color solid
+
+  /* Original Logic:
   uint32_t fillDuration = 300; // Initial fill duration
   uint32_t decayDuration = animationDuration - fillDuration;
   uint32_t totalSteps = (numLeds + 1) * brightness;
@@ -109,7 +121,8 @@ void LEDController::handleFillAndDecay()
     if (millis() - lastUpdateTime >= stepDurationFill)
     {
       int adjustedIndex = (currentStep + LED_OFFSET + numLeds) % numLeds;
-      leds.setPixelColor(adjustedIndex, scaleColor(animationColor, brightness));
+      uint32_t setColor = scaleColor(animationColor, brightness);
+      leds.setPixelColor(adjustedIndex, setColor);
       leds.show();
       currentStep++;
       lastUpdateTime = millis();
@@ -121,9 +134,10 @@ void LEDController::handleFillAndDecay()
     if (!decayStarted)
     {
       decayStarted = true;
-      pixelIndex = 1;
+      pixelIndex = 0;
       brightnessLevel = brightness;
       lastUpdateTime = millis();
+      Serial.println("LED: Decay phase started.");
     }
 
     // Decay phase
@@ -135,7 +149,8 @@ void LEDController::handleFillAndDecay()
       {
         brightnessLevel--;
         int adjustedIndex = (pixelIndex + LED_OFFSET + numLeds) % numLeds;
-        leds.setPixelColor(adjustedIndex, scaleColor(animationColor, brightnessLevel));
+        uint32_t setColor = scaleColor(animationColor, brightnessLevel);
+        leds.setPixelColor(adjustedIndex, setColor);
         leds.show();
       }
       else
@@ -147,12 +162,14 @@ void LEDController::handleFillAndDecay()
         brightnessLevel = brightness;
       }
 
-      if (pixelIndex > numLeds)
+      if (pixelIndex >= numLeds)
       {
+        Serial.println("LED: FillAndDecay finished.");
         stopCurrentAnimation();
       }
     }
   }
+  */
 }
 
 void LEDController::handleSpinner()

@@ -3,54 +3,86 @@
 #include <BluetoothA2DPSink.h>
 #include <WiFiProvisioner.h>
 #include <Preferences.h>
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <ESPmDNS.h>
+#include <ArduinoJson.h>
+#include "ProjectData.h"
+
+// Define reasonable default sizes for JSON documents used in API handlers
+// Adjust these based on MAX_PROJECTS and expected name/color lengths
+// Note: For stack-allocated JsonDocument (v7), size needs care.
+// Use ArduinoJson Assistant: https://arduinojson.org/v7/assistant/
+// const size_t JSON_DOC_SIZE_GET = JSON_ARRAY_SIZE(MAX_PROJECTS) + MAX_PROJECTS * JSON_OBJECT_SIZE(2) + 200; // Rough estimate
+// const size_t JSON_DOC_SIZE_POST_PUT = JSON_OBJECT_SIZE(2) + 256;                                           // Rough estimate
 
 class NetworkController
 {
 public:
-    NetworkController();
-    void begin();
-    void update();
-    void startProvisioning();
-    void stopProvisioning();
-    void reset();
-    bool isWiFiProvisioned();
-    bool isWiFiConnected();
-    bool isBluetoothPaired();
-    void initializeBluetooth();
-    void startBluetooth();
-    void stopBluetooth();
-    void sendWebhookAction(const String &action);
+  NetworkController();
+  void begin();
+  void update();
+  void startProvisioning();
+  void stopProvisioning();
+  void reset();
+  bool isWiFiProvisioned();
+  bool isWiFiConnected();
+  bool isBluetoothPaired();
+  void initializeBluetooth();
+  void startBluetooth();
+  void stopBluetooth();
+  void sendWebhookAction(const String &action);
 
 private:
-    BluetoothA2DPSink a2dp_sink;
-    Preferences preferences;
-    WiFiProvisioner::WiFiProvisioner wifiProvisioner; // Instance of WiFiProvisioner
+  BluetoothA2DPSink a2dp_sink;
+  Preferences preferences;
+  WiFiProvisioner::WiFiProvisioner wifiProvisioner; // Instance of WiFiProvisioner
+  AsyncWebServer _server;
+  bool _webServerRunning;
 
-    String webhookURL;
-    bool btPaired; // Paired state loaded from NVS
-    bool bluetoothActive;
-    bool bluetoothAttempted;
-    bool provisioningMode;
-    unsigned long lastBluetoothtAttempt;
+  String webhookURL;
+  bool btPaired; // Paired state loaded from NVS
+  bool bluetoothActive;
+  bool bluetoothAttempted;
+  bool provisioningMode;
+  unsigned long lastBluetoothtAttempt;
 
-    void WiFiProvisionerSettings();
-    void saveBluetoothPairedState(bool paired);
-    static void btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj);
+  void WiFiProvisionerSettings();
+  void saveBluetoothPairedState(bool paired);
+  static void btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj);
 
-    // Tasks
-    TaskHandle_t bluetoothTaskHandle;
-    TaskHandle_t webhookTaskHandle;
-    QueueHandle_t webhookQueue;
+  // Web Server management
+  void _setupWebServerRoutes();
+  void _startWebServer();
+  void _stopWebServer();
+  static void _onWiFiEvent(WiFiEvent_t event);
 
-    static void bluetoothTask(void *param);
-    static void webhookTask(void *param);
-    bool sendWebhookRequest(const String &action);
+  // --- API Route Handlers (Member Functions) ---
+  void handleGetProjects(AsyncWebServerRequest *request);
+  void handleAddProject(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+  void handleUpdateProject(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+  void handleDeleteProject(AsyncWebServerRequest *request);
+  void handleApiOptions(AsyncWebServerRequest *request); // Common handler for OPTIONS
+  void handleNotFound(AsyncWebServerRequest *request);
+  void handleDeleteProjectPostRequest(AsyncWebServerRequest *request);
+  void handleUpdateProjectPostRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+  void handleGetWebhook(AsyncWebServerRequest *request);
+  void handleUpdateWebhook(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
 
-    static NetworkController *instance;
+  // Tasks
+  TaskHandle_t bluetoothTaskHandle;
+  TaskHandle_t webhookTaskHandle;
+  QueueHandle_t webhookQueue;
 
-    static bool validateInputCallback(const String &input);
-    static void factoryResetCallback();
+  static void bluetoothTask(void *param);
+  static void webhookTask(void *param);
+  bool sendWebhookRequest(const String &action);
 
-    bool validateInput(const String &input);
-    void handleFactoryReset();
+  static NetworkController *instance;
+
+  static bool validateInputCallback(const String &input);
+  static void factoryResetCallback();
+
+  bool validateInput(const String &input);
+  void handleFactoryReset();
 };

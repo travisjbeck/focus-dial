@@ -5,37 +5,43 @@ DoneState::DoneState() : doneEnter(0) {}
 
 void DoneState::enter()
 {
-    Serial.println("Entering Done State");
+  Serial.println("Entering Done State");
 
-    doneEnter = millis();
-    ledController.setBreath(GREEN, -1, true, 2);
+  doneEnter = millis();
+  ledController.setBreath(GREEN, -1, true, 2);
 
-    // Register state-specific handlers
-    inputController.onPressHandler([]()
-                                   {
+  // Register state-specific handlers
+  inputController.onPressHandler([]()
+                                 {
         Serial.println("Done State: Button pressed");
         stateMachine.changeState(&StateMachine::idleState); });
 
-    // Send 'Stop' webhook
-    networkController.sendWebhookAction("stop");
+  // Send 'Stop' webhook
+  String projectName = stateMachine.getPendingProjectName(); // Get project name
+  String action = "stop";
+  if (!projectName.isEmpty())
+  {
+    action += "|" + projectName; // Append project name
+  }
+  networkController.sendWebhookAction(action);
 }
 
 void DoneState::update()
 {
-    inputController.update();
-    ledController.update();
+  inputController.update();
+  ledController.update();
 
-    displayController.drawDoneScreen();
+  displayController.drawDoneScreen();
 
-    if (millis() - doneEnter >= (CHANGE_TIMEOUT * 1000))
-    {
-        // Transition to Idle after timeout
-        stateMachine.changeState(&StateMachine::idleState);
-    }
+  if (millis() - doneEnter >= (CHANGE_TIMEOUT * 1000))
+  {
+    // Transition to Idle after timeout
+    stateMachine.changeState(&StateMachine::idleState);
+  }
 }
 
 void DoneState::exit()
 {
-    Serial.println("Exiting Done State");
-    inputController.releaseHandlers();
+  Serial.println("Exiting Done State");
+  inputController.releaseHandlers();
 }

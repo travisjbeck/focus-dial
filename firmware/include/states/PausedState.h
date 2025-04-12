@@ -5,15 +5,15 @@
 class PausedState : public State
 {
 public:
-    PausedState();
-    void enter() override;
-    void update() override;
-    void exit() override;
+  PausedState();
+  void enter() override;
+  void update() override;
+  void exit() override;
 
-    void setPause(int duration, unsigned long elapsedTime);
+  void setPause(int duration, unsigned long elapsedTime);
 
 private:
-    int duration;
-    unsigned long pauseEnter;
-    unsigned long elapsedTime;
+  int duration;
+  unsigned long pauseEnter;
+  unsigned long elapsedTime;
 };

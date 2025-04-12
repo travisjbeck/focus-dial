@@ -1,0 +1,118 @@
+<!-- Focus Dial Project Management -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Dial | Projects</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Focus Dial</h1>
+      <p class="subtitle">Manage your project timers</p>
+    </header>
+
+    <main>
+      <section class="card" id="projects-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="list-todo" class="icon"></i>
+            Projects
+          </h2>
+        </div>
+        <div id="project-list">
+          <!-- Project list will be loaded here -->
+          <div class="loading">
+            <svg class="spinner" viewBox="0 0 50 50">
+              <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+            </svg>
+            <p>Loading projects...</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="add-project-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="plus-circle" class="icon"></i>
+            Create New Project
+          </h2>
+        </div>
+        <form id="add-project-form">
+          <div class="form-group">
+            <label for="name">
+              <i data-lucide="text" class="icon"></i>
+              Project Name
+            </label>
+            <input type="text" id="name" name="name" placeholder="Enter project name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="color">
+              <i data-lucide="palette" class="icon"></i>
+              Project Color
+            </label>
+            <div class="color-input-wrapper">
+              <input type="color" id="color" name="color" value="#0070f3" required>
+              <span class="color-hex" id="color-hex-value">#0070f3</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary-btn">
+              <i data-lucide="plus" class="icon"></i>
+              <span>Create Project</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="webhook-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="webhook" class="icon"></i>
+            Webhook Configuration
+          </h2>
+        </div>
+        <form id="webhook-form">
+          <div class="form-group">
+            <label for="webhook-url">
+              <i data-lucide="link" class="icon"></i>
+              Webhook URL
+            </label>
+            <input type="url" id="webhook-url" name="webhook-url" placeholder="Enter webhook URL (optional)" required>
+            <p class="form-help">The webhook will be called when a timer completes. You can leave this empty if you
+              don't need webhook notifications.</p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary-btn">
+              <i data-lucide="save" class="icon"></i>
+              <span>Update Webhook</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <div id="message-area"></div>
+      <div class="footer-text">Focus Dial Project Manager</div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Initialize all Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+
+</html>

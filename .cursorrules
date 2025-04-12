@@ -31,7 +31,7 @@
 
 ## Development & Maintenance
 
-- **Building/Uploading**: Use PlatformIO commands (e.g., `pio run`, `pio run -t upload`).
+- **Building/Uploading**: Use PlatformIO commands (e.g., `pio run`, `pio run -t upload`). The full command often needed in the terminal is: `source ~/.platformio/penv/bin/activate && platformio run --environment adafruit_qtpy_esp32` (for build) or similar for upload/monitor/clean.
 - **Dependencies**: Add new libraries to `platformio.ini`.
 - **Adding Features**:
   - For new states: Create a new state class (likely inheriting from a base state) in `firmware/src/states/` and integrate it into `StateMachine.cpp`.

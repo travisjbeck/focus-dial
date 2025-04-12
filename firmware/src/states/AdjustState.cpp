@@ -3,22 +3,29 @@
 
 void AdjustState::enter()
 {
-    Serial.println("Entering Adjust State");
+  Serial.println("Entering Adjust State");
 
-    lastActivity = millis();
-    ledController.setSolid(AMBER);
+  // Initialize duration with the current default from IdleState
+  adjustDuration = StateMachine::idleState.getDefaultDuration();
+  Serial.printf("Adjust State: Starting duration = %d\n", adjustDuration);
 
-    // Register state-specific handlers
-    inputController.onPressHandler([this]()
-                                   {
-        Serial.println("Adjust State: Button pressed"); 
-        
-        StateMachine::idleState.setTimer(this->adjustDuration);
-        displayController.showConfirmation();
-        stateMachine.changeState(&StateMachine::idleState); });
+  lastActivity = millis();
+  ledController.setSolid(AMBER);
 
-    inputController.onEncoderRotateHandler([this](int delta)
-                                           {
+  // Register state-specific handlers
+  inputController.onPressHandler([this]()
+                                 {
+                                   Serial.println("Adjust State: Button pressed - Saving duration");
+
+                                   // Update the actual default duration in IdleState
+                                   StateMachine::idleState.setTimer(this->adjustDuration);
+
+                                   displayController.showConfirmation();               // Show confirmation briefly
+                                   stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
+                                 });
+
+  inputController.onEncoderRotateHandler([this](int delta)
+                                         {
         Serial.println("Adjust State: Encoder turned");
         Serial.println(delta);
         
@@ -35,23 +42,24 @@ void AdjustState::enter()
 
 void AdjustState::update()
 {
-    inputController.update();
-    displayController.drawAdjustScreen(adjustDuration);
+  inputController.update();
+  displayController.drawAdjustScreen(adjustDuration);
 
-    if (millis() - lastActivity >= (CHANGE_TIMEOUT * 1000))
-    {
-        // Transition to Idle
-        stateMachine.changeState(&StateMachine::idleState);
-    }
+  if (millis() - lastActivity >= (CHANGE_TIMEOUT * 1000))
+  {
+    // Transition to Idle
+    stateMachine.changeState(&StateMachine::idleState);
+  }
 }
 
 void AdjustState::exit()
 {
-    Serial.println("Exiting Adjust State");
-    inputController.releaseHandlers();
+  Serial.println("Exiting Adjust State");
+  inputController.releaseHandlers();
+  displayController.clear(); // Ensure display is clear before next state
 }
 
 void AdjustState::adjustTimer(int duration)
 {
-    adjustDuration = duration;
+  adjustDuration = duration;
 }
