@@ -1,5 +1,40 @@
 # Focus Dial Firmware Project Rules
 
+## Current Focus
+
+We are currently developing the **Time Tracking Web Application** for the Focus Dial.
+- **Goal:** Create a React SPA dashboard (hosted on a Raspberry Pi) to receive time tracking data from the Focus Dial via webhooks, store it in a database, and provide features for managing time entries and generating invoices.
+- **Key Document:** Refer to `project-webapp.md` for the detailed plan and task breakdown.
+- **Architecture:** Backend API (Node.js/Express/SQLite) on Raspberry Pi, Frontend (React) served by Pi, Focus Dial sends webhooks to Pi.
+- **Project Directory:** All web application code (backend and frontend) should reside within the `time-tracking-app` directory in the workspace root.
+
+## Project History & Context
+
+### Firmware Project Rules (Focus Dial Hardware: ESP32-S2)
+
+- **Purpose**: Firmware for the "Focus Dial" hardware.
+- **Functionality**: Timer device, rotary dial, OLED, LEDs, Wi-Fi, webhooks, web config UI.
+- **Hardware**: Adafruit QT Py ESP32-S2 (ESP32-S2, 240MHz, 4MB Flash, 2MB PSRAM).
+- **Framework**: Arduino via PlatformIO.
+- **Key Files**: `main.cpp`, `StateMachine.cpp`, `controllers/`, `states/`, `platformio.ini`.
+
+### Feature: Project Timekeeping (Firmware - Completed)
+
+- **Summary:** Added ability to select projects (name/color) on the device before starting a timer. Project color is shown on LEDs. Project name is sent via webhook.
+- **Key Document:** `project-timekeeping.md` (marked as complete).
+
+### Feature: Configuration Web UI (Firmware - Completed)
+
+- **Summary:** Built a web interface (HTML/CSS/JS served from LittleFS via ESPAsyncWebServer) accessible at `focus-dial.local`. Allows managing projects (add/edit/delete name/color) and configuring the webhook URL. Backend API endpoints (`/api/projects`, `/api/webhook`) handle data storage in NVS.
+
+## Development Guidelines
+
+- Follow instructions precisely.
+- Consult `project-webapp.md` for current tasks.
+- Prioritize robust, maintainable code adhering to best practices.
+- Use standard web development tools and practices for the web app (Node.js, React, etc.).
+- Remember the ESP32 firmware only needs to reliably send webhooks to the Raspberry Pi backend.
+
 ## Project Overview
 
 - **Purpose**: Firmware for the "Focus Dial" hardware.

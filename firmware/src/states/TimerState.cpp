@@ -1,7 +1,7 @@
 #include "StateMachine.h"
 #include "Controllers.h"
 
-TimerState::TimerState() : duration(0), elapsedTime(0), startTime(0), currentLedColor(0) {}
+TimerState::TimerState() : duration(0), elapsedTime(0), startTime(0), currentLedColor(0), currentProjectName(""), currentProjectColorHex("") {}
 
 void TimerState::enter()
 {
@@ -14,29 +14,27 @@ void TimerState::enter()
   if (elapsedTime == 0)
   {
     Serial.println("Timer State: Initial entry");
-    projectName = stateMachine.getPendingProjectName();
-    String projectColorStr = stateMachine.getPendingProjectColor();
-    bool hasProject = !projectName.isEmpty();
+    currentProjectName = stateMachine.getPendingProjectName();      // Store name
+    currentProjectColorHex = stateMachine.getPendingProjectColor(); // Store hex string
+    bool hasProject = !currentProjectName.isEmpty();
 
-    Serial.printf("Timer for project: '%s', Color: %s\n", projectName.c_str(), projectColorStr.c_str());
+    Serial.printf("Timer for project: '%s', Color: %s\n", currentProjectName.c_str(), currentProjectColorHex.c_str());
 
-    if (hasProject && projectColorStr.length() > 0)
+    if (hasProject && currentProjectColorHex.length() > 0)
     {
-      currentLedColor = LEDController::hexColorToUint32(projectColorStr);
+      currentLedColor = LEDController::hexColorToUint32(currentProjectColorHex);
     }
     else
     {
       currentLedColor = LEDController::hexColorToUint32("#FFFFFF"); // Default to White
+      currentProjectColorHex = "#FFFFFF";                           // Ensure hex string is white too
     }
-    // Clear pending project info only after initial retrieval
     stateMachine.clearPendingProject();
   }
   else
   {
     Serial.printf("Timer State: Resuming with stored color %06X\n", currentLedColor);
-    // If resuming, we need the project name again for webhooks if applicable
-    // This assumes project context doesn't change mid-timer. Fetch from a more persistent source if needed.
-    // For now, let's assume projectName isn't strictly needed on resume for webhook
+    // Note: currentProjectName and currentProjectColorHex retain their values from initial entry
   }
 
   // Start LED Fill and Decay Animation using stored color and REMAINING duration
@@ -50,32 +48,29 @@ void TimerState::enter()
     ledController.turnOff(); // Turn off if timer already expired on resume
   }
 
-  bool finalHasProject = !projectName.isEmpty(); // Use potentially updated projectName if fetched on resume
+  bool finalHasProject = !currentProjectName.isEmpty();
 
-  // Setup Input Handlers
-  inputController.onPressHandler([this, finalHasProject, projectName]() // Capture necessary info
+  // Setup Input Handlers (capture necessary info)
+  inputController.onPressHandler([this]() // Remove captures, use member vars
                                  {
                                    Serial.println("Timer State: Button Pressed - Pausing");
-                                   // Send 'Stop' webhook (pause)
                                    String action = "stop";
-                                   if (finalHasProject)
+                                   if (!currentProjectName.isEmpty())
                                    {
-                                     action += "|" + projectName; // Append project name
+                                     action += "|" + currentProjectName + "|" + currentProjectColorHex;
                                    }
                                    networkController.sendWebhookAction(action);
                                    displayController.showTimerPause();
-                                   // Transition to PausedState and set elapsed time
                                    StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
                                    stateMachine.changeState(&StateMachine::pausedState); });
 
-  inputController.onDoublePressHandler([this, finalHasProject, projectName]()
+  inputController.onDoublePressHandler([this]() // Remove captures, use member vars
                                        {
                                          Serial.println("Timer State: Button Double Pressed - Canceling");
-                                         // Send 'Stop' webhook (canceled)
                                          String action = "stop";
-                                         if (finalHasProject)
+                                         if (!currentProjectName.isEmpty())
                                          {
-                                           action += "|" + projectName; // Append project name
+                                           action += "|" + currentProjectName + "|" + currentProjectColorHex;
                                          }
                                          networkController.sendWebhookAction(action);
                                          displayController.showCancel();
@@ -85,9 +80,9 @@ void TimerState::enter()
   if (elapsedTime == 0)
   {
     String startAction = "start";
-    if (finalHasProject)
+    if (finalHasProject) // Use finalHasProject for consistency
     {
-      startAction += "|" + projectName; // Append project name
+      startAction += "|" + currentProjectName + "|" + currentProjectColorHex;
     }
     networkController.sendWebhookAction(startAction);
   }
@@ -117,8 +112,10 @@ void TimerState::update()
 void TimerState::exit()
 {
   inputController.releaseHandlers();
-  // networkController.stopBluetooth(); // Let NetworkController manage BT connection
-  ledController.turnOff();
+  // ledController.turnOff(); // Don't turn off LEDs here, PausedState might need them?
+  // Reset potentially large string members
+  currentProjectName = "";
+  currentProjectColorHex = "";
   Serial.println("Exiting Timer State");
 }
 

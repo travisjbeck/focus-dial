@@ -15,7 +15,9 @@ public:
 
 private:
   unsigned long startTime;
-  int duration;              // Total duration in minutes
-  unsigned long elapsedTime; // Elapsed time in seconds
-  uint32_t currentLedColor;  // Store the color for this timer session
+  int duration;                  // Total duration in minutes
+  unsigned long elapsedTime;     // Elapsed time in seconds
+  uint32_t currentLedColor;      // Store the color for this timer session
+  String currentProjectName;     // Store the name for this session
+  String currentProjectColorHex; // Store the color hex string
 };

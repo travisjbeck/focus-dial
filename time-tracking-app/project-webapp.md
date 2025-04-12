@@ -1,5 +1,11 @@
 # Focus Dial - Time Tracking Web Application Development Plan
 
+## Project Summary
+
+This project involves building a full-stack web application to complement the **Focus Dial** hardware, an ESP32-S2 based timer device. The Focus Dial firmware (already developed) allows users to track time against specific projects and sends this data via webhooks.
+
+The web application will provide a dashboard interface (React SPA) for viewing tracked time, managing projects, adding details to time entries, and generating invoices. It will run on a **Raspberry Pi**, acting as the backend server (Node.js/Express) and database host (SQLite), receiving webhooks from the Focus Dial on the local network.
+
 ## 1. Project Context & Goal
 
 ### Device Summary
@@ -44,10 +50,14 @@ Create a web application (React SPA) to act as a dashboard and time-tracking sys
 - [ ] **API Server Implementation (Express.js):**
   - [ ] Set up basic Express server structure (app setup, middleware like `cors`, `json` body parser).
   - [ ] Implement API routes/controllers:
-    - [ ] `POST /api/webhook`: Receives `action`, `project_name` from Focus Dial. Creates/updates `time_entries` in DB. Needs robust logic to handle start/stop/done events and calculate duration.
+    - [ ] `POST /api/webhook`: Receives webhook from Focus Dial.
+      - **Payload Format:** `action|projectName|#hexColor` (e.g., `start|My Project|#FF00AA`, `stop||#FFFFFF` for no project).
+      - **Action:** Parse action, projectName, hexColor.
+      - **Check if `project_name` exists in `projects` table; if not, create a new project record automatically using the received `hexColor`.**
+      - Create/update `time_entries` in DB based on the action. Needs robust logic to handle start/stop/done events and calculate duration.
     - [ ] `GET /api/projects`: Returns list of projects.
-    - [ ] `POST /api/projects`: Creates a new project.
-    - [ ] `PUT /api/projects/:id`: Updates a project.
+    - [ ] `POST /api/projects`: **(Primarily for future use or manual overrides if needed)** Creates a new project. *(Note: Standard creation is automatic via webhook)*.
+    - [ ] `PUT /api/projects/:id`: Updates project details (e.g., color).
     - [ ] `DELETE /api/projects/:id`: Deletes a project.
     - [ ] `GET /api/time_entries`: Returns time entries (allow filtering by project, date range, invoiced status).
     - [ ] `PUT /api/time_entries/:id`: Updates a time entry (description, project_id, invoiced status).
@@ -62,17 +72,26 @@ Create a web application (React SPA) to act as a dashboard and time-tracking sys
 
 - [ ] **Project Setup:**
   - [ ] Use Vite or `create-react-app` to initialize the React project.
-  - [ ] Install necessary libraries: `react-router-dom`, `axios` (or `fetch`), state management (e.g., Zustand, Context), date formatting (e.g., `date-fns`), UI library (optional).
+  - [ ] Install necessary libraries: `react-router-dom`, state management (e.g., Zustand, Context), date formatting (e.g., `date-fns`), **Tailwind CSS v4**, **shadcn/ui**, **lucide-react**. (Use built-in `fetch` instead of Axios).
+  - [ ] Set up Tailwind CSS v4 configuration.
+  - [ ] Set up `shadcn/ui` (includes initializing components).
+- [ ] **Design & Styling Guidelines:**
+    - [ ] **Aesthetics:** The web app's design MUST match the modern, dark-themed aesthetic (Vercel/Tailwind inspired) established in the device's configuration UI.
+    - [ ] **Reference Files:** Refer to the existing configuration UI files for style guidance: `firmware/data/index.html`, `firmware/data/styles.css`, `firmware/data/app.js`.
+    - [ ] **Technology:** Utilize **Tailwind CSS v4** for all styling.
+    - [ ] **Components:** Use **shadcn/ui** components as the primary UI building blocks.
+    - [ ] **Icons:** Use **lucide-react** for icons.
+    - [ ] **UI:** Ensure a clean, intuitive, and responsive user interface.
 - [ ] **Component Development:**
-  - [ ] **Layout:** Main navigation/sidebar, content area.
+  - [ ] **Layout:** Main navigation/sidebar, content area (using shadcn/ui structure where applicable).
   - [ ] **Dashboard/Overview:** Summary of recent activity, total time per project this week/month.
-  - [ ] **Project Management View:** Display projects, allow adding/editing/deleting via API calls.
+  - [ ] **Project Management View:** Display projects, allow editing colors/details or deleting. *(Note: Initial project creation is handled automatically via webhook from the Focus Dial)*.
   - [ ] **Time Entries View:** Table/list display of time entries, filtering controls, ability to trigger edit/delete.
   - [ ] **Time Entry Edit Form:** Modal or inline form for editing description, changing project.
   - [ ] **Invoice Creation View:** Select project, view/select uninvoiced entries, trigger invoice generation.
   - [ ] **Invoice List/Detail View:** Display generated invoices and their line items.
 - [ ] **API Integration:**
-  - [ ] Create services/hooks to fetch/mutate data via backend API endpoints.
+  - [ ] Create services/hooks to fetch/mutate data via backend API endpoints using the built-in **`fetch` API**.
   - [ ] Implement loading states and error handling/display.
 - [ ] **Routing:** Set up client-side routing using `react-router-dom`.
 - [ ] **State Management:** Manage shared application state effectively.
@@ -82,10 +101,11 @@ Create a web application (React SPA) to act as a dashboard and time-tracking sys
 
 ### Phase 3: Refinements & Deployment
 
-- [ ] **Styling:** Apply consistent UI styling (CSS Modules, Tailwind, UI Library).
+- [ ] **Styling:** (This task is now covered by the initial setup and guidelines in Phase 2, can be removed or kept for minor tweaks)
 - [ ] **Invoice Generation:** Implement a user-friendly display format for invoices (HTML/CSS). (PDF generation is optional complexity).
 - [ ] **Authentication (Optional):** Add basic user login if needed.
 - [ ] **Error Handling & Logging:** Enhance backend logging and frontend error reporting.
 - [ ] **Testing:** Add basic tests for critical API endpoints and UI components.
-- [ ] **Deployment:** Configure `pm2` for reliable server operation on the Pi. Consider setting up mDNS on the Pi (e.g., `avahi-daemon`) for easier access (e.g., `http://tracker.local`).
+- [ ] **Deployment:** Configure `pm2` for reliable server operation on the Pi.
+- [ ] **mDNS Setup:** Configure mDNS on the Pi (e.g., using `avahi-daemon`) to allow accessing the app via a local hostname like `http://focus-dial.app` or `http://tracker.local`.
 - [ ] **Data Backup Strategy:** Define a simple backup strategy for the database file on the Pi. 
