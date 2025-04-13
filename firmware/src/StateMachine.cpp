@@ -133,3 +133,9 @@ void StateMachine::resetLEDColor()
     idleState.restoreDefaultLEDPattern();
   }
 }
+
+// Getter for the current state
+State *StateMachine::getCurrentState() const
+{
+  return currentState;
+}

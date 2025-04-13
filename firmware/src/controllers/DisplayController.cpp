@@ -138,23 +138,26 @@ void DisplayController::drawTimerScreen(int remainingSeconds)
   int minutes = (remainingSeconds % 3600) / 60;
   int seconds = remainingSeconds % 60;
 
-  char left[3], right[3], secondsStr[3];
+  char left[3], right[3]; // No need for secondsStr here
   int xLeft = 1;
   int xRight = 73;
+  int yPos = 36; // Default Y position for HH:MM
 
   // Format left and right
   if (hours > 0)
   {
     sprintf(left, "%02d", hours);
     sprintf(right, "%02d", minutes);
+    // yPos remains 36
   }
   else
   {
     sprintf(left, "%02d", minutes);
     sprintf(right, "%02d", seconds);
+    yPos = 40; // Adjust Y position for MM:SS to center vertically more
   }
 
-  // Adjust position if the first character is '1'
+  // Adjust X position if the first character is '1'
   if (left[0] == '1')
   {
     xLeft += 20;
@@ -164,40 +167,30 @@ void DisplayController::drawTimerScreen(int remainingSeconds)
     xRight += 20;
   }
 
-  // Draw the left value (hours or minutes)
+  // Draw the large digits (HH:MM or MM:SS)
   oled.setTextColor(1);
   oled.setTextSize(5);
   oled.setFont(&Org_01);
-  oled.setCursor(xLeft, 36);
+  oled.setCursor(xLeft, yPos);
   oled.print(left);
-
-  // Draw the right value (minutes or seconds)
-  oled.setCursor(xRight, 36);
+  oled.setCursor(xRight, yPos);
   oled.print(right);
 
-  // Separator dots
-  oled.fillRect(62, 31, 5, 5, 1);
-  oled.fillRect(62, 21, 5, 5, 1);
+  // Draw separator dots, adjust Y position based on main digits
+  oled.fillRect(62, yPos - 15, 5, 5, 1); // Upper dot
+  oled.fillRect(62, yPos - 5, 5, 5, 1);  // Lower dot
 
-  sprintf(secondsStr, "%02d", seconds);
-
-  int xSeconds = 54;
-  if (secondsStr[0] == '1')
+  // Only draw icons and labels if displaying hours and minutes
+  if (hours > 0)
   {
-    xSeconds += 8; // Offset by 8 if the first char is '1'
+    oled.drawBitmap(61, 3, icon_star, 7, 7, 1); // Keep star icon?
+    oled.setTextSize(1);
+    oled.setFont(&Picopixel); // Use smaller font for labels
+    oled.setCursor(27, 54);
+    oled.print("H");
+    oled.setCursor(98, 54);
+    oled.print("M");
   }
-
-  oled.setTextSize(2);
-  oled.setCursor(xSeconds, 58);
-  oled.print(secondsStr);
-
-  // Draw icons and labels
-  oled.drawBitmap(61, 3, icon_star, 7, 7, 1);
-  oled.setTextSize(1);
-  oled.setCursor(27, 54);
-  oled.print(hours > 0 ? "H" : "M");
-  oled.setCursor(98, 54);
-  oled.print(hours > 0 ? "M" : "S");
 
   oled.display();
 }

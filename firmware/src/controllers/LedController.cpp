@@ -102,29 +102,29 @@ uint32_t LEDController::scaleColor(uint32_t color, uint8_t brightnessLevel)
 
 void LEDController::handleFillAndDecay()
 {
-  // --- DEBUG: Simplify to just set all LEDs to animationColor ---
-  if (!decayStarted)
-  { // Use decayStarted flag to run this only once
-    Serial.printf("LED DEBUG: Setting all LEDs to %06X\n", animationColor);
-    leds.fill(animationColor); // Use the raw animationColor directly
-    leds.show();
-    decayStarted = true; // Set flag so it doesn't repeat
-  }
-  // Do nothing else, just keep the color solid
+  // Original FillAndDecay Logic
+  uint32_t fillDuration = 300; // Initial quick fill duration in ms
+  // Ensure decayDuration is not negative if animationDuration is very short
+  uint32_t decayDuration = (animationDuration > fillDuration) ? (animationDuration - fillDuration) : 0;
 
-  /* Original Logic:
-  uint32_t fillDuration = 300; // Initial fill duration
-  uint32_t decayDuration = animationDuration - fillDuration;
-  uint32_t totalSteps = (numLeds + 1) * brightness;
-  uint32_t stepDuration = decayDuration / totalSteps;
+  // Calculate total steps based on number of LEDs and brightness levels
+  // Each LED fades through 'brightness' levels
+  uint32_t totalSteps = numLeds * brightness;
+  // Calculate duration per step, avoid division by zero
+  uint32_t stepDuration = (totalSteps > 0) ? (decayDuration / totalSteps) : 0;
 
+  // Phase 1: Quick Fill
   if (currentStep < numLeds)
   {
-    // Quick fill phase
-    uint32_t stepDurationFill = fillDuration / numLeds;
-    if (millis() - lastUpdateTime >= stepDurationFill)
+    // Calculate duration for each LED to turn on during the fill phase
+    uint32_t stepDurationFill = (numLeds > 0) ? (fillDuration / numLeds) : 0;
+
+    // Check if it's time to light up the next LED (or if duration is zero)
+    if (stepDurationFill == 0 || millis() - lastUpdateTime >= stepDurationFill)
     {
+      // Calculate the index with offset, wrapping around
       int adjustedIndex = (currentStep + LED_OFFSET + numLeds) % numLeds;
+      // Set the pixel to the full animation color
       uint32_t setColor = scaleColor(animationColor, brightness);
       leds.setPixelColor(adjustedIndex, setColor);
       leds.show();
@@ -132,48 +132,58 @@ void LEDController::handleFillAndDecay()
       lastUpdateTime = millis();
     }
   }
+  // Phase 2: Decay
   else
   {
-    // Initialize decay phase
+    // Initialize decay phase only once
     if (!decayStarted)
     {
       decayStarted = true;
-      pixelIndex = 0;
-      brightnessLevel = brightness;
+      pixelIndex = 0;               // Start decaying from the first pixel
+      brightnessLevel = brightness; // Start at full brightness for decay
       lastUpdateTime = millis();
       Serial.println("LED: Decay phase started.");
     }
 
-    // Decay phase
-    if (millis() - lastUpdateTime >= stepDuration)
+    // Check if it's time for the next decay step (and if decay is needed)
+    if (stepDuration > 0 && millis() - lastUpdateTime >= stepDuration)
     {
       lastUpdateTime = millis();
 
+      // If current pixel still has brightness, decrease it
       if (brightnessLevel > 0)
       {
         brightnessLevel--;
+        // Calculate the index of the pixel currently being decayed
         int adjustedIndex = (pixelIndex + LED_OFFSET + numLeds) % numLeds;
         uint32_t setColor = scaleColor(animationColor, brightnessLevel);
         leds.setPixelColor(adjustedIndex, setColor);
         leds.show();
       }
+      // If current pixel brightness reached zero, turn it off and move to the next
       else
       {
         int adjustedIndex = (pixelIndex + LED_OFFSET + numLeds) % numLeds;
-        leds.setPixelColor(adjustedIndex, 0);
+        leds.setPixelColor(adjustedIndex, 0); // Turn off the pixel
         leds.show();
-        pixelIndex++;
-        brightnessLevel = brightness;
+        pixelIndex++;                    // Move to the next pixel
+        brightnessLevel = brightness; // Reset brightness for the next pixel decay
       }
 
+      // Check if all pixels have completed their decay
       if (pixelIndex >= numLeds)
       {
         Serial.println("LED: FillAndDecay finished.");
-        stopCurrentAnimation();
+        stopCurrentAnimation(); // Animation complete
       }
     }
+    // Handle cases where decay duration is zero (turn off immediately after fill)
+    else if (stepDuration == 0 && decayStarted && pixelIndex < numLeds)
+    {
+       Serial.println("LED: Decay duration is zero, clearing LEDs.");
+       turnOff(); // Use turnOff to clear and stop animation
+    }
   }
-  */
 }
 
 void LEDController::handleSpinner()

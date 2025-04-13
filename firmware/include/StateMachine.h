@@ -26,6 +26,7 @@ public:
   void begin(); // Ensure begin is declared
   void update();
   void changeState(State *newState);
+  State *getCurrentState() const;
 
   // Static states
   static AdjustState adjustState;

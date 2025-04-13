@@ -1038,10 +1038,20 @@ void NetworkController::_handleWebSocketMessage(const String &message, uint32_t 
 
   if (action == "preview-color")
   {
+    // Check if the device is asleep
+    if (stateMachine.getCurrentState() == &StateMachine::sleepState)
+    {
+      Serial.println("Device is asleep, waking up for color preview...");
+      stateMachine.changeState(&StateMachine::idleState);
+      // Small delay to allow state transition before setting color
+      delay(50);
+    }
+    // Proceed with handling the color preview
     handleColorPreview(value);
   }
   else if (action == "reset-color")
   {
+    // Handle reset, but don't wake the device just for reset
     handleColorReset();
   }
   else
@@ -1068,12 +1078,11 @@ void NetworkController::handleColorPreview(const String &hexColor)
 {
   Serial.printf("Color preview requested: %s\n", hexColor.c_str());
 
-  // Check if we're in IdleState before allowing preview
-  if (stateMachine.isInIdleState())
+  // Allow preview only if in IdleState (or just woken up to IdleState)
+  if (stateMachine.getCurrentState() == &StateMachine::idleState)
   {
-    // Use the ledController to update the LEDs
-    uint32_t color = LEDController::hexColorToUint32(hexColor);
-    ledController.setSolid(color);
+    // Use the ledController to update the LEDs using the preview methods
+    ledController.setPreviewColor(hexColor); // This handles saving state and setting the solid color
 
     Serial.printf("LED color preview set to: %s\n", hexColor.c_str());
   }
@@ -1088,16 +1097,18 @@ void NetworkController::handleColorReset()
 {
   Serial.println("Color reset requested");
 
-  // Only reset if in IdleState
-  if (stateMachine.isInIdleState())
-  {
-    // Signal to IdleState to restore its normal LED pattern
-    stateMachine.resetLEDColor();
+  // Reset preview mode via LEDController (this handles restoring the previous state)
+  // No need to check state here, resetPreviewColor handles its own logic
+  ledController.resetPreviewColor();
 
-    Serial.println("LED color reset to default");
+  // If we *were* in IdleState, ensure its default pattern is restored (redundant check but safe)
+  if (stateMachine.getCurrentState() == &StateMachine::idleState)
+  {
+    stateMachine.resetLEDColor(); // Calls idleState.restoreDefaultLEDPattern()
+    Serial.println("LED color reset to default IdleState pattern");
   }
   else
   {
-    Serial.println("Color reset ignored - not in idle state");
+    Serial.println("LED color preview reset (was not in Idle)");
   }
 }
