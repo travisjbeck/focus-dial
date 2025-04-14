@@ -1,4 +1,4 @@
-// API endpoints
+// API endpoints - we use relative URLs because of the proxy in vite.config.ts
 const API_ENDPOINTS = {
   PROJECTS: '/api/projects',
   TIME_ENTRIES: '/api/time_entries',

@@ -11,12 +11,14 @@ const invoiceRoutes = require('./routes/invoices');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3004;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Add text/plain parsing middleware
+app.use(express.text());
 
 // Serve static files from the React app (will be built later)
 app.use(express.static(path.join(__dirname, '../../frontend/build')));

@@ -13,18 +13,28 @@ const { Project, TimeEntry } = require('../models');
  */
 router.post('/', async (req, res) => {
   try {
+    // Get the request body
     const { body } = req;
 
     // The webhook data can come in different formats depending on how the Focus Dial sends it
     // Here we handle both raw text and JSON payloads
     let webhookData;
 
-    if (typeof body === 'string') {
+    if (Buffer.isBuffer(body)) {
+      // Handle raw buffer (typically from text/plain content-type)
+      webhookData = body.toString('utf8');
+    } else if (typeof body === 'string') {
+      // Handle string data
       webhookData = body;
     } else if (body && body.payload) {
+      // Handle payload in JSON object
       webhookData = body.payload;
-    } else {
+    } else if (typeof body === 'object') {
+      // Try to stringify the object 
       webhookData = JSON.stringify(body);
+    } else {
+      // Fallback
+      webhookData = String(body || '');
     }
 
     console.log('Received webhook data:', webhookData);
@@ -35,7 +45,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid webhook data format' });
     }
 
-    const action = parts[0]?.toLowerCase();
+    const action = parts[0]?.toLowerCase().trim();
     const projectName = parts[1] || 'Default Project';
     const hexColor = parts[2] || '#FFFFFF';
 
@@ -53,7 +63,7 @@ router.post('/', async (req, res) => {
         await handleTimerDone();
         break;
       default:
-        return res.status(400).json({ error: 'Unknown action' });
+        return res.status(400).json({ error: 'Unknown action', receivedAction: action });
     }
 
     return res.status(200).json({ message: 'Webhook processed successfully' });
