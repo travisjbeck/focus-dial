@@ -16,14 +16,8 @@ void DoneState::enter()
         Serial.println("Done State: Button pressed");
         stateMachine.changeState(&StateMachine::idleState); });
 
-  // Send 'Stop' webhook
-  String projectName = stateMachine.getPendingProjectName(); // Get project name
-  String action = "stop";
-  if (!projectName.isEmpty())
-  {
-    action += "|" + projectName; // Append project name
-  }
-  networkController.sendWebhookAction(action);
+  // Send 'stop' action to webhook handler (which will fetch project details)
+  networkController.sendWebhookAction("stop");
 }
 
 void DoneState::update()

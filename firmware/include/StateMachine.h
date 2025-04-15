@@ -45,9 +45,8 @@ public:
   int getPendingDuration();
 
   // Methods to pass selected project info
-  void setPendingProject(const String &name, const String &color);
-  String getPendingProjectName() const;
-  String getPendingProjectColor() const;
+  void setPendingProjectId(const String &projectId);
+  String getPendingProjectId() const;
   void clearPendingProject();
 
   // New methods for LED color preview
@@ -58,9 +57,8 @@ private:
   State *currentState;          // Pointer to the current state
   SemaphoreHandle_t stateMutex; // Mutex to protect transitions
   bool transition = false;
-  int pendingDuration;        // To pass duration from AdjustState to TimerState
-  String pendingProjectName;  // To pass project name to TimerState/Webhook
-  String pendingProjectColor; // To pass project color to TimerState
+  int pendingDuration;     // To pass duration from AdjustState to TimerState
+  String pendingProjectId; // Store selected project ID for TimerState/Webhook
 };
 
 extern StateMachine stateMachine; // Global instance of the StateMachine

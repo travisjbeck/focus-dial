@@ -80,6 +80,7 @@ private:
   void handleApiOptions(AsyncWebServerRequest *request); // Common handler for OPTIONS
   void handleNotFound(AsyncWebServerRequest *request);
   void handleDeleteProjectPostRequest(AsyncWebServerRequest *request);
+  void handleDeleteProjectByIdPostRequest(AsyncWebServerRequest *request);
   void handleUpdateProjectPostRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
   void handleGetWebhook(AsyncWebServerRequest *request);
   void handleUpdateWebhook(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);

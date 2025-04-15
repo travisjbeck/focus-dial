@@ -7,12 +7,7 @@ import {
   createProject,
 } from "../lib/api";
 import { Button } from "../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import {
   Table,
   TableBody,
@@ -28,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -196,47 +190,45 @@ export function Projects() {
 
       {/* Edit Project Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>
-              Make changes to your project details.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleSaveChanges} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name</Label>
               <Input
                 id="name"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                className="col-span-3"
+                required
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="color" className="text-right">
-                Color
-              </Label>
-              <Input
-                id="color"
-                type="color"
-                value={newProjectColor}
-                onChange={(e) => setNewProjectColor(e.target.value)}
-                className="col-span-3 p-1 h-10"
-              />
+            <div className="space-y-2">
+              <Label htmlFor="color">Project Color</Label>
+              <div className="flex items-center space-x-2">
+                <div
+                  className="w-8 h-8 rounded-full border border-border"
+                  style={{ backgroundColor: newProjectColor }}
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
-          </DialogFooter>
+            <div className="space-y-2">
+              <Label htmlFor="color">Project Color</Label>
+              <div className="flex items-center space-x-2">
+                <div
+                  className="w-8 h-8 rounded-full border border-border"
+                  style={{ backgroundColor: newProjectColor }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

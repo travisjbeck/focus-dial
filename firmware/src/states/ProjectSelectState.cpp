@@ -117,14 +117,16 @@ void ProjectSelectState::handleInput()
     int indexToSave = (selectedProjectIndex == 0) ? -1 : selectedProjectIndex - 1;
     projectManager.setLastProjectIndex(indexToSave);
     Serial.printf("Selected project index %d (saved as %d)\n", selectedProjectIndex, indexToSave);
-    String selectedName = "";
-    String selectedColor = "#FFFFFF"; // Default to White
-    if (selectedProjectIndex == 0) { /* No project */ }
-    else if (selectedProjectIndex > 0 && selectedProjectIndex < projectsWithNone.size()) {
-        selectedName = projectsWithNone[selectedProjectIndex].name;
-        selectedColor = projectsWithNone[selectedProjectIndex].color;
-    } else { selectedName = "Error"; selectedColor = "#FF0000"; }
-    stateMachine.setPendingProject(selectedName, selectedColor);
+    
+    // Get the device_project_id
+    String selectedProjectId = ""; // Empty string indicates "No Project"
+    if (selectedProjectIndex > 0 && selectedProjectIndex < projectsWithNone.size()) {
+        selectedProjectId = projectsWithNone[selectedProjectIndex].device_project_id;
+    }
+    
+    Serial.printf("Selected device_project_id: %s\n", selectedProjectId.c_str());
+    stateMachine.setPendingProjectId(selectedProjectId); // Store the ID
+    
     StateMachine::timerState.setTimer(duration, 0);
     displayController.showTimerStart();
     stateMachine.changeState(&StateMachine::timerState); });

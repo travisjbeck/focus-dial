@@ -14,14 +14,8 @@ void PausedState::enter()
                                  {
                                    Serial.println("Paused State: Button Pressed - Resuming");
 
-                                   // Send 'Start' webhook (resume)
-                                   String projectName = stateMachine.getPendingProjectName(); // Get project name
-                                   String action = "start";
-                                   if (!projectName.isEmpty())
-                                   {
-                                     action += "|" + projectName;
-                                   }
-                                   networkController.sendWebhookAction(action);
+                                   // Send 'start' action to webhook handler (resume)
+                                   networkController.sendWebhookAction("start");
 
                                    // Transition back to TimerState with the stored duration and elapsed time
                                    StateMachine::timerState.setTimer(duration, elapsedTime);
@@ -33,14 +27,8 @@ void PausedState::enter()
                                        {
                                          Serial.println("Paused State: Button Double Pressed - Canceling");
 
-                                         // Send 'Stop' webhook (canceled)
-                                         String projectName = stateMachine.getPendingProjectName(); // Get project name
-                                         String action = "stop";
-                                         if (!projectName.isEmpty())
-                                         {
-                                           action += "|" + projectName;
-                                         }
-                                         networkController.sendWebhookAction(action);
+                                         // Send 'stop' action to webhook handler (canceled)
+                                         networkController.sendWebhookAction("stop");
                                          displayController.showCancel();
                                          stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
                                        });
@@ -63,14 +51,8 @@ void PausedState::update()
     // Timeout reached, transition to Idle State
     Serial.println("Paused State: Timout");
 
-    // Send 'Stop' webhook (timeout)
-    String projectName = stateMachine.getPendingProjectName(); // Get project name
-    String action = "stop";
-    if (!projectName.isEmpty())
-    {
-      action += "|" + projectName;
-    }
-    networkController.sendWebhookAction(action);
+    // Send 'stop' action to webhook handler (timeout)
+    networkController.sendWebhookAction("stop");
     displayController.showCancel();
     stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
   }

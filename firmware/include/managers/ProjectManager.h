@@ -19,9 +19,10 @@ public:
   int getLastProjectIndex() const;
 
   // Modifiers (handle NVS saving internally)
-  bool addProject(const Project &project);
+  bool addProject(const JsonObject &projectData);
   bool updateProject(int index, const Project &project);
   bool deleteProject(int index);
+  bool deleteProjectById(const String &deviceProjectId);
   void setLastProjectIndex(int index);
 
 private:
@@ -38,6 +39,9 @@ private:
   // JSON serialization/deserialization
   bool _serializeProjects(JsonDocument &doc);
   bool _deserializeProjects(JsonDocument &doc);
+
+  // Unique ID generation
+  String _generateNextDeviceId();
 };
 
 #endif // PROJECT_MANAGER_H

@@ -5,71 +5,44 @@ const { Project, TimeEntry } = require('../models');
 /**
  * POST /api/webhook
  * Receives webhook data from the Focus Dial
- * Payload format: action|projectName|#hexColor
- * Examples: 
- *   'start|My Project|#FF00AA'
- *   'stop||#FFFFFF' (for no project)
- *   'done|Client Project|#00FF00'
+ * Payload format: JSON {"action": "start|stop|done", "device_project_id": "...", "project_name": "...", "project_color": "#RRGGBB"}
  */
 router.post('/', async (req, res) => {
   try {
-    // Get the request body
-    const { body } = req;
+    console.log('Received webhook payload:', req.body);
 
-    // The webhook data can come in different formats depending on how the Focus Dial sends it
-    // Here we handle both raw text and JSON payloads
-    let webhookData;
-
-    if (Buffer.isBuffer(body)) {
-      // Handle raw buffer (typically from text/plain content-type)
-      webhookData = body.toString('utf8');
-    } else if (typeof body === 'string') {
-      // Handle string data
-      webhookData = body;
-    } else if (body && body.payload) {
-      // Handle payload in JSON object
-      webhookData = body.payload;
-    } else if (typeof body === 'object') {
-      // Try to stringify the object 
-      webhookData = JSON.stringify(body);
-    } else {
-      // Fallback
-      webhookData = String(body || '');
+    // Check if webhook payload is properly formatted
+    if (!req.body || !req.body.event) {
+      return res.status(400).json({ error: 'Invalid webhook payload' });
     }
 
-    console.log('Received webhook data:', webhookData);
+    const { event, project_name, project_color, device_project_id } = req.body;
 
-    // Parse the webhook data (format: action|projectName|#hexColor)
-    const parts = webhookData.split('|');
-    if (parts.length < 1) {
-      return res.status(400).json({ error: 'Invalid webhook data format' });
-    }
-
-    const action = parts[0]?.toLowerCase().trim();
-    const projectName = parts[1] || 'Default Project';
-    const hexColor = parts[2] || '#FFFFFF';
-
-    console.log(`Parsed webhook: Action=${action}, Project=${projectName}, Color=${hexColor}`);
-
-    // Handle the action
-    switch (action) {
-      case 'start':
-        await handleTimerStart(projectName, hexColor);
+    // Handle different timer events
+    switch (event) {
+      case 'timer_start':
+        if (!project_name) {
+          return res.status(400).json({ error: 'Project name is required for timer_start event' });
+        }
+        await handleTimerStart(device_project_id, project_name, project_color);
         break;
-      case 'stop':
+
+      case 'timer_stop':
         await handleTimerStop();
         break;
-      case 'done':
+
+      case 'timer_done':
         await handleTimerDone();
         break;
+
       default:
-        return res.status(400).json({ error: 'Unknown action', receivedAction: action });
+        return res.status(400).json({ error: 'Unknown event type' });
     }
 
-    return res.status(200).json({ message: 'Webhook processed successfully' });
+    res.json({ success: true });
   } catch (error) {
     console.error('Error processing webhook:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -77,17 +50,35 @@ router.post('/', async (req, res) => {
  * Handle timer start event
  * Creates or finds the project and starts a new time entry
  */
-async function handleTimerStart(projectName, hexColor) {
-  // Find or create project
-  const [project, created] = await Project.findOrCreate({
-    where: { name: projectName },
-    defaults: { color: hexColor }
+async function handleTimerStart(deviceProjectId, projectName, projectColor) {
+  // Require deviceProjectId for all requests
+  if (!deviceProjectId) {
+    throw new Error('device_project_id is required for timer_start events');
+  }
+
+  // Find or create project based on device_project_id
+  let project = await Project.findOne({
+    where: { device_project_id: deviceProjectId }
   });
 
-  // If project exists but color is different, update it
-  if (!created && project.color !== hexColor) {
-    project.color = hexColor;
-    await project.save();
+  if (project) {
+    // Update project name/color if they've changed
+    const needsUpdate = (project.name !== projectName) || (project.color !== projectColor);
+
+    if (needsUpdate) {
+      project.name = projectName;
+      project.color = projectColor;
+      await project.save();
+      console.log(`Updated project: ${projectName} (ID: ${deviceProjectId})`);
+    }
+  } else {
+    // Create new project with device_project_id
+    project = await Project.create({
+      name: projectName,
+      color: projectColor,
+      device_project_id: deviceProjectId
+    });
+    console.log(`Created new project: ${projectName} (ID: ${deviceProjectId})`);
   }
 
   // Create a new time entry
@@ -105,7 +96,7 @@ async function handleTimerStart(projectName, hexColor) {
  * Handle timer stop event
  * Finds the most recent active time entry and sets its end time
  */
-async function handleTimerStop() {
+async function handleTimerStop(deviceProjectId) {
   // Find the most recent active time entry (no end_time)
   const activeEntry = await TimeEntry.findOne({
     where: { end_time: null },
@@ -132,9 +123,9 @@ async function handleTimerStop() {
  * Handle timer done event
  * Similar to stop but might have different semantics in the future
  */
-async function handleTimerDone() {
+async function handleTimerDone(deviceProjectId) {
   // For now, handle the same as stop
-  await handleTimerStop();
+  await handleTimerStop(deviceProjectId);
   console.log('Timer marked as done');
 }
 

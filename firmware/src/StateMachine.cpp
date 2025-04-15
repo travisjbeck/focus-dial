@@ -97,26 +97,19 @@ int StateMachine::getPendingDuration()
   return pendingDuration;
 }
 
-void StateMachine::setPendingProject(const String &name, const String &color)
+void StateMachine::setPendingProjectId(const String &projectId)
 {
-  pendingProjectName = name;
-  pendingProjectColor = color;
+  pendingProjectId = projectId;
 }
 
-String StateMachine::getPendingProjectName() const
+String StateMachine::getPendingProjectId() const
 {
-  return pendingProjectName;
-}
-
-String StateMachine::getPendingProjectColor() const
-{
-  return pendingProjectColor;
+  return pendingProjectId;
 }
 
 void StateMachine::clearPendingProject()
 {
-  pendingProjectName = "";
-  pendingProjectColor = ""; // Reset pending details
+  pendingProjectId = ""; // Reset pending project ID
 }
 
 // Check if the current state is IdleState

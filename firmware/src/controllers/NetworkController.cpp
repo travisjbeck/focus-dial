@@ -311,17 +311,75 @@ void NetworkController::bluetoothTask(void *param)
 
 void NetworkController::sendWebhookAction(const String &action)
 {
-  if (!isWiFiConnected() || webhookURL.isEmpty())
+  // Retrieve the pending project ID from the state machine
+  String pendingId = stateMachine.getPendingProjectId();
+  String payloadAction = action; // start, stop, done
+
+  // Find the project details using the ID
+  Project currentProject; // Default empty project
+  bool projectFound = false;
+  if (!pendingId.isEmpty())
   {
-    Serial.println("Webhook skipped: WiFi disconnected or URL not set.");
-    return;
+    const auto &allProjects = getProjectManagerInstance().getProjects();
+    for (const auto &p : allProjects)
+    {
+      if (p.device_project_id == pendingId)
+      {
+        currentProject = p;
+        projectFound = true;
+        break;
+      }
+    }
+    if (!projectFound)
+    {
+      Serial.printf("Warning: Could not find project details for pending ID: %s\n", pendingId.c_str());
+      // Proceed without project info if ID is somehow invalid
+    }
   }
 
-  char *actionToSend = strdup(action.c_str());
-  if (xQueueSend(webhookQueue, &actionToSend, (TickType_t)0) != pdPASS)
+  // Create JSON payload
+  JsonDocument doc; // Use stack-based doc
+  doc["action"] = payloadAction;
+  // Add project details if a valid project was found
+  if (projectFound)
   {
-    Serial.println("Failed to queue webhook action - queue full?");
-    free(actionToSend);
+    doc["device_project_id"] = currentProject.device_project_id;
+    doc["project_name"] = currentProject.name;
+    doc["project_color"] = currentProject.color;
+  }
+  // Add other relevant data like timestamps, duration (if applicable)
+  // This part might need adjustment based on where this function is called from
+  // Example: Add duration if action is 'stop' or 'done'?
+  // doc["duration_seconds"] = ...;
+
+  String jsonPayload;
+  serializeJson(doc, jsonPayload);
+
+  // Add payload to the queue
+  if (webhookQueue != nullptr)
+  {
+    // Send a copy to the queue
+    char *payloadCopy = strdup(jsonPayload.c_str());
+    if (payloadCopy)
+    {
+      if (xQueueSend(webhookQueue, &payloadCopy, pdMS_TO_TICKS(100)) != pdPASS)
+      {
+        Serial.println("Failed to send webhook payload to queue.");
+        free(payloadCopy); // Free memory if sending failed
+      }
+      else
+      {
+        Serial.println("Webhook payload added to queue.");
+      }
+    }
+    else
+    {
+      Serial.println("Failed to allocate memory for webhook payload copy.");
+    }
+  }
+  else
+  {
+    Serial.println("Webhook queue is not initialized.");
   }
 }
 
@@ -631,11 +689,15 @@ void NetworkController::_setupWebServerRoutes()
 
   // Add new route for UPDATE via POST
   _server.on("/api/updateProject", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, std::bind(&NetworkController::handleUpdateProjectPostRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
-  Serial.println("Route registered: POST /api/updateProject"); // New route
+  Serial.println("Route registered: POST /api/updateProject");
 
-  // Route for DELETE via POST
+  // Routes for DELETE
   _server.on("/api/deleteProject", HTTP_POST, std::bind(&NetworkController::handleDeleteProjectPostRequest, this, std::placeholders::_1));
-  Serial.println("Route registered: POST /api/deleteProject");
+  Serial.println("Route registered: POST /api/deleteProject (by index)");
+
+  // Add new route for DELETE by ID
+  _server.on("/api/deleteProjectById", HTTP_POST, std::bind(&NetworkController::handleDeleteProjectByIdPostRequest, this, std::placeholders::_1));
+  Serial.println("Route registered: POST /api/deleteProjectById");
 
   // Webhook API endpoints
   _server.on("/api/webhook", HTTP_GET, std::bind(&NetworkController::handleGetWebhook, this, std::placeholders::_1));
@@ -764,7 +826,7 @@ void NetworkController::_onWiFiEvent(WiFiEvent_t event)
 
 void NetworkController::handleGetProjects(AsyncWebServerRequest *request)
 {
-  JsonDocument doc;
+  JsonDocument doc; // Adjust size dynamically if needed, or use JsonDocument
   JsonArray array = doc.to<JsonArray>();
 
   const auto &projects = getProjectManagerInstance().getProjects();
@@ -773,6 +835,8 @@ void NetworkController::handleGetProjects(AsyncWebServerRequest *request)
     JsonObject obj = array.add<JsonObject>();
     obj["name"] = project.name;
     obj["color"] = project.color;
+    // Always include the device_project_id (should exist for all projects going forward)
+    obj["device_project_id"] = project.device_project_id;
   }
 
   String responseJson;
@@ -783,8 +847,9 @@ void NetworkController::handleGetProjects(AsyncWebServerRequest *request)
 void NetworkController::handleAddProject(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
   if (index + len == total)
-  { // Process only when the full body is received
-    JsonDocument doc;
+  {                   // Process only when the full body is received
+    JsonDocument doc; // Use stack-based JsonDocument for ArduinoJson v7+
+    // Filter to only parse necessary fields for safety
     JsonDocument filter;
     filter["name"] = true;
     filter["color"] = true;
@@ -797,19 +862,20 @@ void NetworkController::handleAddProject(AsyncWebServerRequest *request, uint8_t
       return;
     }
 
-    if (!doc.is<JsonObject>() || !doc["name"].is<const char *>() || !doc["color"].is<const char *>())
+    // Ensure the root is an object
+    if (!doc.is<JsonObject>())
     {
-      Serial.println("POST /api/projects Error: Missing or invalid fields");
-      request->send(400, "application/json", "{\"error\":\"Missing or invalid 'name' or 'color' fields\"}");
+      Serial.println("POST /api/projects Error: JSON root is not an object");
+      request->send(400, "application/json", "{\"error\":\"Invalid JSON structure\"}");
       return;
     }
 
-    Project newProject;
-    newProject.name = doc["name"].as<String>();
-    newProject.color = doc["color"].as<String>();
+    JsonObject projectData = doc.as<JsonObject>();
 
-    if (getProjectManagerInstance().addProject(newProject))
+    // Pass the JsonObject directly to the ProjectManager
+    if (getProjectManagerInstance().addProject(projectData))
     {
+      // Fetch updated projects list (including the new one with its ID)
       JsonDocument responseDoc;
       JsonArray array = responseDoc.to<JsonArray>();
       const auto &projects = getProjectManagerInstance().getProjects();
@@ -818,9 +884,15 @@ void NetworkController::handleAddProject(AsyncWebServerRequest *request, uint8_t
         JsonObject obj = array.add<JsonObject>();
         obj["name"] = p.name;
         obj["color"] = p.color;
+        // Include the device ID in the response
+        if (!p.device_project_id.isEmpty())
+        {
+          obj["device_project_id"] = p.device_project_id;
+        }
       }
       String responseJson;
       serializeJson(responseDoc, responseJson);
+      // Send 201 Created with the updated list
       request->send(201, "application/json", responseJson);
     }
     else
@@ -936,6 +1008,67 @@ void NetworkController::handleDeleteProjectPostRequest(AsyncWebServerRequest *re
     Serial.printf("POST /api/deleteProject Error: Index %d not found\n", projectIndex);
     // Maybe return an error page or JSON instead of 404 if preferred
     request->send(404, "application/json", "{\"error\":\"Project index not found\"}");
+  }
+}
+
+void NetworkController::handleDeleteProjectByIdPostRequest(AsyncWebServerRequest *request)
+{
+  // Read device_project_id from POST body parameters
+  if (!request->hasParam("device_project_id", true))
+  {
+    Serial.println("POST /api/deleteProjectById Error: Missing 'device_project_id' parameter in body");
+    request->send(400, "application/json", "{\"error\":\"Missing 'device_project_id' parameter in body\"}");
+    return;
+  }
+
+  String deviceProjectId = request->getParam("device_project_id", true)->value();
+  if (deviceProjectId.isEmpty())
+  {
+    Serial.println("POST /api/deleteProjectById Error: Empty 'device_project_id' parameter");
+    request->send(400, "application/json", "{\"error\":\"Empty 'device_project_id' parameter\"}");
+    return;
+  }
+
+  Serial.printf("POST /api/deleteProjectById Request for ID: %s\n", deviceProjectId.c_str());
+
+  const auto &projects = getProjectManagerInstance().getProjects();
+  Serial.printf("Currently %d projects in list before delete\n", projects.size());
+
+  // Find and log the project we're going to delete (for debugging)
+  bool foundProject = false;
+  for (size_t i = 0; i < projects.size(); i++)
+  {
+    if (projects[i].device_project_id == deviceProjectId)
+    {
+      Serial.printf("Found project with ID %s: %s, %s\n",
+                    deviceProjectId.c_str(), projects[i].name.c_str(), projects[i].color.c_str());
+      foundProject = true;
+      break;
+    }
+  }
+
+  if (!foundProject)
+  {
+    Serial.printf("POST /api/deleteProjectById Warning: Project with ID %s not found in pre-delete check\n",
+                  deviceProjectId.c_str());
+  }
+
+  bool deleted = getProjectManagerInstance().deleteProjectById(deviceProjectId);
+  Serial.printf("deleteProjectById returned: %s\n", deleted ? "true" : "false");
+
+  const auto &updatedProjects = getProjectManagerInstance().getProjects();
+  Serial.printf("Now %d projects in list after delete\n", updatedProjects.size());
+
+  if (deleted)
+  {
+    // Redirect back to the main page after successful deletion
+    request->redirect("/");
+  }
+  else
+  {
+    Serial.printf("POST /api/deleteProjectById Error: ID %s not found\n", deviceProjectId.c_str());
+    request->send(404, "application/json",
+                  "{\"error\":\"Project with specified ID not found\"}");
   }
 }
 

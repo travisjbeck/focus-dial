@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Projects } from "./pages/Projects";
-import { Toaster } from "./components/ui/Toaster";
+import { Toaster } from "./components/ui/toast/Toaster";
 
 // Let's implement the Time Entries page since we now have working time entries
 import { TimeEntries } from "./pages/TimeEntries";
