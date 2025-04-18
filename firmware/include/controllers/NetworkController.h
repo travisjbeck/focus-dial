@@ -49,6 +49,7 @@ private:
   unsigned long _lastWsCleanupTime;
 
   String webhookURL;
+  String apiKey; // Added to store API Key
   bool btPaired; // Paired state loaded from NVS
   bool bluetoothActive;
   bool bluetoothAttempted;
@@ -84,6 +85,8 @@ private:
   void handleUpdateProjectPostRequest(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
   void handleGetWebhook(AsyncWebServerRequest *request);
   void handleUpdateWebhook(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
+  void handleGetApiKeyStatus(AsyncWebServerRequest *request); // New handler for GET API Key status
+  void handleUpdateApiKey(AsyncWebServerRequest *request);    // New handler for POST API Key
 
   // Tasks
   TaskHandle_t bluetoothTaskHandle;

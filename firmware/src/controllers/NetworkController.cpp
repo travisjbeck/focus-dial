@@ -80,6 +80,7 @@ void NetworkController::begin()
   // Load Webhook URL from NVS under the "focusdial" namespace
   preferences.begin("focusdial", true); // Start read-only
   webhookURL = preferences.getString("webhook_url", "");
+  apiKey = preferences.getString("api_key", ""); // Load API Key
   preferences.end();
 
   // --- Validate loaded URL ---
@@ -110,6 +111,14 @@ void NetworkController::begin()
   if (!webhookURL.isEmpty())
   {
     Serial.println("Loaded Webhook URL: " + webhookURL);
+  }
+  if (!apiKey.isEmpty())
+  {
+    Serial.println("Loaded API Key (partial): " + apiKey.substring(0, 5) + "..."); // Log partial key for confirmation
+  }
+  else
+  {
+    Serial.println("API Key not found in NVS.");
   }
 
   if (webhookQueue == nullptr)
@@ -315,6 +324,22 @@ void NetworkController::sendWebhookAction(const String &action)
   String pendingId = stateMachine.getPendingProjectId();
   String payloadAction = action; // start, stop, done
 
+  // Map the firmware action to the webhook action
+  String webhookAction;
+  if (payloadAction == "start")
+  {
+    webhookAction = "start_timer";
+  }
+  else if (payloadAction == "stop" || payloadAction == "done")
+  {
+    webhookAction = "stop_timer";
+  }
+  else
+  {
+    Serial.printf("Warning: Unknown action type: %s\n", payloadAction.c_str());
+    return;
+  }
+
   // Find the project details using the ID
   Project currentProject; // Default empty project
   bool projectFound = false;
@@ -333,24 +358,21 @@ void NetworkController::sendWebhookAction(const String &action)
     if (!projectFound)
     {
       Serial.printf("Warning: Could not find project details for pending ID: %s\n", pendingId.c_str());
-      // Proceed without project info if ID is somehow invalid
+      return; // Don't send webhook if project not found
     }
   }
-
-  // Create JSON payload
-  JsonDocument doc; // Use stack-based doc
-  doc["action"] = payloadAction;
-  // Add project details if a valid project was found
-  if (projectFound)
+  else
   {
-    doc["device_project_id"] = currentProject.device_project_id;
-    doc["project_name"] = currentProject.name;
-    doc["project_color"] = currentProject.color;
+    Serial.println("No pending project ID found. Cannot send webhook.");
+    return;
   }
-  // Add other relevant data like timestamps, duration (if applicable)
-  // This part might need adjustment based on where this function is called from
-  // Example: Add duration if action is 'stop' or 'done'?
-  // doc["duration_seconds"] = ...;
+
+  // Create JSON payload in the format expected by the webhook endpoint
+  JsonDocument doc;
+  doc["action"] = webhookAction;
+  doc["device_project_id"] = currentProject.device_project_id;
+  doc["project_name"] = currentProject.name;
+  doc["project_color"] = currentProject.color;
 
   String jsonPayload;
   serializeJson(doc, jsonPayload);
@@ -358,14 +380,13 @@ void NetworkController::sendWebhookAction(const String &action)
   // Add payload to the queue
   if (webhookQueue != nullptr)
   {
-    // Send a copy to the queue
     char *payloadCopy = strdup(jsonPayload.c_str());
     if (payloadCopy)
     {
       if (xQueueSend(webhookQueue, &payloadCopy, pdMS_TO_TICKS(100)) != pdPASS)
       {
         Serial.println("Failed to send webhook payload to queue.");
-        free(payloadCopy); // Free memory if sending failed
+        free(payloadCopy);
       }
       else
       {
@@ -452,26 +473,36 @@ bool NetworkController::sendWebhookRequest(const String &action)
   {
     http.addHeader("Content-Type", "application/json");
 
-    // Parse the action string (format: "action|projectName" or just "action")
-    String actualAction = action;
-    String projectName = "";
-    int separatorIndex = action.indexOf('|');
-    if (separatorIndex != -1)
+    // Add Authorization header if API key exists
+    if (!apiKey.isEmpty())
     {
-      actualAction = action.substring(0, separatorIndex);
-      projectName = action.substring(separatorIndex + 1);
+      http.addHeader("Authorization", "Bearer " + apiKey);
+    }
+    else
+    {
+      Serial.println("Warning: Sending webhook without API Key.");
     }
 
-    // Construct JSON payload
-    JsonDocument doc;
-    doc["action"] = actualAction;
-    if (!projectName.isEmpty())
+    // Parse the incoming action JSON
+    JsonDocument incomingDoc;
+    DeserializationError error = deserializeJson(incomingDoc, action);
+
+    if (error)
     {
-      doc["project"] = projectName;
+      Serial.printf("Failed to parse incoming action JSON: %s\n", error.c_str());
+      return false;
     }
+
+    // Create the final payload
+    JsonDocument outgoingDoc;
+    outgoingDoc["action"] = incomingDoc["action"];
+    outgoingDoc["timestamp"] = time(nullptr); // Current Unix timestamp
+    outgoingDoc["device_project_id"] = incomingDoc["device_project_id"];
+    outgoingDoc["project_name"] = incomingDoc["project_name"];
+    outgoingDoc["project_color"] = incomingDoc["project_color"];
 
     String jsonPayload;
-    serializeJson(doc, jsonPayload);
+    serializeJson(outgoingDoc, jsonPayload);
 
     Serial.printf("Sending webhook payload: %s\n", jsonPayload.c_str());
 
@@ -704,6 +735,13 @@ void NetworkController::_setupWebServerRoutes()
   Serial.println("Route registered: GET /api/webhook");
   _server.on("/api/webhook", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, std::bind(&NetworkController::handleUpdateWebhook, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
   Serial.println("Route registered: POST /api/webhook");
+
+  // API Key routes
+  _server.on("/api/apikey", HTTP_GET, std::bind(&NetworkController::handleGetApiKeyStatus, this, std::placeholders::_1));
+  Serial.println("Route registered: GET /api/apikey");
+  // Use on() with HTTP_POST for simple form data
+  _server.on("/api/apikey", HTTP_POST, std::bind(&NetworkController::handleUpdateApiKey, this, std::placeholders::_1));
+  Serial.println("Route registered: POST /api/apikey");
 
   // --- Then Serve Static Files ---
   _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -1122,6 +1160,64 @@ void NetworkController::handleUpdateWebhook(AsyncWebServerRequest *request, uint
     {
       request->send(400, "application/json", "{\"error\":\"Invalid webhook URL format\"}");
     }
+  }
+}
+
+// New Handler: Get API Key Status
+void NetworkController::handleGetApiKeyStatus(AsyncWebServerRequest *request)
+{
+  // Check if the API key exists in NVS without reading its value
+  bool keyPresent = false;
+  if (preferences.begin("focusdial", true))
+  { // Read-only
+    keyPresent = preferences.isKey("api_key");
+    preferences.end();
+  }
+
+  JsonDocument doc;
+  doc["key_present"] = keyPresent;
+
+  String responseJson;
+  serializeJson(doc, responseJson);
+  request->send(200, "application/json", responseJson);
+}
+
+// New Handler: Update API Key
+void NetworkController::handleUpdateApiKey(AsyncWebServerRequest *request)
+{
+  String receivedKey = "";
+  // Check if the parameter exists in the POST body (URL-encoded form data)
+  if (request->hasParam("api_key", true))
+  {
+    receivedKey = request->getParam("api_key", true)->value();
+  }
+
+  // Trim whitespace
+  receivedKey.trim();
+
+  Serial.println("Received POST request to /api/apikey");
+
+  // Save the key (even if empty, to allow clearing)
+  if (preferences.begin("focusdial", false))
+  { // Read-write
+    preferences.putString("api_key", receivedKey);
+    preferences.end();
+    apiKey = receivedKey; // Update the in-memory copy as well
+
+    if (!receivedKey.isEmpty())
+    {
+      Serial.println("API Key saved successfully (partial): " + apiKey.substring(0, 5) + "...");
+    }
+    else
+    {
+      Serial.println("API Key cleared successfully.");
+    }
+    request->send(200, "application/json", "{\"message\":\"API Key updated successfully\"}");
+  }
+  else
+  {
+    Serial.println("Failed to open NVS for writing API key.");
+    request->send(500, "application/json", "{\"error\":\"Failed to save API Key (NVS error)\"}");
   }
 }
 

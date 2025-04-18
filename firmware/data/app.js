@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM fully loaded');
   fetchAndRenderProjects();
   fetchWebhookUrl();
+  fetchApiKey();
 
   // Initialize WebSocket connection
   setupWebSocket();
@@ -141,7 +142,7 @@ const apiBaseUrl = '/api/projects';
 const projectListDiv = document.getElementById('project-list');
 const messageArea = document.getElementById('message-area');
 
-// --- Webhook URL Configuration ---
+// --- Webhook URL & API Key Configuration ---
 async function fetchWebhookUrl() {
   try {
     const response = await fetch('/api/webhook');
@@ -173,52 +174,103 @@ async function fetchWebhookUrl() {
   }
 }
 
+// New function to fetch API Key
+async function fetchApiKey() {
+  try {
+    // Assuming a new GET endpoint exists
+    const response = await fetch('/api/apikey');
+    if (!response.ok) {
+      console.log('API Key endpoint not available or key not set');
+      return;
+    }
+    const data = await response.json();
+    const apiKeyInput = document.getElementById('api-key');
+    if (apiKeyInput && data.key_present) {
+      // Don't display the actual key, just indicate it's set
+      // Or use a placeholder if preferred
+      apiKeyInput.placeholder = 'API Key is set (********)';
+      // Optionally, could have a separate status indicator
+    }
+  } catch (error) {
+    console.error('Error fetching API key status:', error);
+  }
+}
+
 async function handleWebhookSubmit(event) {
   event.preventDefault();
   const form = event.target;
   const webhookInput = document.getElementById('webhook-url');
+  const apiKeyInput = document.getElementById('api-key'); // Get API Key input
 
   let webhookUrl = webhookInput.value.trim();
+  let apiKey = apiKeyInput.value.trim(); // Get API Key value
 
-  if (!webhookUrl) {
-    showMessage('Webhook URL cannot be empty.', 'error');
-    return;
-  }
-
-  // Ensure URL has a protocol
-  if (!webhookUrl.match(/^https?:\/\//i)) {
-    webhookUrl = 'http://' + webhookUrl;
-  }
-
-  // Simple URL validation
-  try {
-    new URL(webhookUrl); // Will throw if invalid URL
-  } catch (e) {
-    showMessage('Please enter a valid URL.', 'error');
-    return;
-  }
-
-  showMessage('Updating webhook URL...', '');
-
-  try {
-    const response = await fetch('/api/webhook', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: webhookUrl }),
-    });
-
-    if (response.ok) {
-      showMessage('Webhook URL updated successfully.', 'success');
-    } else {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to update webhook URL. Invalid response from device.' }));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+  // Keep URL validation (allow empty URL to clear it)
+  if (webhookUrl) {
+    if (!webhookUrl.match(/^https?:\/\//i)) {
+      webhookUrl = 'http://' + webhookUrl;
     }
-  } catch (error) {
-    console.error('Error updating webhook URL:', error);
-    showMessage(`Error: ${error.message}`, 'error');
+    try {
+      new URL(webhookUrl);
+    } catch (e) {
+      showMessage('Please enter a valid URL or leave it empty to clear.', 'error');
+      return;
+    }
   }
+
+  // Basic check: if URL is provided, API key should also be provided
+  if (webhookUrl && !apiKey) {
+    showMessage('API Key is required when Webhook URL is set.', 'error');
+    apiKeyInput.focus(); // Focus the API key input
+    return;
+  }
+
+  showMessage('Saving settings...', '');
+
+  // Use Promise.allSettled to send both requests and handle results
+  const results = await Promise.allSettled([
+    // Request 1: Update Webhook URL (using JSON)
+    fetch('/api/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl }), // Send empty string to clear
+    }),
+    // Request 2: Update API Key (using URL-encoded form data)
+    fetch('/api/apikey', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `api_key=${encodeURIComponent(apiKey)}`, // Send empty string to potentially clear
+    })
+  ]);
+
+  // Process results
+  const urlResult = results[0];
+  const keyResult = results[1];
+  let success = true;
+  let messages = [];
+
+  if (urlResult.status === 'fulfilled' && urlResult.value.ok) {
+    messages.push('Webhook URL updated.');
+  } else {
+    success = false;
+    const errorMsg = urlResult.reason ? urlResult.reason.message : `HTTP ${urlResult.value?.status}`;
+    messages.push(`Webhook URL update failed: ${errorMsg}`);
+    console.error('Webhook URL update failed:', urlResult.reason || urlResult.value);
+  }
+
+  if (keyResult.status === 'fulfilled' && keyResult.value.ok) {
+    messages.push('API Key updated.');
+    // Clear the input field after successful save for security
+    apiKeyInput.value = '';
+    apiKeyInput.placeholder = 'API Key is set (********)';
+  } else {
+    success = false;
+    const errorMsg = keyResult.reason ? keyResult.reason.message : `HTTP ${keyResult.value?.status}`;
+    messages.push(`API Key update failed: ${errorMsg}`);
+    console.error('API Key update failed:', keyResult.reason || keyResult.value);
+  }
+
+  showMessage(messages.join('<br>'), success ? 'success' : 'error');
 }
 
 // --- Fetch and Render Projects --- 

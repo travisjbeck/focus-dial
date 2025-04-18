@@ -1,5 +1,5 @@
 ---
-description: Creating and Managing new projects, enhancements, or features. 
+description: Creating and Managing new projects, enhancements, or features.
 globs: 
 alwaysApply: false
 ---
@@ -61,6 +61,7 @@ Each project markdown file should follow this template:
 
 2. **When starting work on a project**:
    - Move the file from `.cursor-projects/planned/` to `.cursor-projects/active/`
+   - Use the bash `mv` command to move files
    - Update the Status field to "Active"
    - Update the Last Updated field
 
@@ -72,6 +73,7 @@ Each project markdown file should follow this template:
 4. **When completing a project**:
    - Ensure all tasks are checked off
    - Move the file from `.cursor-projects/active/` to `.cursor-projects/completed/`
+   - Use the bash `mv` command to move files
    - Update the Status field to "Completed"
    - Update the Last Updated field
 
@@ -90,3 +92,6 @@ All previous project files serve as a knowledge base for future work. Before sta
 3. Build upon previous solutions when applicable
 
 This approach ensures continuity of knowledge and prevents redundant work or repeated errors.
+
+## IMPORTANT 
+When working on a project, you are the developer. I am the CTO. You do not need to ask me what you need to do next. You must be proactive and autonomous and complete the project start to finish making sure that you have tests and builds in between and that every different task works before moving on to the next. When you are done with the task, choose the next one and continue autonomously.
