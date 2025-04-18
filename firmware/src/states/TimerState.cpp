@@ -50,39 +50,61 @@ void TimerState::enter()
     Serial.printf("Timer State: Resuming with stored color %06X\n", currentLedColor);
   }
 
-  // Start LED Fill and Decay Animation using stored color and REMAINING duration
-  uint32_t remainingDurationMs = (this->duration * 60 - this->elapsedTime) * 1000;
-  if (remainingDurationMs > 0)
+  // Handle LED state based on duration
+  if (this->duration == 0) // Indeterminate mode
   {
-    ledController.startFillAndDecay(currentLedColor, remainingDurationMs);
+    Serial.println("Timer State: Indeterminate mode - setting solid LED color.");
+    ledController.setSolid(currentLedColor);
   }
-  else
+  else // Countdown mode
   {
-    ledController.turnOff(); // Turn off if timer already expired on resume
+    // Start LED Fill and Decay Animation using stored color and REMAINING duration
+    uint32_t remainingDurationMs = (this->duration * 60 - this->elapsedTime) * 1000;
+    if (remainingDurationMs > 0)
+    {
+      ledController.startFillAndDecay(currentLedColor, remainingDurationMs);
+    }
+    else
+    {
+      ledController.turnOff(); // Turn off if timer already expired on resume
+    }
   }
 
   // Setup Input Handlers
   inputController.onPressHandler([this]()
                                  {
-                                   Serial.println("Timer State: Button Pressed - Pausing");
-                                   // Send 'stop' action, webhook handler uses stored ID
-                                   networkController.sendWebhookAction("stop"); 
-                                   displayController.showTimerPause();
-                                   StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
-                                   stateMachine.changeState(&StateMachine::pausedState); });
+                                   // Send 'stop' action first (applies to both modes)
+                                   networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+
+                                   if (this->duration == 0) // Indeterminate mode
+                                   {
+                                     Serial.println("Timer State: Button Pressed - Stopping Indeterminate Timer");
+                                     // Pass final elapsed time to DoneState via StateMachine
+                                     stateMachine.setPendingElapsedTime(this->elapsedTime);
+                                     displayController.showTimerDone(); // Show done animation
+                                     stateMachine.changeState(&StateMachine::doneState);
+                                   }
+                                   else // Countdown mode
+                                   {
+                                     Serial.println("Timer State: Button Pressed - Pausing Countdown Timer");
+                                     displayController.showTimerPause();
+                                     // Pass current duration and elapsed time to PausedState
+                                     StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
+                                     stateMachine.changeState(&StateMachine::pausedState);
+                                   } });
 
   inputController.onDoublePressHandler([this]()
                                        {
                                          Serial.println("Timer State: Button Double Pressed - Canceling");
-                                         // Send 'stop' action, webhook handler uses stored ID
-                                         networkController.sendWebhookAction("stop");
+                                         // Send 'stop' action with current elapsed time
+                                         networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
                                          displayController.showCancel();
                                          stateMachine.changeState(&StateMachine::idleState); });
 
   // Send 'start' action ONLY on initial entry
   if (elapsedTime == 0)
   {
-    networkController.sendWebhookAction("start");
+    networkController.sendWebhookAction("start", this->duration, 0); // Pass set duration, 0 elapsed
   }
 }
 
@@ -94,16 +116,27 @@ void TimerState::update()
   unsigned long currentTime = millis();
   elapsedTime = (currentTime - startTime) / 1000;
 
-  int remainingSeconds = duration * 60 - elapsedTime;
-
-  displayController.drawTimerScreen(remainingSeconds);
-
-  // Check if the timer is done
-  if (remainingSeconds <= 0)
+  if (duration == 0) // Indeterminate Mode
   {
-    Serial.println("Timer State: Done");
-    displayController.showTimerDone();
-    stateMachine.changeState(&StateMachine::doneState); // Transition to Done State
+    // Display elapsed time counting up
+    displayController.drawTimerScreen(elapsedTime, true);
+    // No automatic completion check, relies on button press
+  }
+  else // Countdown Mode
+  {
+    int remainingSeconds = duration * 60 - elapsedTime;
+
+    displayController.drawTimerScreen(remainingSeconds, false);
+
+    // Check if the timer is done
+    if (remainingSeconds <= 0)
+    {
+      Serial.println("Timer State: Done (Countdown)");
+      // Pass final elapsed time (which is duration * 60) to DoneState via StateMachine
+      stateMachine.setPendingElapsedTime(this->duration * 60);
+      displayController.showTimerDone();
+      stateMachine.changeState(&StateMachine::doneState); // Transition to Done State
+    }
   }
 }
 

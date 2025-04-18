@@ -39,17 +39,15 @@ void DisplayController::drawSplashScreen()
   oled.display();
 }
 
-void DisplayController::drawIdleScreen(int duration, bool wifi)
+void DisplayController::drawIdleScreen(int durationMinutes, bool wifi)
 {
   if (isAnimationRunning())
     return;
 
+  // Restore original blinking logic for WiFi icon when disconnected
   static unsigned long lastBlinkTime = 0;
   static bool blinkState = true;
-
   unsigned long currentTime = millis();
-
-  // Toggle blink state if WiFi is off
   if (!wifi && (currentTime - lastBlinkTime >= 500))
   {
     blinkState = !blinkState;
@@ -58,7 +56,7 @@ void DisplayController::drawIdleScreen(int duration, bool wifi)
 
   oled.clearDisplay();
 
-  // "PRESS TO START"
+  // Restore original "PRESS TO START" label
   oled.setFont(&Picopixel);
   oled.setTextSize(1);
   oled.setTextColor(1);
@@ -66,91 +64,108 @@ void DisplayController::drawIdleScreen(int duration, bool wifi)
   oled.print("PRESS TO START");
   oled.drawRoundRect(35, 51, 60, 11, 1, 1);
 
-  // Display WiFi icon based on WiFi state
+  // Restore original WiFi icon display logic (top right with text)
   if (wifi)
   {
     oled.drawBitmap(70, 3, icon_wifi_on, 5, 5, 1);
     oled.setCursor(54, 7);
     oled.print("WIFI");
   }
-  else if (blinkState)
+  else if (blinkState) // Only draw 'off' icon when blinking
   {
     oled.drawBitmap(70, 3, icon_wifi_off, 5, 5, 1);
     oled.setCursor(54, 7);
     oled.print("WIFI");
   }
 
-  char left[3], right[3];
-  int xLeft = 1;
-  int xRight = 73;
-
-  if (duration < 60)
+  // Check if duration is indeterminate (0)
+  if (durationMinutes == 0)
   {
-    sprintf(left, "%02d", duration);
-    strcpy(right, "00");
+    // Draw infinity icon centered, replacing the time digits ONLY
+    int iconWidth = 48;
+    int iconHeight = 24;
+    int x = (oled.width() - iconWidth) / 2;
+    int y = (oled.height() - iconHeight) / 2; // Approximately center vertically
+    oled.drawBitmap(x, y, icon_infinity, iconWidth, iconHeight, 1);
+    // NO H/M/S labels, NO separator dots for infinity icon
   }
   else
   {
-    int hours = duration / 60;
-    int minutes = duration % 60;
-    sprintf(left, "%02d", hours);
-    sprintf(right, "%02d", minutes);
+    // Restore original logic to display MM:00 using large font
+    char left[3], right[3];
+    int xLeft = 1;
+    int xRight = 73;
+
+    // Idle screen always shows MM:00 format based on durationMinutes
+    sprintf(left, "%02d", durationMinutes);
+    strcpy(right, "00");
+
+    // Adjust X position if the first character is '1'
+    if (left[0] == '1')
+    {
+      xLeft += 20;
+    }
+    // Right side is always "00", no need to check '1'
+
+    oled.setTextSize(5);
+    oled.setFont(&Org_01);
+    oled.setCursor(xLeft, 36);
+    oled.print(left);
+
+    oled.setCursor(xRight, 36);
+    oled.print(right);
+
+    // Restore original separator dots
+    oled.fillRect(62, 21, 5, 5, 1);
+    oled.fillRect(62, 31, 5, 5, 1);
+
+    // REMOVE any H/M/S labels below the time - ensure they are not drawn
+    // oled.setTextSize(1);
+    // oled.setFont(&Picopixel);
+    // oled.setCursor(27, 54);
+    // oled.print("M");
+    // oled.setCursor(98, 54);
+    // oled.print("S");
   }
-
-  // Adjust position if the first character is '1'
-  if (left[0] == '1')
-  {
-    xLeft += 20;
-  }
-  if (right[0] == '1')
-  {
-    xRight += 20;
-  }
-
-  oled.setTextSize(5);
-  oled.setFont(&Org_01);
-  oled.setCursor(xLeft, 36);
-  oled.print(left);
-
-  oled.setCursor(xRight, 36);
-  oled.print(right);
-
-  // Separator dots
-  oled.fillRect(62, 21, 5, 5, 1);
-  oled.fillRect(62, 31, 5, 5, 1);
 
   oled.display();
 }
 
-void DisplayController::drawTimerScreen(int remainingSeconds)
+void DisplayController::drawTimerScreen(int timeValue, bool isCountUp)
 {
   if (isAnimationRunning())
     return;
 
   oled.clearDisplay();
 
-  if (remainingSeconds < 0)
+  int displaySeconds = timeValue;
+  if (!isCountUp && displaySeconds < 0) // Ensure remainingSeconds doesn't go below 0 for countdown display
   {
-    remainingSeconds = 0;
+    displaySeconds = 0;
+  }
+  else if (isCountUp && displaySeconds < 0) // Should not happen for elapsed, but safety check
+  {
+    displaySeconds = 0;
   }
 
-  int hours = remainingSeconds / 3600;
-  int minutes = (remainingSeconds % 3600) / 60;
-  int seconds = remainingSeconds % 60;
+  // Calculate H, M, S based on the time value (which is either elapsed or remaining)
+  int hours = displaySeconds / 3600;
+  int minutes = (displaySeconds % 3600) / 60;
+  int seconds = displaySeconds % 60;
 
-  char left[3], right[3]; // No need for secondsStr here
+  char left[3], right[3];
   int xLeft = 1;
   int xRight = 73;
   int yPos = 36; // Default Y position for HH:MM
 
-  // Format left and right
-  if (hours > 0)
+  // Format left and right (HH:MM or MM:SS)
+  if (hours > 0 || (isCountUp && displaySeconds >= 3600)) // Show HH:MM if hours > 0 OR if counting up and reached an hour
   {
     sprintf(left, "%02d", hours);
     sprintf(right, "%02d", minutes);
     // yPos remains 36
   }
-  else
+  else // Show MM:SS otherwise
   {
     sprintf(left, "%02d", minutes);
     sprintf(right, "%02d", seconds);
@@ -167,7 +182,7 @@ void DisplayController::drawTimerScreen(int remainingSeconds)
     xRight += 20;
   }
 
-  // Draw the large digits (HH:MM or MM:SS)
+  // Draw the large digits
   oled.setTextColor(1);
   oled.setTextSize(5);
   oled.setFont(&Org_01);
@@ -176,20 +191,30 @@ void DisplayController::drawTimerScreen(int remainingSeconds)
   oled.setCursor(xRight, yPos);
   oled.print(right);
 
-  // Draw separator dots, adjust Y position based on main digits
+  // Draw separator dots
   oled.fillRect(62, yPos - 15, 5, 5, 1); // Upper dot
   oled.fillRect(62, yPos - 5, 5, 5, 1);  // Lower dot
 
-  // Only draw icons and labels if displaying hours and minutes
-  if (hours > 0)
+  // Draw labels (H/M or M/S)
+  oled.setTextSize(1);
+  oled.setFont(&Picopixel);
+  if (hours > 0 || (isCountUp && displaySeconds >= 3600)) // Show H and M if hours > 0 OR if counting up and reached an hour
   {
-    oled.drawBitmap(61, 3, icon_star, 7, 7, 1); // Keep star icon?
-    oled.setTextSize(1);
-    oled.setFont(&Picopixel); // Use smaller font for labels
     oled.setCursor(27, 54);
     oled.print("H");
     oled.setCursor(98, 54);
     oled.print("M");
+    // Optionally draw a small indicator for count-up mode?
+    // if (isCountUp) { oled.drawBitmap(61, 3, icon_up_arrow, 7, 7, 1); }
+  }
+  else // Show M and S otherwise
+  {
+    oled.setCursor(27, 54);
+    oled.print("M");
+    oled.setCursor(98, 54);
+    oled.print("S");
+    // Optionally draw a small indicator for count-up mode?
+    // if (isCountUp) { oled.drawBitmap(61, 3, icon_up_arrow, 7, 7, 1); }
   }
 
   oled.display();
@@ -320,109 +345,161 @@ void DisplayController::drawResetScreen(bool resetSelected)
   oled.display();
 }
 
-void DisplayController::drawDoneScreen()
+void DisplayController::drawDoneScreen(unsigned long finalElapsedTime)
 {
   if (isAnimationRunning())
     return;
 
-  static unsigned long lastBlinkTime = 0;
-  static bool blinkState = true;
-
-  unsigned long currentTime = millis();
-
-  // Toggle blink every 500 ms
-  if (currentTime - lastBlinkTime >= 500)
-  {
-    blinkState = !blinkState;
-    lastBlinkTime = currentTime;
-  }
-
   oled.clearDisplay();
 
-  if (blinkState)
+  // Calculate H, M, S from finalElapsedTime
+  int hours = finalElapsedTime / 3600;
+  int minutes = (finalElapsedTime % 3600) / 60;
+  int seconds = finalElapsedTime % 60;
+
+  char left[3], right[3];
+  int xLeft = 1;
+  int xRight = 73;
+  int yPos = 36;
+
+  // Format left and right (HH:MM or MM:SS)
+  if (hours > 0) // Show HH:MM if duration was an hour or more
   {
-    oled.setTextColor(1);
-    oled.setTextSize(5);
-    oled.setFont(&Org_01);
-    oled.setCursor(1, 36);
-    oled.print("00");
-    oled.setCursor(73, 36);
-    oled.print("00");
-    oled.fillRect(62, 31, 5, 5, 1);
-    oled.fillRect(62, 21, 5, 5, 1);
+    sprintf(left, "%02d", hours);
+    sprintf(right, "%02d", minutes);
+  }
+  else // Show MM:SS otherwise
+  {
+    sprintf(left, "%02d", minutes);
+    sprintf(right, "%02d", seconds);
+    yPos = 40; // Adjust Y slightly for MM:SS
   }
 
-  // Draw label and icon
+  // Adjust X position if the first character is '1'
+  if (left[0] == '1')
+  {
+    xLeft += 20;
+  }
+  if (right[0] == '1')
+  {
+    xRight += 20;
+  }
+
+  // Draw the large digits
+  oled.setTextColor(1);
+  oled.setTextSize(5);
+  oled.setFont(&Org_01);
+  oled.setCursor(xLeft, yPos);
+  oled.print(left);
+  oled.setCursor(xRight, yPos);
+  oled.print(right);
+
+  // Draw separator dots
+  oled.fillRect(62, yPos - 15, 5, 5, 1); // Upper dot
+  oled.fillRect(62, yPos - 5, 5, 5, 1);  // Lower dot
+
+  // Draw labels (H/M or M/S)
+  oled.setTextSize(1);
+  oled.setFont(&Picopixel);
+  if (hours > 0)
+  {
+    oled.setCursor(27, 54);
+    oled.print("H");
+    oled.setCursor(98, 54);
+    oled.print("M");
+  }
+  else
+  {
+    oled.setCursor(27, 54);
+    oled.print("M");
+    oled.setCursor(98, 54);
+    oled.print("S");
+  }
+
+  // Draw label and icon (Keep "DONE" label)
   oled.fillRoundRect(46, 51, 35, 11, 1, 1);
-  oled.setTextColor(0);
+  oled.setTextColor(0); // Text inside box is black (inverted)
   oled.setTextSize(1);
   oled.setFont(&Picopixel);
   oled.setCursor(56, 58);
   oled.print("DONE");
-  oled.drawBitmap(61, 3, icon_star, 7, 7, 1);
+  // oled.drawBitmap(61, 3, icon_star, 7, 7, 1); // Remove star, keep it clean
 
   oled.display();
 }
 
-void DisplayController::drawAdjustScreen(int duration)
+void DisplayController::drawAdjustScreen(int duration, bool wifi)
 {
   if (isAnimationRunning())
     return;
 
   oled.clearDisplay();
 
-  oled.setTextColor(1);
-  oled.setTextSize(4);
-  oled.setFont(&Org_01);
-
-  int hours = duration / 60;
-  int minutes = duration % 60;
-
-  char hourStr[3];
-  char minuteStr[3];
-
-  // Format hour and minute strings with leading zeros
-  sprintf(hourStr, "%02d", hours);
-  sprintf(minuteStr, "%02d", minutes);
-
-  // Default positions for hours and minutes
-  int xHour = 13;
-  int xMinute = 72;
-
-  // Check the first character and adjust position if '1'
-  if (hourStr[0] == '1')
-  {
-    xHour += 15;
-  }
-  if (minuteStr[0] == '1')
-  {
-    xMinute += 15;
-  }
-
-  // Display hours
-  oled.setCursor(xHour, 37);
-  oled.print(hourStr);
-
-  // Display minutes
-  oled.setCursor(xMinute, 37);
-  oled.print(minuteStr);
-
-  // Display labels
-  oled.setTextSize(1);
-  oled.setCursor(26, 55);
-  oled.print("HRS");
-  oled.setCursor(86, 55);
-  oled.print("MIN");
-
-  // Additional UI elements
-  oled.drawBitmap(0, 12, image_change_left, 7, 40, 1);
-  oled.drawRoundRect(36, 1, 57, 11, 1, 1);
-  oled.drawBitmap(121, 12, image_change_right, 7, 40, 1);
+  // Restore original "PRESS TO SAVE" label
   oled.setFont(&Picopixel);
-  oled.setCursor(41, 8);
+  oled.setTextSize(1);
+  oled.setTextColor(1);
+  oled.setCursor(40, 58);
   oled.print("PRESS TO SAVE");
-  oled.drawBitmap(103, 3, icon_arrow_down, 5, 7, 1);
-  oled.drawBitmap(21, 3, icon_arrow_down, 5, 7, 1);
+  oled.drawRoundRect(35, 51, 60, 11, 1, 1);
+
+  // Restore original WiFi icon display logic (top right with text)
+  oled.drawBitmap(70, 3, wifi ? icon_wifi_on : icon_wifi_off, 5, 5, 1);
+  oled.setCursor(54, 7);
+  oled.print("WIFI");
+
+  // Check for indeterminate mode (duration == 0)
+  if (duration == 0)
+  {
+    // Display Infinity Icon for indeterminate mode, replacing time digits/dashes ONLY
+    const int iconWidth = 48;
+    const int iconHeight = 24;
+    const int iconX = (128 - iconWidth) / 2; // Center horizontally
+    const int iconY = 18;                    // Position vertically (like original digits)
+    oled.drawBitmap(iconX, iconY, icon_infinity, iconWidth, iconHeight, 1);
+    // NO H/M/S labels, NO separator dots for infinity icon
+  }
+  else
+  {
+    // Restore original logic for HH:MM or MM:00 display
+    char left[3], right[3];
+    int xLeft = 1;
+    int xRight = 73;
+
+    // Determine format based on original logic (assuming MM:00 for <60, HH:MM for >=60)
+    // CHANGE: Always use HH:MM format for consistency
+    int hours = duration / 60;
+    int minutes = duration % 60;
+    sprintf(left, "%02d", hours);
+    sprintf(right, "%02d", minutes);
+
+    // Adjust X position if the first character is '1'
+    if (left[0] == '1')
+    {
+      xLeft += 20;
+    }
+    if (right[0] == '1')
+    {
+      xRight += 20;
+    }
+
+    oled.setTextSize(5);
+    oled.setFont(&Org_01);
+    oled.setCursor(xLeft, 36);
+    oled.print(left);
+
+    oled.setCursor(xRight, 36);
+    oled.print(right);
+
+    // Restore original separator dots
+    oled.fillRect(62, 21, 5, 5, 1);
+    oled.fillRect(62, 31, 5, 5, 1);
+
+    // REMOVE any H/M/S labels below the time - ensure they are not drawn
+    // oled.setTextSize(1);
+    // oled.setFont(&Picopixel);
+    // if (duration >= 60) { ... } else { ... }
+  }
 
   oled.display();
 }
@@ -611,3 +688,4 @@ void DisplayController::drawProjectSelectionScreen(const ProjectList &projects, 
 
   oled.display();
 }
+

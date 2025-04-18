@@ -15,7 +15,7 @@ void PausedState::enter()
                                    Serial.println("Paused State: Button Pressed - Resuming");
 
                                    // Send 'start' action to webhook handler (resume)
-                                   networkController.sendWebhookAction("start");
+                                   networkController.sendWebhookAction("start", this->duration, this->elapsedTime);
 
                                    // Transition back to TimerState with the stored duration and elapsed time
                                    StateMachine::timerState.setTimer(duration, elapsedTime);
@@ -23,12 +23,12 @@ void PausedState::enter()
                                    stateMachine.changeState(&StateMachine::timerState); // Transition back to Timer State
                                  });
 
-  inputController.onDoublePressHandler([]()
+  inputController.onDoublePressHandler([this]()
                                        {
                                          Serial.println("Paused State: Button Double Pressed - Canceling");
 
                                          // Send 'stop' action to webhook handler (canceled)
-                                         networkController.sendWebhookAction("stop");
+                                         networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
                                          displayController.showCancel();
                                          stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
                                        });
@@ -52,7 +52,7 @@ void PausedState::update()
     Serial.println("Paused State: Timout");
 
     // Send 'stop' action to webhook handler (timeout)
-    networkController.sendWebhookAction("stop");
+    networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
     displayController.showCancel();
     stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
   }

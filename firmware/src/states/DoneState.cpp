@@ -16,8 +16,8 @@ void DoneState::enter()
         Serial.println("Done State: Button pressed");
         stateMachine.changeState(&StateMachine::idleState); });
 
-  // Send 'stop' action to webhook handler (which will fetch project details)
-  networkController.sendWebhookAction("stop");
+  // Send 'stop' action to webhook handler (which will fetch project details) - MOVED to TimerState exit/handlers
+  // networkController.sendWebhookAction("stop");
 }
 
 void DoneState::update()
@@ -25,7 +25,9 @@ void DoneState::update()
   inputController.update();
   ledController.update();
 
-  displayController.drawDoneScreen();
+  // Get the final elapsed time stored in StateMachine
+  unsigned long finalElapsedTime = stateMachine.getPendingElapsedTime();
+  displayController.drawDoneScreen(finalElapsedTime);
 
   if (millis() - doneEnter >= (CHANGE_TIMEOUT * 1000))
   {

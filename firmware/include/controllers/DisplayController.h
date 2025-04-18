@@ -14,11 +14,11 @@ public:
 
   void drawSplashScreen();
   void drawIdleScreen(int duration, bool wifi);
-  void drawTimerScreen(int remainingSeconds);
+  void drawTimerScreen(int timeValue, bool isCountUp);
   void drawPausedScreen(int remainingSeconds);
   void drawResetScreen(bool resetSelected);
-  void drawDoneScreen();
-  void drawAdjustScreen(int duration);
+  void drawDoneScreen(unsigned long finalElapsedTime);
+  void drawAdjustScreen(int duration, bool wifi);
   void drawProvisionScreen();
   void drawProjectSelectionScreen(const ProjectList &projects, int selectedIndex, int topIndex, int numToShow);
   void clear();

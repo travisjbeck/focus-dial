@@ -43,6 +43,8 @@ public:
   // Methods to pass context between states
   void setPendingDuration(int duration);
   int getPendingDuration();
+  void setPendingElapsedTime(unsigned long seconds);
+  unsigned long getPendingElapsedTime();
 
   // Methods to pass selected project info
   void setPendingProjectId(const String &projectId);
@@ -57,8 +59,9 @@ private:
   State *currentState;          // Pointer to the current state
   SemaphoreHandle_t stateMutex; // Mutex to protect transitions
   bool transition = false;
-  int pendingDuration;     // To pass duration from AdjustState to TimerState
-  String pendingProjectId; // Store selected project ID for TimerState/Webhook
+  int pendingDuration;              // To pass duration from AdjustState to TimerState
+  unsigned long pendingElapsedTime; // To pass final time from TimerState to DoneState
+  String pendingProjectId;          // Store selected project ID for TimerState/Webhook
 };
 
 extern StateMachine stateMachine; // Global instance of the StateMachine

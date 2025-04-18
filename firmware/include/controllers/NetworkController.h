@@ -31,11 +31,13 @@ public:
   void initializeBluetooth();
   void startBluetooth();
   void stopBluetooth();
-  void sendWebhookAction(const String &action);
+  void sendWebhookAction(const String &action, int durationSetMinutes, unsigned long actualElapsedSeconds);
 
   // New methods for WebSocket color preview
   void handleColorPreview(const String &hexColor);
   void handleColorReset();
+
+  void startWebServer();
 
 private:
   BluetoothA2DPSink a2dp_sink;

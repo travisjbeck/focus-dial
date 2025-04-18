@@ -97,6 +97,16 @@ int StateMachine::getPendingDuration()
   return pendingDuration;
 }
 
+void StateMachine::setPendingElapsedTime(unsigned long seconds)
+{
+  pendingElapsedTime = seconds;
+}
+
+unsigned long StateMachine::getPendingElapsedTime()
+{
+  return pendingElapsedTime;
+}
+
 void StateMachine::setPendingProjectId(const String &projectId)
 {
   pendingProjectId = projectId;

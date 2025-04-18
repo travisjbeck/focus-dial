@@ -318,11 +318,11 @@ void NetworkController::bluetoothTask(void *param)
   }
 }
 
-void NetworkController::sendWebhookAction(const String &action)
+void NetworkController::sendWebhookAction(const String &action, int durationSetMinutes, unsigned long actualElapsedSeconds)
 {
   // Retrieve the pending project ID from the state machine
   String pendingId = stateMachine.getPendingProjectId();
-  String payloadAction = action; // start, stop, done
+  String payloadAction = action; // start, stop
 
   // Map the firmware action to the webhook action
   String webhookAction;
@@ -330,13 +330,13 @@ void NetworkController::sendWebhookAction(const String &action)
   {
     webhookAction = "start_timer";
   }
-  else if (payloadAction == "stop" || payloadAction == "done")
+  else if (payloadAction == "stop") // "done" action is no longer passed here
   {
     webhookAction = "stop_timer";
   }
   else
   {
-    Serial.printf("Warning: Unknown action type: %s\n", payloadAction.c_str());
+    Serial.printf("Warning: Unknown action type passed to sendWebhookAction: %s\n", payloadAction.c_str());
     return;
   }
 
@@ -358,21 +358,35 @@ void NetworkController::sendWebhookAction(const String &action)
     if (!projectFound)
     {
       Serial.printf("Warning: Could not find project details for pending ID: %s\n", pendingId.c_str());
-      return; // Don't send webhook if project not found
+      // Continue without project details? Or return?
+      // Let's proceed but won't include project info in payload.
+      // Alternatively: return;
     }
   }
   else
   {
-    Serial.println("No pending project ID found. Cannot send webhook.");
-    return;
+    Serial.println("No pending project ID found for webhook.");
+    // Proceed without project details if no ID was set (e.g., timer started w/o project)
   }
 
-  // Create JSON payload in the format expected by the webhook endpoint
+  // Create JSON payload
   JsonDocument doc;
   doc["action"] = webhookAction;
-  doc["device_project_id"] = currentProject.device_project_id;
-  doc["project_name"] = currentProject.name;
-  doc["project_color"] = currentProject.color;
+
+  // Include project info only if found/relevant
+  if (projectFound)
+  {
+    doc["device_project_id"] = currentProject.device_project_id;
+    doc["project_name"] = currentProject.name;
+    doc["project_color"] = currentProject.color;
+  }
+
+  // Add duration info based on action
+  doc["duration_set_minutes"] = durationSetMinutes; // Always include set duration
+  if (webhookAction == "stop_timer")
+  {
+    doc["duration_actual_seconds"] = actualElapsedSeconds; // Include actual duration only for stop
+  }
 
   String jsonPayload;
   serializeJson(doc, jsonPayload);

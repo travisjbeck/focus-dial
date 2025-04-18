@@ -31,8 +31,8 @@ void AdjustState::enter()
         
         // Update duration with delta and enforce bounds
         this->adjustDuration += (delta * 5);
-        if (this->adjustDuration < MIN_TIMER) {
-            this->adjustDuration = MIN_TIMER;
+        if (this->adjustDuration < 0) { // Allow 0 as the minimum duration
+            this->adjustDuration = 0;
         } else if (this->adjustDuration > MAX_TIMER) {
             this->adjustDuration = MAX_TIMER;
         }
@@ -43,7 +43,9 @@ void AdjustState::enter()
 void AdjustState::update()
 {
   inputController.update();
-  displayController.drawAdjustScreen(adjustDuration);
+  // Get Wi-Fi status from the NetworkController
+  bool wifiStatus = networkController.isWiFiConnected();
+  displayController.drawAdjustScreen(adjustDuration, wifiStatus);
 
   if (millis() - lastActivity >= (CHANGE_TIMEOUT * 1000))
   {
