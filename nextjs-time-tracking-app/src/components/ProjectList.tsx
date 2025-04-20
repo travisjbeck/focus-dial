@@ -53,12 +53,6 @@ export default function ProjectList() {
   return (
     <div className="space-y-4">
       {projects.map((project: Project) => {
-        // Log the project ID and its type before creating the link
-        console.log(
-          `[ProjectList] Rendering link for project: ID=${
-            project.id
-          }, Type=${typeof project.id}`
-        );
         return (
           <div
             key={project.id}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTimeEntries } from "@/lib/hooks/useTimeEntries";
 import { useProjects } from "@/lib/hooks/useProjects";
 import type { Database } from "@/types/supabase";
-import { getDateRangeForOption } from "@/lib/utils/dateUtils";
+import { getDateRangeForOption, generateTimelineMarkers } from "@/lib/utils/dateUtils";
 
 // Use types derived from hooks/database
 // type TimeEntry = Database["public"]["Tables"]["sessions"]["Row"]; // Inferred from useTimeEntries
@@ -36,35 +36,9 @@ function formatDate(dateString?: string | null): string {
   try {
     return new Date(dateString).toLocaleString();
   } catch {
-    console.error("Error formatting date:", dateString);
     return "Invalid Date";
   }
 }
-
-// Format time for the timeline
-function formatTimeLabel(date: Date): string {
-  return date.toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: true
-  });
-}
-
-// Get today's date range (midnight to midnight) - NO LONGER USED
-/* function getTodayRange() {
-  const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-  return { start: startOfDay, end: endOfDay };
-} */
-
-// Check if a date is today - NO LONGER USED (Filtering done by range)
-/* function isToday(date: Date): boolean {
-  const today = new Date();
-  return date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-} */
 
 // --- Time Range Options (Moved outside component and type exported) ---
 const timeRangeOptions = [
@@ -105,7 +79,7 @@ export default function Dashboard() {
 
   // Memoize project map for efficient lookups
   const projectsMap = useMemo(() => {
-    const map: Record<string, Project> = {};
+    const map: Record<number, Project> = {};
     if (projects) {
       projects.forEach((project) => {
         map[project.id] = project;
@@ -183,7 +157,7 @@ export default function Dashboard() {
 
   // Group filtered entries by project
   const entriesByProject = useMemo(() => {
-    const grouped: Record<string, TimeEntry[]> = {};
+    const grouped: Record<number, TimeEntry[]> = {};
     
     if (projects?.length) {
       // Initialize with empty arrays for all projects
@@ -204,22 +178,20 @@ export default function Dashboard() {
       }
       
       // Sort grouped entries (no change needed here, logic is sound)
-      const sortedEntries: Record<string, TimeEntry[]> = {};
+      const sortedEntries: Record<number, TimeEntry[]> = {};
       Object.entries(grouped)
-        .filter(([projectId, entries]) => {
-          Boolean(projectId); // Evaluate variable to satisfy linter
+        .filter(([, entries]) => {
           return entries.length > 0;
         })
         .forEach(([projectId, entries]) => {
-          sortedEntries[projectId] = entries;
+          sortedEntries[Number(projectId)] = entries;
         });
       Object.entries(grouped)
-        .filter(([projectId, entries]) => {
-          Boolean(projectId); // Evaluate variable to satisfy linter
+        .filter(([, entries]) => {
           return entries.length === 0;
         })
         .forEach(([projectId, entries]) => {
-          sortedEntries[projectId] = entries;
+          sortedEntries[Number(projectId)] = entries;
         });
       
       return sortedEntries;
@@ -280,8 +252,12 @@ export default function Dashboard() {
   }, [selectedRangeEntries]);
 
   const handleRetry = () => {
-    if (errorEntries) refetchEntries();
-    if (errorProjects) refetchProjects();
+    if (errorEntries) {
+      refetchEntries();
+    }
+    if (errorProjects) {
+      refetchProjects();
+    }
   };
 
   // Calculate position and width for timeline entries
@@ -318,161 +294,18 @@ export default function Dashboard() {
     };
   };
 
-  // Generate hour markers for the timeline based on range
+  // Generate hour markers for the timeline using the utility function
   const hourMarkers = useMemo(() => {
-    const markers = [];
-    const timelineStart = timelineRange.start;
-    const timelineEnd = timelineRange.end;
-    const rangeDurationHours = (timelineEnd.getTime() - timelineStart.getTime()) / (1000 * 60 * 60);
-
-    // Determine interval based on range duration for better granularity
-    let intervalHours: number;
-
-    // Define multi-day range options
-    const multiDayOptions: TimeRangeOption[] = [
-      "Week to Date",
-      "Month to Date",
-      "Year to Date",
-      "Last 7 Days",
-      "Last 30 Days",
-    ];
-
-    if (rangeDurationHours <= 0) return []; // Exit if range is invalid
-
-    // Prioritize range type for interval decision
-    if (multiDayOptions.includes(selectedRange)) {
-      // Multi-day view: Use Daily or Weekly markers
-      if (rangeDurationHours > 24 * 7) {
-        intervalHours = 24 * 7; // Weekly markers for ranges > 7 days
-      } else {
-        intervalHours = 24;     // Daily markers for multi-day ranges <= 7 days
-      }
-    } else {
-      // Single-day view (Today/Yesterday): Use Hourly markers based on duration
-      if (rangeDurationHours <= 8) {
-        intervalHours = 1;      // 1-hour interval if range <= 8 hours
-      } else if (rangeDurationHours <= 16) {
-        intervalHours = 2;      // 2-hour interval if range <= 16 hours
-      } else {
-        intervalHours = 3;      // Default 3-hour interval if range > 16 hours
-      }
-    }
-
-    const timelineStartMs = timelineStart.getTime();
-    const timelineEndMs = timelineEnd.getTime();
-    const timelineDurationMs = timelineEndMs - timelineStartMs;
-
-    if (timelineDurationMs <= 0) return [];
-
-    // Calculate the first potential marker time: Floor the start time to the nearest previous interval boundary.
-    const currentMarkerTime = new Date(timelineStart);
-    if (intervalHours >= 24) { // Daily or Weekly alignment
-        if (intervalHours === 24 * 7) { // Weekly: Align to start of week (Sunday) containing the start date
-             const dayOfWeek = currentMarkerTime.getDay(); // 0=Sun
-             currentMarkerTime.setDate(currentMarkerTime.getDate() - dayOfWeek);
-        }
-         currentMarkerTime.setHours(0, 0, 0, 0); // Align to midnight for Day/Week intervals
-    } else { // Hourly alignment
-        const startHour = currentMarkerTime.getHours();
-        const alignedHour = Math.floor(startHour / intervalHours) * intervalHours;
-        currentMarkerTime.setHours(alignedHour, 0, 0, 0);
-    }
-
-    let iterations = 0; // Safety break for loop
-    const maxIterations = 100;
-
-    // Generate markers starting from the calculated first potential marker time
-    while (currentMarkerTime.getTime() <= timelineEndMs && iterations < maxIterations) {
-      const markerTimeMs = currentMarkerTime.getTime();
-
-      // Add marker only if it's visually within the timeline range (at or after the start)
-      if (markerTimeMs >= timelineStartMs) {
-          const positionPercent = ((markerTimeMs - timelineStartMs) / timelineDurationMs) * 100;
-          const clampedPosition = Math.max(0, Math.min(100, positionPercent));
-
-          // Format label based on interval type
-          let label = "";
-          if (intervalHours === 24*7) {
-              label = currentMarkerTime.toLocaleDateString([], { month: 'short', day: 'numeric' });
-          } else if (intervalHours === 24) {
-              label = currentMarkerTime.toLocaleDateString([], { weekday: 'short', day: 'numeric'});
-          } else { // Hourly intervals (1, 2, or 3 hours)
-              label = formatTimeLabel(currentMarkerTime);
-          }
-
-          // Add the marker if its position is valid
-          if (clampedPosition >= 0 && clampedPosition <= 100) {
-              markers.push({
-                  time: label,
-                  position: `${clampedPosition}%`
-              });
-          }
-      }
-
-      // Increment marker time for the next iteration
-      if (intervalHours === 24*7) {
-          currentMarkerTime.setDate(currentMarkerTime.getDate() + 7);
-      } else {
-          currentMarkerTime.setHours(currentMarkerTime.getHours() + intervalHours);
-      }
-      iterations++;
-    }
-
-     // Log error if max iterations reached (indicates a potential logic issue)
-     if (iterations >= maxIterations) {
-       console.error("Max iterations reached in hour marker generation. Check interval logic.");
-     }
-
-    // Refinement: If using hourly intervals and the actual start time doesn't match
-    // the first generated marker, add a specific marker for the start time at 0%.
-    if (intervalHours < 24) { // Only add specific start time marker for hourly intervals
-        const actualStartTimeLabel = formatTimeLabel(timelineStart);
-        const firstMarker = markers[0];
-
-        // Check if we need to add the specific start marker:
-        // - If there are no markers OR
-        // - If the first marker isn't already at 0% OR
-        // - If the first marker is at 0% but its label doesn't match the actual start time label
-        if (!firstMarker || firstMarker.position !== '0%' || firstMarker.time !== actualStartTimeLabel) {
-          // Calculate the timestamp of the first marker for comparison
-          const firstMarkerTimeMs = firstMarker
-              ? new Date(timelineStart).setHours(
-                  parseInt(firstMarker.time.split(':')[0]) + (firstMarker.time.includes('PM') && !firstMarker.time.startsWith('12') ? 12 : 0),
-                  parseInt(firstMarker.time.split(':')[1].substring(0, 2)),
-                  0,
-                  0
-                )
-              : Infinity; // Set to infinity if no markers exist yet
-
-          // Avoid adding duplicate label if the first marker will be very close anyway (e.g., difference < 1 minute)
-          const shouldAddStartLabel = !firstMarker || Math.abs(timelineStartMs - firstMarkerTimeMs) > 60 * 1000;
-
-          if (shouldAddStartLabel) {
-              markers.unshift({ time: actualStartTimeLabel, position: '0%' });
-          }
-        }
-    } // End check for intervalHours < 24
-
-    // Remove potential duplicate markers that might end up at the same percentage
-    const uniqueMarkers = markers.reduce((acc, current) => {
-        const x = acc.find(item => item.position === current.position);
-        if (!x) {
-            return acc.concat([current]);
-        }
-        // Optional: Could prioritize keeping the earliest time label if positions collide
-        return acc;
-    }, [] as { time: string; position: string }[]);
-
-    return uniqueMarkers;
-  }, [timelineRange]); // Depends only on the calculated timelineRange
+    // Pass the calculated range and selected option to the utility
+    return generateTimelineMarkers(timelineRange, selectedRange);
+  }, [timelineRange, selectedRange]); 
 
   // Filter projects with entries for the timeline display
   const projectsWithEntries = useMemo(() => {
     return Object.entries(entriesByProject)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      .filter(([_, entries]) => entries.length > 0)
-      .map(([projectId]) => projectId);
-  }, [entriesByProject]);
+      .filter(([, entries]) => entries.length > 0) // Keep only projects with entries
+      .map(([projectId]) => projectId); // Map to get the project ID
+  }, [entriesByProject]); 
 
   return (
     <div className="container mx-auto px-4">
@@ -598,54 +431,62 @@ export default function Dashboard() {
 
                 {/* Timeline rows */}
                 <div className="timeline-body">
-                  {Object.entries(entriesByProject)
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    .filter(([_, entries]) => entries.length > 0)
-                    .map(([projectId, entries], rowIndex) => {
-                      const project = projectsMap[projectId];
-                      if (!project) return null;
-                      
-                      return (
-                        <div 
-                          key={projectId} 
-                          className={`timeline-row ${rowIndex % 2 === 0 ? 'timeline-row-alt' : ''}`}
-                        >
-                          {/* Project name */}
-                          <div className="project-name">
-                            <Link 
-                              href={`/projects/${projectId}`}
-                              className="font-medium text-white hover:text-gray-300 truncate block"
-                              title={project.name}
-                            >
-                              {project.name}
-                            </Link>
-                          </div>
-                          
-                          {/* Timeline entries */}
-                          <div className="time-entries">
-                            {entries.map(entry => {
-                              const position = getTimelinePosition(entry.start_time, entry.end_time);
-                              const isActive = !entry.end_time;
-                              
-                              return (
-                                <div
-                                  key={entry.id}
-                                  className={`time-entry ${isActive ? "active-entry" : ""}`}
-                                  style={{
-                                    left: position.left,
-                                    width: position.width,
-                                    backgroundColor: project.color || '#808080',
-                                    zIndex: 1 /* Above the grid lines */
-                                  }}
-                                  title={`${formatDate(entry.start_time)} - ${entry.end_time ? formatDate(entry.end_time) : "Running"} (${formatDuration(entry.duration)})`}
-                                />
-                              );
-                            })}
-                          </div>
+                  {/* Map over only the projects that have entries in the selected range */}
+                  {projectsWithEntries.map((projectIdStr, rowIndex) => {
+                    const projectId = Number(projectIdStr); // Convert string ID back to number
+                    // Get the project details and entries using the projectId
+                    const project = projectsMap[projectId];
+                    const entries = entriesByProject[projectId];
+
+                    // Basic safety checks (should ideally not happen if data fetching is correct)
+                    if (!project || !entries) {
+                      console.warn(`Missing project data for ID: ${projectId}`);
+                      return null;
+                    }
+
+                    // We already know entries.length > 0 because projectsWithEntries filters for it,
+                    // so no need for an additional length check here.
+
+                    return (
+                      <div 
+                        key={projectId} 
+                        className={`timeline-row ${rowIndex % 2 === 0 ? 'timeline-row-alt' : ''}`}
+                      >
+                        {/* Project name */}
+                        <div className="project-name">
+                          <Link 
+                            href={`/projects/${projectId}`}
+                            className="font-medium text-white hover:text-gray-300 truncate block"
+                            title={project.name}
+                          >
+                            {project.name}
+                          </Link>
                         </div>
-                      );
-                    })
-                  }
+                        
+                        {/* Timeline entries */}
+                        <div className="time-entries">
+                          {entries.map((entry: TimeEntry) => {
+                            const position = getTimelinePosition(entry.start_time, entry.end_time);
+                            const isActive = !entry.end_time;
+                            
+                            return (
+                              <div
+                                key={entry.id}
+                                className={`time-entry ${isActive ? "active-entry" : ""}`}
+                                style={{
+                                  left: position.left,
+                                  width: position.width,
+                                  backgroundColor: project.color || '#808080',
+                                  zIndex: 1 /* Above the grid lines */
+                                }}
+                                title={`${formatDate(entry.start_time)} - ${entry.end_time ? formatDate(entry.end_time) : "Running"} (${formatDuration(entry.duration)})`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 
                 {/* Add CSS for the timeline grid */}

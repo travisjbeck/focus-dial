@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-// Import server actions
+// Import server actions from the correct path
 import {
+  fetchApiKeys,
   generateApiKey,
   revokeApiKey,
-  fetchApiKeys, // Also import fetch for potential manual refetch
 } from "@/app/settings/actions";
 // Import the type from actions for consistency
 import type { ApiKeyMetadata } from "@/app/settings/actions";
@@ -46,18 +46,18 @@ export default function ApiKeyManager({
     setNewlyGeneratedKey(null);
     setError(null);
     startGeneratingTransition(async () => {
-      console.log("Generating key with name:", newKeyName);
-      const result = await generateApiKey({
-        name: newKeyName || "Default API Key",
-      });
-
-      if (result.success && result.apiKey) {
-        setNewlyGeneratedKey(result.apiKey);
-        setNewKeyName("Default API Key"); // Reset input field
-        // Refetch the list to include the new key
-        await refetchKeys();
-      } else {
-        setError(result.error || "Failed to generate key.");
+      // Use the imported action directly, handle promise
+      try {
+        const result = await generateApiKey({ name: newKeyName });
+        if (result.success && result.apiKey) {
+          setNewlyGeneratedKey(result.apiKey);
+          setNewKeyName(""); // Clear input on success
+          await refetchKeys(); // Refetch the list
+        } else {
+          setError(result.error || "Failed to generate key.");
+        }
+      } catch (e) {
+        setError((e as Error).message || "An unexpected error occurred.");
       }
     });
   };
@@ -66,15 +66,18 @@ export default function ApiKeyManager({
     setError(null);
     setRevokingId(id);
     startRevokingTransition(async () => {
-      console.log(`Revoking key ${id}...`);
-      const result = await revokeApiKey(id);
-
-      if (result.success) {
-        // Optimistically update the list or refetch
-        setApiKeys((prevKeys) => prevKeys.filter((key) => key.id !== id));
-        // Optionally: await refetchKeys(); // If optimistic update isn't preferred
-      } else {
-        setError(result.error || "Failed to revoke key.");
+      // Use the imported action directly, handle promise
+      try {
+        const result = await revokeApiKey(id);
+        if (result.success) {
+          // Optimistically update the list or refetch
+          setApiKeys((prevKeys) => prevKeys.filter((key) => key.id !== id));
+          // await refetchKeys(); // Optionally refetch
+        } else {
+          setError(result.error || "Failed to revoke key.");
+        }
+      } catch (e) {
+        setError((e as Error).message || "An unexpected error occurred during revocation.");
       }
       setRevokingId(null);
     });
