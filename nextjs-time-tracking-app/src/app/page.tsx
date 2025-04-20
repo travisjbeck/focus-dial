@@ -250,10 +250,33 @@ export default function Dashboard() {
 
   // Calculate total duration for the selected range
   const selectedRangeTotalDuration = useMemo(() => {
+    const now = new Date().getTime(); // Get current time once
     return selectedRangeEntries.reduce(
-      (total, entry) => total + (entry.duration || 0),
+      (total, entry) => {
+        if (entry.end_time === null) {
+          // Timer is still running
+          const startTime = new Date(entry.start_time).getTime();
+          // Calculate elapsed seconds since start_time, ensure it's not negative
+          const elapsedSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
+          return total + elapsedSeconds;
+        } else {
+          // Timer is completed, use stored duration
+          return total + (entry.duration || 0);
+        }
+      },
       0
     );
+  }, [selectedRangeEntries]);
+
+  // Add this new useMemo hook before the return statement
+  const activeProjectsCountInRange = useMemo(() => {
+    const projectIds = new Set<number>();
+    selectedRangeEntries.forEach(entry => {
+        if (entry.project_id !== null) {
+            projectIds.add(entry.project_id);
+        }
+    });
+    return projectIds.size;
   }, [selectedRangeEntries]);
 
   const handleRetry = () => {
@@ -473,7 +496,7 @@ export default function Dashboard() {
         <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
           <h3 className="text-xs uppercase text-gray-500 mb-1">Projects</h3>
           <div className="text-2xl font-bold">
-            {isLoadingProjects ? "..." : projects?.length ?? 0}
+            {isLoadingEntries || isLoadingProjects ? "..." : activeProjectsCountInRange}
           </div>
         </div>
         <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
@@ -481,7 +504,7 @@ export default function Dashboard() {
           <div className="text-2xl font-bold">
             {isLoadingEntries
               ? "..."
-              : formatDuration(summaryStats.totalDuration)}
+              : formatDuration(selectedRangeTotalDuration)}
           </div>
         </div>
         <div className="bg-black p-4 rounded-lg shadow border border-gray-800 relative">
@@ -503,7 +526,19 @@ export default function Dashboard() {
 
       {/* Timeline Time Entries Section */}
       <div className="bg-black p-6 rounded-lg shadow border border-gray-800 mb-8">
+        {/* Row 1: View All Entries Link (Top Right) */}
+        <div className="flex justify-end mb-2"> { /* Push link to right, add margin bottom */}
+          <Link
+            href="/entries"
+            className="text-xs text-gray-400 hover:text-white"
+          >
+            View All Entries →
+          </Link>
+        </div>
+
+        {/* Row 2: Title and Dropdown */}
         <div className="flex justify-between items-center mb-4">
+          {/* Left side: Title and total duration */}
           <div className="flex items-baseline space-x-2">
             <h2 className="text-lg font-semibold text-white">
               Activity Timeline
@@ -513,12 +548,13 @@ export default function Dashboard() {
               ({formatDuration(selectedRangeTotalDuration)} total)
             </span>
           </div>
-          {/* --- Time Range Selector --- */}
+          {/* Right side: Dropdown only */}
           <div className="flex items-center space-x-4">
+            {/* Dropdown */}
             <select
               value={selectedRange}
               onChange={(e) => setSelectedRange(e.target.value as TimeRangeOption)}
-              className="form-select py-1 text-sm" // Use existing form-select style
+              className="form-select py-1 text-sm"
             >
               {timeRangeOptions.map(option => (
                 <option key={option} value={option}>
@@ -526,12 +562,6 @@ export default function Dashboard() {
                 </option>
               ))}
             </select>
-            <Link
-              href="/entries"
-              className="text-sm text-gray-400 hover:text-white"
-            >
-              View All Entries →
-            </Link>
           </div>
         </div>
         {isLoadingEntries ? (
