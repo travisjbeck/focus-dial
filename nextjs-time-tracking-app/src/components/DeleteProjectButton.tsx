@@ -45,7 +45,7 @@ export default function DeleteProjectButton({
       {error && <p className="text-xs text-red-400 mt-2">Error: {error}</p>}
       <button
         onClick={handleDelete}
-        className="px-3 py-1 text-xs font-medium text-red-400 bg-gray-700 rounded hover:bg-red-900 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500 disabled:opacity-50"
+        className="px-3 py-1 text-xs font-medium text-red-400 bg-black rounded-md border border-red-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
         disabled={isPending}
       >
         {isPending ? "Deleting..." : "Delete"}

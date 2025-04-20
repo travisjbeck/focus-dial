@@ -10,11 +10,30 @@
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Layout styles for sticky footer */
+.layout-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex-grow: 1;
 }
 
 /* Custom styles */
 .btn {
-  @apply px-4 py-2 rounded transition-colors;
+  @apply px-4 py-2 rounded-md transition-colors;
 }
 
 .btn-primary {
@@ -35,7 +54,7 @@ body {
 
 .form-input,
 .input {
-  @apply w-full px-3 py-2 bg-black border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-gray-500;
+  @apply w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500;
 }
 
 .form-label {
@@ -43,7 +62,7 @@ body {
 }
 
 .form-select {
-  @apply bg-black border border-gray-700 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500;
+  @apply bg-black border border-gray-700 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500;
 }
 
 .loading-spinner {

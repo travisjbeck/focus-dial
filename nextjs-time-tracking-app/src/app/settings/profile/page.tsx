@@ -84,23 +84,23 @@ export default function ProfilePage() {
       <h1 className="text-2xl font-bold mb-6">Profile Settings</h1>
 
       {successMessage && (
-        <div className="mb-4 p-4 bg-green-800/30 border border-green-800 text-green-300 rounded">
+        <div className="mb-4 p-4 bg-black border border-green-800 text-green-400 rounded-md">
           {successMessage}
         </div>
       )}
 
       {errorMessage && (
-        <div className="mb-4 p-4 bg-red-800/30 border border-red-800 text-red-300 rounded">
+        <div className="mb-4 p-4 bg-black border border-red-800 text-red-400 rounded-md">
           {errorMessage}
         </div>
       )}
 
-      <div className="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+      <div className="bg-black p-6 rounded-lg shadow border border-gray-800">
         <h2 className="text-xl font-semibold mb-4">Account Information</h2>
 
         <div className="mb-6">
           <div className="flex items-center mb-4">
-            <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center mr-4">
+            <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center mr-4">
               <span className="text-xl font-medium">
                 {user?.email?.charAt(0).toUpperCase() || "U"}
               </span>
@@ -113,7 +113,7 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <h3 className="text-lg font-medium mb-4 border-t border-gray-700 pt-4">
+          <h3 className="text-lg font-medium mb-4 border-t border-gray-800 pt-4">
             Change Password
           </h3>
 
@@ -130,7 +130,7 @@ export default function ProfilePage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 bg-black border border-gray-800 rounded-md text-white focus:ring-gray-500 focus:border-gray-700"
               />
               {passwordError && (
                 <p className="mt-1 text-sm text-red-400">{passwordError}</p>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2 bg-black border border-gray-800 rounded-md text-white focus:ring-gray-500 focus:border-gray-700"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Saving..." : "Save Changes"}
             </button>

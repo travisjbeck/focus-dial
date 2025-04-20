@@ -133,12 +133,12 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
 
         {/* Display fetch error or submission error */}
         {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-3 rounded mb-4">
+          <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md mb-4">
             <span>{error}</span>
           </div>
         )}
 
-        <div className="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-6 rounded-lg shadow border border-gray-800">
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label
@@ -153,7 +153,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 placeholder-gray-400"
+                className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5 placeholder-gray-400"
                 placeholder="Enter project name"
                 disabled={isPending} // Use isPending from useTransition
                 required // Added required attribute
@@ -175,7 +175,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
                   name="color" // Ensure name matches state
                   value={formData.color}
                   onChange={handleChange}
-                  className="p-0 w-10 h-10 block bg-gray-700 border border-gray-600 cursor-pointer rounded-lg disabled:opacity-50 disabled:pointer-events-none"
+                  className="p-0 w-10 h-10 block bg-black border border-gray-800 cursor-pointer rounded-md disabled:opacity-50 disabled:pointer-events-none"
                   title="Select color"
                   disabled={isPending}
                 />
@@ -185,7 +185,7 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
                   name="color" // Ensure name matches state
                   value={formData.color}
                   onChange={handleChange}
-                  className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                  className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
                   disabled={isPending}
                 >
                   {colorOptions.map((option) => (
@@ -198,17 +198,16 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
             </div>
 
             <div className="flex justify-end gap-2">
-              {/* Link back to project detail page */}
               <Link
                 href={`/projects/${params.id}`}
-                className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-600 rounded-lg hover:bg-gray-500"
+                className="px-4 py-2 text-sm font-medium text-white bg-black border border-gray-800 rounded-md hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
               >
                 Cancel
               </Link>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-800 disabled:opacity-50"
-                disabled={isPending} // Use isPending
+                className="px-4 py-2 text-sm font-medium text-black bg-white rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
+                disabled={isPending}
               >
                 {isPending ? "Saving..." : "Save Changes"}
               </button>

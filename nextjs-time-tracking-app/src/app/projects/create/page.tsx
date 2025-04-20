@@ -53,7 +53,10 @@ export default function CreateProjectPage() {
     <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-100">Create New Project</h1>
-        <Link href="/projects" className="btn btn-secondary flex items-center">
+        <Link 
+          href="/projects" 
+          className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center"
+        >
           <svg
             className="w-5 h-5 mr-1"
             fill="none"
@@ -72,9 +75,9 @@ export default function CreateProjectPage() {
         </Link>
       </div>
 
-      <div className="card max-w-2xl mx-auto">
+      <div className="bg-black rounded-lg shadow-lg border border-gray-800 p-6 max-w-2xl mx-auto">
         {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-300 px-4 py-3 rounded mb-6">
+          <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md mb-6">
             <div className="flex items-center">
               <svg
                 className="w-5 h-5 mr-2"
@@ -97,13 +100,13 @@ export default function CreateProjectPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label htmlFor="name" className="form-label">
+            <label htmlFor="name" className="block text-gray-300 mb-2">
               Project Name
             </label>
             <input
               type="text"
               id="name"
-              className="form-input"
+              className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter project name"
@@ -112,14 +115,14 @@ export default function CreateProjectPage() {
           </div>
 
           <div className="mb-6">
-            <label className="form-label">Project Color</label>
+            <label className="block text-gray-300 mb-2">Project Color</label>
             <div className="flex items-center">
               <div
-                className="w-10 h-10 rounded-md mr-4 shadow-inner border border-gray-600"
+                className="w-10 h-10 rounded-md mr-4 shadow-inner border border-gray-700"
                 style={{ backgroundColor: color }}
               />
               <select
-                className="form-select"
+                className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
               >
@@ -133,17 +136,20 @@ export default function CreateProjectPage() {
           </div>
 
           <div className="flex justify-end space-x-3">
-            <Link href="/projects" className="btn btn-secondary">
+            <Link 
+              href="/projects" 
+              className="px-4 py-2 border border-gray-800 rounded-md text-white hover:bg-gray-900"
+            >
               Cancel
             </Link>
             <button
               type="submit"
-              className="btn btn-primary flex items-center"
+              className="px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 flex items-center"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <div className="loading-spinner loading-spinner-sm mr-2"></div>
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
                   Creating...
                 </>
               ) : (

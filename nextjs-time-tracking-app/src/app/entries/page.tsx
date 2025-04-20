@@ -102,13 +102,13 @@ export default function EntriesPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
           <h3 className="text-xs uppercase text-gray-500 mb-1">Total Hours</h3>
           <div className="text-2xl font-bold text-white">
             {isLoading ? "..." : formatDuration(summaryStats.totalDuration)}
           </div>
         </div>
-        <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
           <h3 className="text-xs uppercase text-gray-500 mb-1">
             Total Entries
           </h3>
@@ -116,7 +116,7 @@ export default function EntriesPage() {
             {isLoading ? "..." : summaryStats.totalEntries}
           </div>
         </div>
-        <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
           <h3 className="text-xs uppercase text-gray-500 mb-1">
             Active Timers
           </h3>
@@ -124,7 +124,7 @@ export default function EntriesPage() {
             {isLoading ? "..." : summaryStats.activeTimers}
           </div>
         </div>
-        <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
           <h3 className="text-xs uppercase text-gray-500 mb-1">Projects</h3>
           <div className="text-2xl font-bold text-white">
             {isLoadingProjects ? "..." : projects?.length ?? 0}
@@ -170,17 +170,17 @@ export default function EntriesPage() {
       {isLoading ? (
         <div className="text-center py-8 text-gray-400">Loading data...</div>
       ) : error ? (
-        <div className="bg-gray-900 border border-red-800 text-red-400 px-4 py-3 rounded text-center">
+        <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md text-center">
           <span>Error loading data: {error.message}</span>
           <button
             onClick={handleRetry}
-            className="ml-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded"
+            className="ml-2 px-2 py-1 text-xs bg-gray-900 hover:bg-gray-800 text-white rounded-md"
           >
             Retry
           </button>
         </div>
       ) : filteredEntries.length === 0 ? (
-        <div className="bg-gray-800 p-6 rounded-lg shadow border border-gray-700 text-center">
+        <div className="bg-black p-6 rounded-lg shadow border border-gray-800 text-center">
           <p className="text-gray-400">
             {activeFilter === "all"
               ? "No time entries found. Start a timer on your device!"
@@ -190,9 +190,9 @@ export default function EntriesPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-700">
+        <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-800">
           <table className="w-full text-sm text-left text-gray-400">
-            <thead className="text-xs text-gray-400 uppercase bg-gray-700">
+            <thead className="text-xs text-gray-400 uppercase bg-black border-b border-gray-800">
               <tr>
                 <th scope="col" className="py-3 px-6">
                   Project
@@ -207,10 +207,7 @@ export default function EntriesPage() {
                   Duration
                 </th>
                 <th scope="col" className="py-3 px-6">
-                  Notes
-                </th>
-                <th scope="col" className="py-3 px-6">
-                  Status
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -222,7 +219,7 @@ export default function EntriesPage() {
                 return (
                   <tr
                     key={entry.id}
-                    className="bg-gray-800 border-b border-gray-700 hover:bg-gray-600"
+                    className="border-b border-gray-800 hover:bg-gray-900"
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-center">
@@ -242,29 +239,29 @@ export default function EntriesPage() {
                         </span>
                       </div>
                     </td>
+                    <td className="py-4 px-6">{formatDate(entry.start_time)}</td>
                     <td className="py-4 px-6">
-                      {formatDate(entry.start_time)}
+                      {entry.end_time ? (
+                        formatDate(entry.end_time)
+                      ) : (
+                        <span className="text-green-500 font-medium">
+                          <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
+                          Running
+                        </span>
+                      )}
                     </td>
-                    <td className="py-4 px-6">{formatDate(entry.end_time)}</td>
                     <td className="py-4 px-6 font-mono">
                       {formatDuration(entry.duration)}
                     </td>
-                    <td
-                      className="py-4 px-6 max-w-xs truncate"
-                      title={entry.notes || ""}
-                    >
-                      {entry.notes || "-"}
-                    </td>
                     <td className="py-4 px-6">
-                      {entry.end_time ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-300 border border-green-700">
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-900 text-yellow-300 border border-yellow-700">
-                          In Progress
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        <button className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800">
+                          View
+                        </button>
+                        <button className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800">
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -1,4 +1,10 @@
 #include "controllers/LEDController.h"
+#include <Arduino.h> // Ensure Arduino types (min, uint32_t, etc.) are included
+#include <cmath>     // Include for fmodf
+
+// Define animation constants locally in this file
+const float RADAR_SWEEP_SPEED_LEDS_PER_SEC = 1.0f; // Halved speed
+const uint8_t RADAR_SWEEP_TAIL_LENGTH = 12; // Longer tail (assuming 16 LEDs total for ~4 gap)
 
 #define LED_OFFSET -1 // Offset to align 12 o'clock position
 
@@ -34,6 +40,9 @@ void LEDController::update()
     break;
   case Breath:
     handleBreath();
+    break;
+  case RadarSweep:
+    handleRadarSweep();
     break;
   default:
     break;
@@ -259,6 +268,58 @@ void LEDController::handleBreath()
   }
 }
 
+void LEDController::handleRadarSweep()
+{
+  unsigned long currentTime = millis();
+  unsigned long dt = currentTime - lastUpdateTime;
+
+  // Calculate position increment based on speed and elapsed time
+  float increment = (RADAR_SWEEP_SPEED_LEDS_PER_SEC * dt) / 1000.0f;
+  if (numLeds == 0) return;
+  // Use fmodf explicitly for float modulo
+  // sweepPosition = fmodf(sweepPosition + increment, (float)numLeds); // Original CW logical attempt
+  // To achieve visual CW, decrement the logical position
+  sweepPosition = fmodf(sweepPosition - increment + numLeds, (float)numLeds);
+
+  lastUpdateTime = currentTime;
+
+  leds.clear();
+
+  int leadPixel = (int)sweepPosition;
+
+  // Draw the fading tail
+  uint8_t tailLength = min((uint8_t)RADAR_SWEEP_TAIL_LENGTH, (uint8_t)numLeds);
+  if (tailLength == 0) return;
+
+  for (int i = 0; i < tailLength; ++i)
+  {
+    // Calculate index clockwise FROM the head position
+    int currentPixelIndex = (leadPixel + i) % numLeds;
+
+    // Brightness: Head (i=0) is brightest, fade for tail (i>0)
+    uint8_t brightnessLevel;
+    if (i == 0) {
+        brightnessLevel = 255; // Head is full brightness
+    } else {
+        // Ensure tailLength is not 0 to avoid division by zero
+        // brightnessLevel = (tailLength > 0) ? (255 * (tailLength - i)) / tailLength : 0; // Previous linear fade
+        // Apply non-linear (quadratic) fade for a steeper drop-off
+        if (tailLength > 1) {
+            float normalized_pos_from_end = (float)(tailLength - 1 - i) / (tailLength - 1);
+            float fade_factor = normalized_pos_from_end * normalized_pos_from_end; // Square the factor
+            brightnessLevel = (uint8_t)(255.0f * fade_factor);
+        } else {
+            brightnessLevel = 0; // Should not happen if head is i=0, but safe fallback
+        }
+    }
+
+    uint32_t dimmedColor = scaleColor(sweepColor, brightnessLevel);
+    leds.setPixelColor(currentPixelIndex, dimmedColor);
+  }
+
+  leds.show();
+}
+
 void LEDController::stopCurrentAnimation()
 {
   currentAnimation = None;
@@ -357,4 +418,15 @@ void LEDController::restoreLastState()
     setSolid(lastColor);
     break;
   }
+}
+
+// New function to start the Radar Sweep animation
+void LEDController::startRadarSweep(uint32_t color)
+{
+  stopCurrentAnimation();
+  currentAnimation = RadarSweep;
+  sweepColor = color;
+  sweepPosition = 0.0f;
+  lastUpdateTime = millis(); // Use common lastUpdateTime for timing
+  Serial.printf("LED: Starting RadarSweep. Color: %06X\n", color);
 }

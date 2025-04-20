@@ -51,7 +51,7 @@ export default function TimeEntryList() {
             if (errorEntries) refetchEntries();
             if (errorProjects) refetchProjects();
           }}
-          className="ml-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded"
+          className="ml-2 px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
         >
           Retry
         </button>
@@ -92,9 +92,9 @@ export default function TimeEntryList() {
   };
 
   return (
-    <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-700">
+    <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-800">
       <table className="w-full text-sm text-left text-gray-400">
-        <thead className="text-xs text-gray-400 uppercase bg-gray-700">
+        <thead className="text-xs text-gray-400 uppercase bg-black border-b border-gray-800">
           <tr>
             <th scope="col" className="py-3 px-6">
               Project
@@ -122,22 +122,42 @@ export default function TimeEntryList() {
             const projectName = entry.project_id
               ? projectMap.get(entry.project_id)?.name
               : null;
+            const project = entry.project_id
+              ? projectMap.get(entry.project_id)
+              : null;
             return (
               <tr
                 key={entry.id}
-                className="bg-gray-800 border-b border-gray-700 hover:bg-gray-600"
+                className="border-b border-gray-800 hover:bg-gray-900"
               >
                 <td className="py-4 px-6">
-                  {projectName ||
-                    (entry.project_id ? `ID: ${entry.project_id}` : "N/A")}
+                  <div className="flex items-center">
+                    {project && (
+                      <span
+                        className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+                        style={{
+                          backgroundColor: project.color || "#808080",
+                        }}
+                      ></span>
+                    )}
+                    <span>
+                      {projectName ||
+                        (entry.project_id ? `ID: ${entry.project_id}` : "N/A")}
+                    </span>
+                  </div>
                 </td>
                 <td className="py-4 px-6">
                   {formatDateTime(entry.start_time)}
                 </td>
                 <td className="py-4 px-6">
-                  {entry.end_time
-                    ? formatDateTime(entry.end_time)
-                    : "Running..."}
+                  {entry.end_time ? (
+                    formatDateTime(entry.end_time)
+                  ) : (
+                    <span className="text-green-500 font-medium">
+                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
+                      Running
+                    </span>
+                  )}
                 </td>
                 <td className="py-4 px-6">{formatDuration(entry.duration)}</td>
                 <td
@@ -149,7 +169,7 @@ export default function TimeEntryList() {
                 <td className="py-4 px-6 text-right">
                   <Link
                     href={`/entries/${entry.id}`}
-                    className="font-medium text-blue-500 hover:underline"
+                    className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
                   >
                     View
                   </Link>

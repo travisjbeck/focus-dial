@@ -81,8 +81,8 @@ export default function ApiKeyManager({
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
-      <h2 className="text-lg font-medium text-white mb-4">Your API Keys</h2>
+    <div className="bg-black p-6 rounded-lg shadow border border-gray-800">
+      <h2 className="text-lg font-medium text-primary mb-4">Your API Keys</h2>
 
       {/* Error Display */}
       {error && (
@@ -104,7 +104,7 @@ export default function ApiKeyManager({
           </div>
           <button
             onClick={() => setNewlyGeneratedKey(null)}
-            className="mt-2 text-xs text-gray-400 hover:text-white"
+            className="mt-2 text-xs text-muted hover:text-primary"
           >
             Dismiss
           </button>
@@ -116,7 +116,7 @@ export default function ApiKeyManager({
         <div className="flex-grow">
           <label
             htmlFor="newKeyName"
-            className="block text-sm font-medium text-gray-300 mb-1"
+            className="block text-sm font-medium text-tertiary mb-1"
           >
             New Key Name
           </label>
@@ -126,7 +126,7 @@ export default function ApiKeyManager({
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Enter a name for the key (optional)"
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 placeholder-gray-400"
+            className="bg-black border border-gray-800 text-secondary text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 placeholder-gray-400"
             disabled={isGenerating}
           />
         </div>
@@ -142,16 +142,16 @@ export default function ApiKeyManager({
       {/* List Existing Keys */}
       <div className="space-y-4">
         {apiKeys.length === 0 && !initialError && (
-          <p className="text-gray-400">You don&apos;t have any API keys yet.</p>
+          <p className="text-tertiary">You don&apos;t have any API keys yet.</p>
         )}
         {apiKeys.map((key) => (
           <div
             key={key.id}
-            className="flex items-center justify-between bg-gray-700 p-4 rounded"
+            className="flex items-center justify-between bg-gray-900 p-4 rounded"
           >
             <div>
-              <p className="font-medium text-white">{key.key_name}</p>
-              <p className="text-xs text-gray-400">
+              <p className="font-medium text-secondary">{key.key_name}</p>
+              <p className="text-xs text-muted">
                 Created: {new Date(key.created_at).toLocaleDateString()} - Last
                 used:{" "}
                 {key.last_used_at

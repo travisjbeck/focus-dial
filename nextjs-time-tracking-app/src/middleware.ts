@@ -9,7 +9,6 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  console.log(`[Middleware] Path: ${request.nextUrl.pathname}`); // Log path
 
   // Use server-side env vars (without NEXT_PUBLIC_ prefix)
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -74,7 +73,6 @@ export async function middleware(request: NextRequest) {
   const { data: { user }, error: getUserError } = await supabase.auth.getUser();
 
   // Log user and error status
-  console.log(`[Middleware] User found: ${!!user}`);
   if (getUserError) {
     console.error(`[Middleware] getUser Error: ${getUserError.message}`);
   }
@@ -93,7 +91,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  console.log(`[Middleware] Allowing access to ${request.nextUrl.pathname}`); // Log allowed access
 
   // Return the response object, potentially modified by the Supabase client
   return response;

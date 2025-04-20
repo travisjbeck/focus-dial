@@ -58,19 +58,19 @@ export default function ProjectForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">
+    <form onSubmit={handleSubmit} className="bg-black rounded-lg shadow p-6 border border-gray-800">
+      <h2 className="text-xl font-semibold mb-4 text-white">
         {isEditing ? "Edit Project" : "Create New Project"}
       </h2>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md mb-4">
           {error}
         </div>
       )}
 
       <div className="mb-4">
-        <label htmlFor="name" className="block text-gray-700 mb-2">
+        <label htmlFor="name" className="block text-gray-300 mb-2">
           Project Name
         </label>
         <input
@@ -78,14 +78,14 @@ export default function ProjectForm({
           id="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
           placeholder="Enter project name"
           required
         />
       </div>
 
       <div className="mb-6">
-        <label htmlFor="color" className="block text-gray-700 mb-2">
+        <label htmlFor="color" className="block text-gray-300 mb-2">
           Project Color
         </label>
         <div className="flex items-center">
@@ -94,13 +94,13 @@ export default function ProjectForm({
             id="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="h-10 w-10 border border-gray-300 rounded mr-2"
+            className="h-10 w-10 border border-gray-700 rounded-md mr-2"
           />
           <input
             type="text"
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
             placeholder="#RRGGBB"
             pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
             required
@@ -112,14 +112,14 @@ export default function ProjectForm({
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+          className="px-4 py-2 border border-gray-800 rounded-md text-white hover:bg-gray-900"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 ${
+          className={`px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 ${
             isSubmitting ? "opacity-70 cursor-not-allowed" : ""
           }`}
         >

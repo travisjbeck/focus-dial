@@ -31,7 +31,7 @@ export default async function RootLayout({
         <body className={inter.className}>
           {user ? (
             // Authenticated Layout with Sidebar
-            <div className="min-h-screen flex">
+            <div className="layout-wrapper">
               {/* Sidebar */}
               <aside className="w-64 bg-black text-white border-r border-gray-800 flex flex-col h-screen fixed">
                 {/* Logo section */}
@@ -75,7 +75,7 @@ export default async function RootLayout({
                         <li>
                           <Link
                             href="/"
-                            className="flex items-center p-2 hover:bg-gray-800 rounded-md text-gray-300 hover:text-white"
+                            className="flex items-center p-2 hover:bg-gray-900 rounded-md text-gray-300 hover:text-white transition-colors"
                           >
                             <svg
                               className="w-5 h-5 mr-3"
@@ -96,7 +96,7 @@ export default async function RootLayout({
                         <li>
                           <Link
                             href="/projects"
-                            className="flex items-center p-2 hover:bg-gray-800 rounded-md text-gray-300 hover:text-white"
+                            className="flex items-center p-2 hover:bg-gray-900 rounded-md text-gray-300 hover:text-white transition-colors"
                           >
                             <svg
                               className="w-5 h-5 mr-3"
@@ -117,7 +117,7 @@ export default async function RootLayout({
                         <li>
                           <Link
                             href="/entries"
-                            className="flex items-center p-2 hover:bg-gray-800 rounded-md text-gray-300 hover:text-white"
+                            className="flex items-center p-2 hover:bg-gray-900 rounded-md text-gray-300 hover:text-white transition-colors"
                           >
                             <svg
                               className="w-5 h-5 mr-3"
@@ -149,7 +149,7 @@ export default async function RootLayout({
                         <li>
                           <Link
                             href="/settings/profile"
-                            className="flex items-center p-2 hover:bg-gray-800 rounded-md text-gray-300 hover:text-white"
+                            className="flex items-center p-2 hover:bg-gray-900 rounded-md text-gray-300 hover:text-white transition-colors"
                           >
                             <svg
                               className="w-5 h-5 mr-3"
@@ -170,7 +170,7 @@ export default async function RootLayout({
                         <li>
                           <Link
                             href="/settings/api-keys"
-                            className="flex items-center p-2 hover:bg-gray-800 rounded-md text-gray-300 hover:text-white"
+                            className="flex items-center p-2 hover:bg-gray-900 rounded-md text-gray-300 hover:text-white transition-colors"
                           >
                             <svg
                               className="w-5 h-5 mr-3"
@@ -196,7 +196,7 @@ export default async function RootLayout({
                 {/* User avatar section */}
                 <div className="p-4 border-t border-gray-800 mt-auto">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center mr-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center mr-3">
                       <span className="text-sm font-medium">
                         {user.email?.charAt(0).toUpperCase() || "U"}
                       </span>
@@ -219,7 +219,7 @@ export default async function RootLayout({
               </aside>
 
               {/* Main content */}
-              <div className="ml-64 w-full">
+              <div className="ml-64 main-content w-full">
                 <main className="py-6 px-6">{children}</main>
                 <footer className="bg-black py-4 text-center text-gray-500 text-xs border-t border-gray-800">
                   <div className="container mx-auto px-4">
@@ -230,7 +230,14 @@ export default async function RootLayout({
             </div>
           ) : (
             // Unauthenticated Layout (Login/Signup pages)
-            <>{children}</>
+            <div className="min-h-screen flex flex-col">
+              <main className="flex-grow">{children}</main>
+              <footer className="bg-black py-4 text-center text-gray-500 text-xs border-t border-gray-800">
+                <div className="container mx-auto px-4">
+                  Focus Dial Time Tracker &copy; {new Date().getFullYear()}
+                </div>
+              </footer>
+            </div>
           )}
         </body>
       </ReactQueryProvider>

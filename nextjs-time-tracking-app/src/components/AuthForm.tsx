@@ -34,14 +34,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
     <form action={handleFormAction} className="space-y-6">
       {/* Optional: Display server error messages */}
       {/* {errorMessage && ( 
-        <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        <div className="p-4 mb-4 text-sm text-red-400 rounded-md bg-black border border-red-800" role="alert">
           <span className="font-medium">Error:</span> {errorMessage}
         </div>
       )} */}
       <div>
         <label
           htmlFor="email"
-          className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          className="block mb-2 text-sm font-medium text-white"
         >
           Email
         </label>
@@ -52,7 +52,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           // Remove value and onChange if using uncontrolled form with FormData
           // value={email}
           // onChange={(e) => setEmail(e.target.value)}
-          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
           placeholder="name@company.com"
           required
           disabled={isPending} // Disable input when pending
@@ -61,7 +61,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <div>
         <label
           htmlFor="password"
-          className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          className="block mb-2 text-sm font-medium text-white"
         >
           Password
         </label>
@@ -73,7 +73,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           // value={password}
           // onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
           required
           minLength={6}
           disabled={isPending} // Disable input when pending
@@ -82,7 +82,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       <button
         type="submit"
-        className="w-full text-white bg-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-500 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-800 disabled:opacity-50"
+        className="w-full text-black bg-white hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-500 font-medium rounded-md text-sm px-5 py-2.5 text-center disabled:opacity-50"
         disabled={isPending} // Disable button when pending
       >
         {isPending ? "Processing..." : mode === "login" ? "Log In" : "Sign Up"}

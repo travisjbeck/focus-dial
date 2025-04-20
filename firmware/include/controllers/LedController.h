@@ -3,6 +3,11 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 
+// Define animation constants here or move to Config.h
+// const float RADAR_SWEEP_SPEED_LEDS_PER_SEC = 4.0f; // Original speed
+// const float RADAR_SWEEP_SPEED_LEDS_PER_SEC = 2.0f; // Slower speed
+// const uint8_t RADAR_SWEEP_TAIL_LENGTH = 5;
+
 class LEDController
 {
 public:
@@ -15,6 +20,7 @@ public:
   void setSpinner(uint32_t color, int cycles);
   void setBreath(uint32_t color, int cycles, bool endFilled, uint32_t speed);
   void setSolid(uint32_t color);
+  void startRadarSweep(uint32_t color); // New animation start function
 
   void turnOff();
   void printDebugInfo();
@@ -53,7 +59,8 @@ private:
     None,
     FillAndDecay,
     Spinner,
-    Breath
+    Breath,
+    RadarSweep // Added new animation type
   } currentAnimation;
   unsigned long lastUpdateTime;
 
@@ -77,12 +84,19 @@ private:
   void handleFillAndDecay();
   void handleSpinner();
   void handleBreath();
+  void handleRadarSweep(); // Added handler for new animation
 
   // Reset animation state
   void stopCurrentAnimation();
 
   // Helper to scale color by brightness
   uint32_t scaleColor(uint32_t color, uint8_t brightness);
+
+  // New members for Radar Sweep state
+  uint32_t sweepColor;
+  float sweepPosition;
+  unsigned long lastSweepUpdate; // Reuse lastUpdateTime? Maybe dedicated one is clearer
+  // Let's use lastUpdateTime for simplicity unless conflicts arise
 
   // Save/restore state before/after preview
   void saveCurrentState();

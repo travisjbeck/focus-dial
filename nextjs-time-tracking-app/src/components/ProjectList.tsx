@@ -20,7 +20,7 @@ export default function ProjectList() {
         Error loading projects: {error.message}
         <button
           onClick={() => refetch()}
-          className="ml-2 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded"
+          className="ml-2 px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
         >
           Retry
         </button>
@@ -62,7 +62,7 @@ export default function ProjectList() {
         return (
           <div
             key={project.id}
-            className="bg-gray-800 rounded-lg shadow p-4 border border-gray-700 flex justify-between items-center"
+            className="bg-black rounded-lg shadow p-4 border border-gray-800 flex justify-between items-center"
           >
             <div className="flex items-center">
               <span

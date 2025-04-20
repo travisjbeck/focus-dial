@@ -81,7 +81,7 @@ export default async function ProjectDetailPage({
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("*")
-    .eq("id", params.id) // Filter by project ID from params
+    .eq("id", Number(params.id)) // Convert params.id to number
     .eq("user_id", user.id) // Filter by user ID
     .single(); // Expect a single result
 
@@ -89,7 +89,7 @@ export default async function ProjectDetailPage({
   const { data: timeEntries, error: entriesError } = await supabase
     .from("time_entries")
     .select("*")
-    .eq("project_id", params.id) // Filter by project ID
+    .eq("project_id", Number(params.id)) // Convert params.id to number for filtering
     .eq("user_id", user.id) // Filter by user ID
     .order("start_time", { ascending: false });
 
@@ -118,13 +118,9 @@ export default async function ProjectDetailPage({
   const activeEntries = safeTimeEntries.filter((entry) => !entry.end_time);
 
   // Convert project ID to number for the button component
-  const projectIdNumber = parseInt(params.id, 10);
-  // Add basic validation in case params.id is not a number string
-  if (isNaN(projectIdNumber)) {
-    console.error("Invalid project ID format:", params.id);
-    notFound(); // Or return an error component
-  }
-
+  // Since project exists, we can use project.id which is already a number
+  const projectIdNumber = typeof project.id === 'string' ? parseInt(project.id, 10) : project.id;
+  
   // Remove old loading/error checks based on useState
   // if (isLoading) { ... }
   // if (error || !project) { ... } // Handled above with notFound()
@@ -144,13 +140,13 @@ export default async function ProjectDetailPage({
           <div className="flex space-x-2">
             <Link
               href="/projects"
-              className="px-3 py-1 text-xs font-medium text-gray-300 bg-gray-700 rounded hover:bg-gray-600"
+              className="px-3 py-1 text-xs font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900"
             >
               Back
             </Link>
             <Link
               href={`/projects/${project.id}/edit`}
-              className="px-3 py-1 text-xs font-medium text-gray-300 bg-gray-700 rounded hover:bg-gray-600"
+              className="px-3 py-1 text-xs font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900"
             >
               Edit
             </Link>
@@ -168,19 +164,19 @@ export default async function ProjectDetailPage({
         {/* Project Stats - Use directly calculated stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {/* ... Stat cards using totalDuration, totalEntries, activeEntries.length ... */}
-          <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
             <h3 className="text-xs uppercase text-gray-500 mb-1">Total Time</h3>
             <div className="text-2xl font-bold text-white">
               {formatDuration(totalDuration)}
             </div>
           </div>
-          <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
             <h3 className="text-xs uppercase text-gray-500 mb-1">
               Time Entries
             </h3>
             <div className="text-2xl font-bold text-white">{totalEntries}</div>
           </div>
-          <div className="bg-gray-800 p-4 rounded-lg shadow border border-gray-700">
+          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
             <h3 className="text-xs uppercase text-gray-500 mb-1">
               Active Sessions
             </h3>
@@ -191,7 +187,7 @@ export default async function ProjectDetailPage({
         </div>
 
         {/* Time Entries - Use fetched `safeTimeEntries` */}
-        <div className="bg-gray-800 p-6 rounded-lg shadow border border-gray-700">
+        <div className="bg-black p-6 rounded-lg shadow border border-gray-800">
           <h2 className="text-lg font-medium mb-4 text-white">Time Entries</h2>
 
           {safeTimeEntries.length === 0 ? (
@@ -201,7 +197,7 @@ export default async function ProjectDetailPage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left text-gray-400">
-                <thead className="text-xs text-gray-400 uppercase bg-gray-700">
+                <thead className="text-xs text-gray-400 uppercase bg-black border-b border-gray-800">
                   <tr>
                     <th scope="col" className="py-3 px-6">
                       Start Time
@@ -213,10 +209,7 @@ export default async function ProjectDetailPage({
                       Duration
                     </th>
                     <th scope="col" className="py-3 px-6">
-                      Status
-                    </th>
-                    <th scope="col" className="py-3 px-6">
-                      Notes
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -224,33 +217,31 @@ export default async function ProjectDetailPage({
                   {safeTimeEntries.map((entry) => (
                     <tr
                       key={entry.id}
-                      className="bg-gray-900 border-b border-gray-700 hover:bg-gray-700"
+                      className="border-b border-gray-800 hover:bg-gray-900"
                     >
                       <td className="py-4 px-6">
                         {formatDate(entry.start_time)}
                       </td>
                       <td className="py-4 px-6">
-                        {formatDate(entry.end_time)}
+                        {entry.end_time ? (
+                          formatDate(entry.end_time)
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-black text-green-500 border border-green-800">
+                            <span className="w-2 h-2 mr-1 bg-green-500 rounded-full animate-pulse"></span>
+                            Running
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 px-6 font-mono">
                         {formatDuration(entry.duration)}
                       </td>
-                      <td className="py-4 px-6">
-                        {entry.end_time ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-300 border border-green-700">
-                            Completed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-900 text-yellow-300 border border-yellow-700">
-                            In Progress
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="py-4 px-6 max-w-xs truncate"
-                        title={entry.notes || ""}
-                      >
-                        {entry.notes || "-"}
+                      <td className="py-4 px-6 text-right">
+                        <Link
+                          href={`/entries/${entry.id}`}
+                          className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
+                        >
+                          View
+                        </Link>
                       </td>
                     </tr>
                   ))}

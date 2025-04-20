@@ -53,8 +53,8 @@ void TimerState::enter()
   // Handle LED state based on duration
   if (this->duration == 0) // Indeterminate mode
   {
-    Serial.println("Timer State: Indeterminate mode - setting solid LED color.");
-    ledController.setSolid(currentLedColor);
+    Serial.println("Timer State: Indeterminate mode - starting Radar Sweep LED animation.");
+    ledController.startRadarSweep(currentLedColor); // Start new sweep animation
   }
   else // Countdown mode
   {
@@ -111,7 +111,7 @@ void TimerState::enter()
 void TimerState::update()
 {
   inputController.update();
-  ledController.update();
+  ledController.update(); // This now handles RadarSweep update automatically
 
   unsigned long currentTime = millis();
   elapsedTime = (currentTime - startTime) / 1000;
@@ -143,7 +143,7 @@ void TimerState::update()
 void TimerState::exit()
 {
   inputController.releaseHandlers();
-  // Don't reset local state (like currentLedColor) as it's needed if resuming from pause
+  // ledController.stopCurrentAnimation(); // Ensure animation stops - Likely handled by next state's LED call
   Serial.println("Exiting Timer State");
 }
 

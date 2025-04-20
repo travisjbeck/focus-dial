@@ -19,6 +19,9 @@ void DisplayController::begin()
 
   // oled.ssd1306_command(SSD1306_SETCONTRAST);
   // oled.ssd1306_command(128);
+  // Set contrast to maximum (0xFF = 255) for potentially brighter display
+  oled.ssd1306_command(SSD1306_SETCONTRAST);
+  oled.ssd1306_command(0xFF); // Use 0xFF (255) for max contrast/brightness
 
   oled.clearDisplay();
   oled.display();
