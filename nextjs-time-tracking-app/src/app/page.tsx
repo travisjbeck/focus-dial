@@ -6,11 +6,14 @@ import { useTimeEntries } from "@/lib/hooks/useTimeEntries";
 import { useProjects } from "@/lib/hooks/useProjects";
 import type { Database } from "@/types/supabase";
 import { getDateRangeForOption, generateTimelineMarkers } from "@/lib/utils/dateUtils";
+// Import the TimeEntry type from the hook
+import type { TimeEntry } from "@/lib/hooks/useTimeEntries";
 
 // Use types derived from hooks/database
 // type TimeEntry = Database["public"]["Tables"]["sessions"]["Row"]; // Inferred from useTimeEntries
 type Project = Database["public"]["Tables"]["projects"]["Row"];
-type TimeEntry = {
+// Local TimeEntry definition is no longer needed
+/* type TimeEntry = {
   id: number;
   project_id: number | null;
   start_time: string;
@@ -19,7 +22,7 @@ type TimeEntry = {
   user_id: string;
   created_at: string;
   description?: string | null;
-};
+}; */
 
 // Helper functions (formatDuration, formatDate) remain the same
 function formatDuration(seconds?: number | null): string {

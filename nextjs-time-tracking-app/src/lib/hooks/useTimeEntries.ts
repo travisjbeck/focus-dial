@@ -7,7 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 // Use 'time_entries' table - **FIXED TABLE NAME**
-type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
+export type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
 
 // Fetch function for time entries
 const fetchTimeEntries = async (): Promise<TimeEntry[]> => {
