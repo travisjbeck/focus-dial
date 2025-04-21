@@ -5,6 +5,8 @@ import { notFound } from "next/navigation"; // Import notFound
 import { cookies } from "next/headers"; // Import cookies
 import { createServerComponentSupabaseClient } from "@/utils/supabase"; // Import Supabase client
 import DeleteProjectButton from "@/components/DeleteProjectButton"; // Import the new button component
+import { formatDuration, formatDate } from "@/lib/utils/dateUtils"; // Import from utils
+import { Button } from "@/components/ui/button"; // Import Button
 
 // Remove client-side imports if no longer needed
 // import { useState, useEffect } from "react";
@@ -14,28 +16,6 @@ import DeleteProjectButton from "@/components/DeleteProjectButton"; // Import th
 // Use types directly
 // type Project = Database["public"]["Tables"]["projects"]["Row"]; // Remove unused
 // type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"]; // Remove unused
-
-// Helper functions (formatDuration, formatDate) remain the same
-function formatDuration(seconds?: number | null): string {
-  // Updated type
-  if (seconds === null || seconds === undefined) return "—";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  return [hours, minutes, secs]
-    .map((v) => v.toString().padStart(2, "0"))
-    .join(":");
-}
-function formatDate(dateString?: string | null): string {
-  // Updated type
-  if (!dateString) return "—";
-  try {
-    return new Date(dateString).toLocaleString();
-  } catch {
-    console.error("Error formatting date:", dateString);
-    return "Invalid Date";
-  }
-}
 
 interface ProjectDetailPageProps {
   params: {
@@ -129,95 +109,86 @@ export default async function ProjectDetailPage({
     <div className="container mx-auto px-4">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          {/* ... Display project name/color using fetched `project` ... */}
           <div className="flex items-center">
             <div
               className="w-6 h-6 rounded-full mr-3"
               style={{ backgroundColor: project.color || "#808080" }}
             />
-            <h1 className="text-xl font-bold text-white">{project.name}</h1>
+            <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
           </div>
           <div className="flex space-x-2">
             <Link
               href="/projects"
-              className="px-3 py-1 text-xs font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900"
+              passHref // Required for Button inside Link
+              legacyBehavior // Required for Button inside Link
             >
-              Back
+              <Button asChild variant="outline" size="sm">
+                <a>Back</a>
+              </Button>
             </Link>
             <Link
               href={`/projects/${project.id}/edit`}
-              className="px-3 py-1 text-xs font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900"
+              passHref // Required for Button inside Link
+              legacyBehavior // Required for Button inside Link
             >
-              Edit
+              <Button asChild variant="outline" size="sm">
+                <a>Edit</a>
+              </Button>
             </Link>
             <DeleteProjectButton projectId={projectIdNumber} />
           </div>
         </div>
 
-        {/* TODO: Handle delete error display with new component state */}
-        {/* {deleteError && ( ... )} */}
-
-        <div className="text-xs text-gray-500 mb-4">
+        <div className="text-xs text-muted-foreground mb-4">
           Created: {formatDate(project.created_at)}
         </div>
 
-        {/* Project Stats - Use directly calculated stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {/* ... Stat cards using totalDuration, totalEntries, activeEntries.length ... */}
-          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-            <h3 className="text-xs uppercase text-gray-500 mb-1">Total Time</h3>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-card p-4 rounded-lg shadow border border-border">
+            <h3 className="text-xs uppercase text-muted-foreground mb-1">Total Time</h3>
+            <div className="text-2xl font-bold text-card-foreground">
               {formatDuration(totalDuration)}
             </div>
           </div>
-          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-            <h3 className="text-xs uppercase text-gray-500 mb-1">
+          <div className="bg-card p-4 rounded-lg shadow border border-border">
+            <h3 className="text-xs uppercase text-muted-foreground mb-1">
               Time Entries
             </h3>
-            <div className="text-2xl font-bold text-white">{totalEntries}</div>
+            <div className="text-2xl font-bold text-card-foreground">{totalEntries}</div>
           </div>
-          <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-            <h3 className="text-xs uppercase text-gray-500 mb-1">
+          <div className="bg-card p-4 rounded-lg shadow border border-border">
+            <h3 className="text-xs uppercase text-muted-foreground mb-1">
               Active Sessions
             </h3>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-card-foreground">
               {activeEntries.length}
             </div>
           </div>
         </div>
 
-        {/* Time Entries - Use fetched `safeTimeEntries` */}
-        <div className="bg-black p-6 rounded-lg shadow border border-gray-800">
-          <h2 className="text-lg font-medium mb-4 text-white">Time Entries</h2>
+        <div className="bg-card p-6 rounded-lg shadow border border-border">
+          <h2 className="text-lg font-medium mb-4 text-card-foreground">Time Entries</h2>
 
           {safeTimeEntries.length === 0 ? (
-            <div className="text-gray-400 text-center py-4">
+            <div className="text-muted-foreground text-center py-4">
               No time entries found for this project.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-400">
-                <thead className="text-xs text-gray-400 uppercase bg-black border-b border-gray-800">
+              <table className="w-full text-sm text-left text-foreground">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                   <tr>
-                    <th scope="col" className="py-3 px-6">
-                      Start Time
-                    </th>
-                    <th scope="col" className="py-3 px-6">
-                      End Time
-                    </th>
-                    <th scope="col" className="py-3 px-6">
-                      Duration
-                    </th>
-                    <th scope="col" className="py-3 px-6">
-                      <span className="sr-only">Actions</span>
-                    </th>
+                    <th scope="col" className="py-3 px-6">Start Time</th>
+                    <th scope="col" className="py-3 px-6">End Time</th>
+                    <th scope="col" className="py-3 px-6">Duration</th>
+                    <th scope="col" className="py-3 px-6"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {safeTimeEntries.map((entry) => (
                     <tr
                       key={entry.id}
-                      className="border-b border-gray-800 hover:bg-gray-900"
+                      className="border-b border-border hover:bg-muted/50"
                     >
                       <td className="py-4 px-6">
                         {formatDate(entry.start_time)}
@@ -226,7 +197,7 @@ export default async function ProjectDetailPage({
                         {entry.end_time ? (
                           formatDate(entry.end_time)
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-black text-green-500 border border-green-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 border border-green-300 dark:border-green-700">
                             <span className="w-2 h-2 mr-1 bg-green-500 rounded-full animate-pulse"></span>
                             Running
                           </span>
@@ -236,12 +207,22 @@ export default async function ProjectDetailPage({
                         {formatDuration(entry.duration)}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <Link
-                          href={`/entries/${entry.id}`}
-                          className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center space-x-2 justify-end">
+                            <Link
+                              href={`/time-entries/${entry.id}`}
+                              className="px-2 py-1 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md border border-border"
+                              aria-label={`View details for time entry started at ${formatDate(entry.start_time)}`}
+                            >
+                              View
+                            </Link>
+                            <Link
+                              href={`/time-entries/${entry.id}/edit`}
+                              className="px-2 py-1 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md border border-border"
+                              aria-label={`Edit time entry started at ${formatDate(entry.start_time)}`}
+                            >
+                              Edit
+                            </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

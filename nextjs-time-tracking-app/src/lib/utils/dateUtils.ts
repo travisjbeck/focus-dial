@@ -81,6 +81,34 @@ export function getDateRangeForOption(option: TimeRangeOption): DateRange {
   return { start, end };
 } 
 
+// --- Standard Formatting Functions --- //
+
+/**
+ * Formats duration in seconds to HH:MM:SS format.
+ */
+export function formatDuration(seconds?: number | null): string {
+  if (seconds === null || seconds === undefined) return "—";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return [hours, minutes, secs]
+    .map((v) => v.toString().padStart(2, "0"))
+    .join(":");
+}
+
+/**
+ * Formats a date string into a locale-specific string.
+ */
+export function formatDate(dateString?: string | null): string {
+  if (!dateString) return "—";
+  try {
+    return new Date(dateString).toLocaleString();
+  } catch {
+    console.error("Error formatting date:", dateString);
+    return "Invalid Date";
+  }
+}
+
 // --- Timeline Marker Generation --- //
 
 // Helper to format time labels consistently

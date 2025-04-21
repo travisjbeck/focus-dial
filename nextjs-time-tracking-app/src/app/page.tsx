@@ -6,6 +6,13 @@ import { useTimeEntries } from "@/lib/hooks/useTimeEntries";
 import { useProjects } from "@/lib/hooks/useProjects";
 import type { Database } from "@/types/supabase";
 import { getDateRangeForOption, generateTimelineMarkers } from "@/lib/utils/dateUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // Import the TimeEntry type from the hook
 import type { TimeEntry } from "@/lib/hooks/useTimeEntries";
 
@@ -310,17 +317,21 @@ export default function Dashboard() {
       .map(([projectId]) => projectId); // Map to get the project ID
   }, [entriesByProject]); 
 
+  const handleRangeChange = (value: string) => {
+    setSelectedRange(value as TimeRangeOption);
+  };
+
   return (
     <div className="container mx-auto px-4">
       <h1 className="sr-only">Dashboard</h1>
 
       {/* Render error first if exists */}
       {error && (
-        <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md text-center mb-6">
+        <div className="bg-destructive border border-destructive text-destructive-foreground px-4 py-3 rounded-md text-center mb-6">
           <span>Error loading dashboard data: {error.message}</span>
           <button
             onClick={handleRetry}
-            className="ml-2 px-2 py-1 text-xs bg-gray-900 hover:bg-gray-800 text-white rounded-md"
+            className="ml-2 px-2 py-1 text-xs bg-destructive-foreground text-destructive rounded-md hover:opacity-90"
           >
             Retry
           </button>
@@ -329,22 +340,22 @@ export default function Dashboard() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">Projects</h3>
+        <div className="bg-card text-card-foreground p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">Projects</h3>
           <div className="text-2xl font-bold">
             {isLoadingEntries || isLoadingProjects ? "..." : activeProjectsCountInRange}
           </div>
         </div>
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">Total Hours</h3>
+        <div className="bg-card text-card-foreground p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">Total Hours</h3>
           <div className="text-2xl font-bold">
             {isLoadingEntries
               ? "..."
               : formatDuration(selectedRangeTotalDuration)}
           </div>
         </div>
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800 relative">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">Active Timer</h3>
+        <div className="bg-card text-card-foreground p-4 rounded-lg shadow border border-border relative">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">Active Timer</h3>
           <div className="text-2xl font-bold">
             {isLoadingEntries ? (
               "..."
@@ -361,12 +372,12 @@ export default function Dashboard() {
       </div>
 
       {/* Timeline Time Entries Section */}
-      <div className="bg-black p-6 rounded-lg shadow border border-gray-800 mb-8">
+      <div className="bg-card text-card-foreground p-6 rounded-lg shadow border border-border mb-8">
         {/* Row 1: View All Entries Link (Top Right) */}
         <div className="flex justify-end mb-2"> { /* Push link to right, add margin bottom */}
           <Link
             href="/entries"
-            className="text-xs text-gray-400 hover:text-white"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             View All Entries →
           </Link>
@@ -376,41 +387,46 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-4">
           {/* Left side: Title and total duration */}
           <div className="flex items-baseline space-x-2">
-            <h2 className="text-lg font-semibold text-white">
+            {/* Ensure header text uses foreground color */} 
+            <h2 className="text-lg font-semibold text-foreground">
               Activity Timeline
             </h2>
-            {/* Display total duration for selected range */}
-            <span className="text-sm text-gray-400">
+            {/* Muted text for total */}
+            <span className="text-sm text-muted-foreground">
               ({formatDuration(selectedRangeTotalDuration)} total)
             </span>
           </div>
           {/* Right side: Dropdown only */}
           <div className="flex items-center space-x-4">
-            {/* Dropdown */}
-            <select
+            {/* ShadCN Select themes correctly, but ensure trigger has appropriate theme styles if needed */}
+            <Select
               value={selectedRange}
-              onChange={(e) => setSelectedRange(e.target.value as TimeRangeOption)}
-              className="form-select py-1 text-sm"
+              onValueChange={handleRangeChange}
             >
-              {timeRangeOptions.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              {/* Apply input/border styles */}
+              <SelectTrigger className="w-[180px] bg-background border-border text-foreground">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              {/* Content uses popover styles from theme */}
+              <SelectContent>
+                {timeRangeOptions.map(option => (
+                  <SelectItem key={option} value={option}>{option}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {isLoadingEntries ? (
-          <div className="text-center py-4 text-gray-400">
+          <div className="text-center py-4 text-muted-foreground">
             Loading entries...
           </div>
-        ) : selectedRangeEntries.length === 0 ? ( // Use filtered entries count
-          <div className="text-gray-500 text-center py-8">
-            No entries recorded for {selectedRange}. {/* Update message */}
+        ) : selectedRangeEntries.length === 0 ? (
+          <div className="text-muted-foreground text-center py-8">
+            No entries recorded for {selectedRange}.
           </div>
         ) : (
           <div className="mt-6">
-            {/* Timeline Container with responsive grid layout */}
+            {/* Timeline Container needs theme styles? Or relies on card bg? */}
             {projectsWithEntries.length > 0 ? (
               <div className="timeline-container">
                 {/* Timeline header */}
@@ -425,8 +441,12 @@ export default function Dashboard() {
                         className="time-marker"
                         style={{ left: marker.position }}
                       >
-                        <div className="marker-label">{marker.time}</div>
-                        <div className="marker-line"></div>
+                        {/* Apply theme classes directly to label */}
+                        <div className="marker-label bg-background/80 text-muted-foreground px-1 rounded-sm">
+                          {marker.time}
+                        </div>
+                        {/* Keep themed line */}
+                        <div className="marker-line border-l border-border/40"></div>
                       </div>
                     ))}
                   </div>
@@ -434,7 +454,6 @@ export default function Dashboard() {
 
                 {/* Timeline rows */}
                 <div className="timeline-body">
-                  {/* Map over only the projects that have entries in the selected range */}
                   {projectsWithEntries.map((projectIdStr, rowIndex) => {
                     const projectId = Number(projectIdStr); // Convert string ID back to number
                     // Get the project details and entries using the projectId
@@ -453,13 +472,14 @@ export default function Dashboard() {
                     return (
                       <div 
                         key={projectId} 
-                        className={`timeline-row ${rowIndex % 2 === 0 ? 'timeline-row-alt' : ''}`}
+                        // Adjust row background for theme
+                        className={`timeline-row ${rowIndex % 2 === 0 ? 'bg-muted/30' : ''}`}
                       >
                         {/* Project name */}
                         <div className="project-name">
                           <Link 
                             href={`/projects/${projectId}`}
-                            className="font-medium text-white hover:text-gray-300 truncate block"
+                            className="font-medium text-foreground hover:text-muted-foreground truncate block"
                             title={project.name}
                           >
                             {project.name}
@@ -475,12 +495,13 @@ export default function Dashboard() {
                             return (
                               <div
                                 key={entry.id}
+                                // Adjust entry style if needed, but color comes from project
                                 className={`time-entry ${isActive ? "active-entry" : ""}`}
                                 style={{
                                   left: position.left,
                                   width: position.width,
-                                  backgroundColor: project.color || '#808080',
-                                  zIndex: 1 /* Above the grid lines */
+                                  backgroundColor: project.color || '#808080', // Keep project color
+                                  zIndex: 1,
                                 }}
                                 title={`${formatDate(entry.start_time)} - ${entry.end_time ? formatDate(entry.end_time) : "Running"} (${formatDuration(entry.duration)})`}
                               />
@@ -492,7 +513,7 @@ export default function Dashboard() {
                   })}
                 </div>
                 
-                {/* Add CSS for the timeline grid */}
+                {/* Update inline CSS for timeline */}
                 <style jsx>{`
                   .timeline-container {
                     width: 100%;
@@ -531,7 +552,6 @@ export default function Dashboard() {
                     position: absolute;
                     top: 0;
                     font-weight: 500;
-                    background-color: rgba(0, 0, 0, 0.7);
                     padding: 0 4px;
                     border-radius: 2px;
                     z-index: 2;
@@ -547,40 +567,27 @@ export default function Dashboard() {
                     transform: translateX(-50%);
                     text-align: center;
                     top: 0;
-                    width: 1px;
-                    height: 100%;
                   }
                   
                   .marker-line {
                     height: 6px;
                     width: 1px;
-                    background-color: rgb(75 85 99 / 40%); /* Match opacity with line extension */
                     margin: 0 auto;
                     position: relative;
                     z-index: 1;
                   }
                   
-                  /* Add vertical grid lines that extend through all content */
                   .time-marker::after {
                     content: '';
                     position: absolute;
                     top: 24px;
-                    left: 0;
+                    left: 50%;
+                    transform: translateX(-50%);
                     width: 1px;
-                    background-color: rgb(75 85 99 / 40%);
-                    height: 2000px; /* Very tall to cover all potential content */
+                    border-left: 1px solid hsl(var(--border) / 0.4);
+                    height: 2000px;
                     z-index: 0;
                     pointer-events: none;
-                  }
-                  
-                  .marker-label {
-                    background-color: rgba(0, 0, 0, 0.7);
-                    padding: 0 4px;
-                    border-radius: 2px;
-                    white-space: nowrap;
-                    position: relative;
-                    bottom: 3px;
-                    z-index: 2;
                   }
                   
                   .timeline-row {
@@ -588,19 +595,9 @@ export default function Dashboard() {
                     border-radius: 4px;
                   }
                   
-                  .timeline-row-alt {
-                    background-color: rgba(75, 85, 99, 0.15); /* Brightened by ~15% */
-                  }
-                  
-                  .project-name {
-                    padding-right: 1rem;
-                    overflow: hidden;
-                  }
-                  
                   .time-entries {
                     position: relative;
-                    height: 28px;
-                    width: 100%;
+                    height: 100%;
                   }
                   
                   .time-entry {
@@ -609,7 +606,7 @@ export default function Dashboard() {
                     top: 0;
                     border-radius: 2px;
                     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-                    z-index: 1; /* Above the grid lines */
+                    z-index: 1;
                   }
                   
                   .active-entry {
@@ -633,8 +630,8 @@ export default function Dashboard() {
                 `}</style>
               </div>
             ) : (
-              <div className="text-gray-500 text-center py-6">
-                No project activity tracked for {selectedRange}. {/* Update message */}
+              <div className="text-muted-foreground text-center py-6">
+                No project activity tracked for {selectedRange}.
               </div>
             )}
           </div>

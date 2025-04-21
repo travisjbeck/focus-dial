@@ -4,6 +4,13 @@ import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 // Removed axios import
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Import server actions
 import { getProjectById, updateProject } from "@/app/(auth)/actions";
@@ -64,6 +71,13 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleColorChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      color: value,
     }));
   };
 
@@ -179,21 +193,31 @@ export default function EditProjectPage({ params }: EditProjectPageProps) {
                   title="Select color"
                   disabled={isPending}
                 />
-                {/* Color Select Dropdown */}
-                <select
-                  id="color-select"
-                  name="color" // Ensure name matches state
+
+                {/* Replace with ShadCN UI Select */}
+                <input type="hidden" name="color" value={formData.color} />
+                <Select
                   value={formData.color}
-                  onChange={handleChange}
-                  className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
+                  onValueChange={handleColorChange}
                   disabled={isPending}
                 >
-                  {colorOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label} ({option.value})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full bg-black border-gray-800 text-white">
+                    <SelectValue placeholder="Select a color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center">
+                          <span 
+                            className="inline-block w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: option.value }}
+                          ></span>
+                          {option.label} ({option.value})
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

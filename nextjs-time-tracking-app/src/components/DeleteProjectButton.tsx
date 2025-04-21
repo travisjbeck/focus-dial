@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProject } from "@/app/(auth)/actions"; // Import the server action
+import { Button } from "@/components/ui/button"; // Import Button
 
 interface DeleteProjectButtonProps {
   projectId: number;
@@ -43,13 +44,14 @@ export default function DeleteProjectButton({
     <>
       {/* Display error message if deletion failed */}
       {error && <p className="text-xs text-red-400 mt-2">Error: {error}</p>}
-      <button
+      <Button
+        variant="destructive" // Use destructive variant
+        size="sm" // Match size with other buttons
         onClick={handleDelete}
-        className="px-3 py-1 text-xs font-medium text-red-400 bg-black rounded-md border border-red-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
         disabled={isPending}
       >
         {isPending ? "Deleting..." : "Delete"}
-      </button>
+      </Button>
     </>
   );
 }

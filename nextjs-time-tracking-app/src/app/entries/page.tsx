@@ -4,32 +4,12 @@ import { useState, useMemo } from "react";
 import { useTimeEntries } from "@/lib/hooks/useTimeEntries";
 import { useProjects } from "@/lib/hooks/useProjects";
 import type { Database } from "@/types/supabase";
+import { formatDuration, formatDate } from "@/lib/utils/dateUtils";
+import Link from "next/link";
 
 // Use types derived from hooks/database
 // type TimeEntry = Database["public"]["Tables"]["sessions"]["Row"]; // Type is inferred by useTimeEntries hook
 type Project = Database["public"]["Tables"]["projects"]["Row"];
-
-// Helper to format duration in seconds to a readable format
-function formatDuration(seconds?: number | null): string {
-  if (seconds === null || seconds === undefined) return "—";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  return [hours, minutes, secs]
-    .map((v) => v.toString().padStart(2, "0"))
-    .join(":");
-}
-
-// Helper to format date
-function formatDate(dateString?: string | null): string {
-  if (!dateString) return "—";
-  try {
-    return new Date(dateString).toLocaleString();
-  } catch {
-    console.error("Error formatting date:", dateString);
-    return "Invalid Date";
-  }
-}
 
 export default function EntriesPage() {
   const [activeFilter, setActiveFilter] = useState<
@@ -97,48 +77,48 @@ export default function EntriesPage() {
   return (
     <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-white">Time Entries</h1>
+        <h1 className="text-xl font-bold text-foreground">Time Entries</h1>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">Total Hours</h3>
-          <div className="text-2xl font-bold text-white">
+        <div className="bg-card p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">Total Hours</h3>
+          <div className="text-2xl font-bold text-card-foreground">
             {isLoading ? "..." : formatDuration(summaryStats.totalDuration)}
           </div>
         </div>
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">
+        <div className="bg-card p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">
             Total Entries
           </h3>
-          <div className="text-2xl font-bold text-white">
+          <div className="text-2xl font-bold text-card-foreground">
             {isLoading ? "..." : summaryStats.totalEntries}
           </div>
         </div>
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">
+        <div className="bg-card p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">
             Active Timers
           </h3>
-          <div className="text-2xl font-bold text-white">
+          <div className="text-2xl font-bold text-card-foreground">
             {isLoading ? "..." : summaryStats.activeTimers}
           </div>
         </div>
-        <div className="bg-black p-4 rounded-lg shadow border border-gray-800">
-          <h3 className="text-xs uppercase text-gray-500 mb-1">Projects</h3>
-          <div className="text-2xl font-bold text-white">
+        <div className="bg-card p-4 rounded-lg shadow border border-border">
+          <h3 className="text-xs uppercase text-muted-foreground mb-1">Projects</h3>
+          <div className="text-2xl font-bold text-card-foreground">
             {isLoadingProjects ? "..." : projects?.length ?? 0}
           </div>
         </div>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex border-b border-gray-800 mb-6">
+      <div className="flex border-b border-border mb-6">
         <button
           className={`py-2 px-4 text-sm font-medium ${
             activeFilter === "all"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "text-foreground border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 border-b-2 border-transparent"
           }`}
           onClick={() => setActiveFilter("all")}
         >
@@ -147,8 +127,8 @@ export default function EntriesPage() {
         <button
           className={`py-2 px-4 text-sm font-medium ${
             activeFilter === "active"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "text-foreground border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 border-b-2 border-transparent"
           }`}
           onClick={() => setActiveFilter("active")}
         >
@@ -157,8 +137,8 @@ export default function EntriesPage() {
         <button
           className={`py-2 px-4 text-sm font-medium ${
             activeFilter === "completed"
-              ? "text-white border-b-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "text-foreground border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 border-b-2 border-transparent"
           }`}
           onClick={() => setActiveFilter("completed")}
         >
@@ -168,20 +148,20 @@ export default function EntriesPage() {
 
       {/* Main Content Area */}
       {isLoading ? (
-        <div className="text-center py-8 text-gray-400">Loading data...</div>
+        <div className="text-center py-8 text-muted-foreground">Loading data...</div>
       ) : error ? (
-        <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md text-center">
+        <div className="bg-destructive border border-destructive text-destructive-foreground px-4 py-3 rounded-md text-center">
           <span>Error loading data: {error.message}</span>
           <button
             onClick={handleRetry}
-            className="ml-2 px-2 py-1 text-xs bg-gray-900 hover:bg-gray-800 text-white rounded-md"
+            className="ml-2 px-2 py-1 text-xs bg-destructive-foreground text-destructive rounded-md hover:opacity-90"
           >
             Retry
           </button>
         </div>
       ) : filteredEntries.length === 0 ? (
-        <div className="bg-black p-6 rounded-lg shadow border border-gray-800 text-center">
-          <p className="text-gray-400">
+        <div className="bg-card p-6 rounded-lg shadow border border-border text-center">
+          <p className="text-muted-foreground">
             {activeFilter === "all"
               ? "No time entries found. Start a timer on your device!"
               : activeFilter === "active"
@@ -190,9 +170,9 @@ export default function EntriesPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-gray-800">
-          <table className="w-full text-sm text-left text-gray-400">
-            <thead className="text-xs text-gray-400 uppercase bg-black border-b border-gray-800">
+        <div className="overflow-x-auto relative shadow-md sm:rounded-lg border border-border">
+          <table className="w-full text-sm text-left text-foreground">
+            <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
               <tr>
                 <th scope="col" className="py-3 px-6">
                   Project
@@ -219,7 +199,7 @@ export default function EntriesPage() {
                 return (
                   <tr
                     key={entry.id}
-                    className="border-b border-gray-800 hover:bg-gray-900"
+                    className="border-b border-border hover:bg-muted/50"
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-center">
@@ -231,7 +211,7 @@ export default function EntriesPage() {
                             }}
                           ></span>
                         )}
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-foreground">
                           {project?.name ||
                             (entry.project_id
                               ? "Unknown Project"
@@ -255,12 +235,20 @@ export default function EntriesPage() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
-                        <button className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800">
+                        <Link
+                          href={`/time-entries/${entry.id}`}
+                          className="px-2 py-1 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md border border-border"
+                          aria-label={`View details for time entry started at ${formatDate(entry.start_time)}`}
+                        >
                           View
-                        </button>
-                        <button className="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800">
+                        </Link>
+                        <Link
+                          href={`/time-entries/${entry.id}/edit`}
+                          className="px-2 py-1 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md border border-border"
+                          aria-label={`Edit time entry started at ${formatDate(entry.start_time)}`}
+                        >
                           Edit
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>

@@ -11,16 +11,16 @@ export default function ProjectList() {
   const { data: projects, isLoading, error, refetch } = useProjects();
 
   if (isLoading) {
-    return <div className="text-center text-gray-400">Loading projects...</div>;
+    return <div className="text-center text-muted-foreground">Loading projects...</div>;
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-500">
+      <div className="text-center text-destructive-foreground bg-destructive p-4 rounded-md">
         Error loading projects: {error.message}
         <button
           onClick={() => refetch()}
-          className="ml-2 px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white rounded-md border border-gray-800"
+          className="ml-2 px-2 py-1 text-xs bg-destructive-foreground text-destructive rounded-md hover:opacity-90"
         >
           Retry
         </button>
@@ -30,11 +30,11 @@ export default function ProjectList() {
 
   if (!projects || projects.length === 0) {
     return (
-      <div className="text-center text-gray-500">
-        <p>No projects found.</p>
+      <div className="bg-card text-card-foreground p-6 rounded-lg shadow border border-border text-center">
+        <p className="text-muted-foreground">No projects found.</p>
         <Link
           href="/projects/create"
-          className="mt-2 inline-block text-blue-400 hover:underline"
+          className="mt-2 inline-block text-primary hover:underline"
         >
           Create your first project
         </Link>
@@ -56,19 +56,19 @@ export default function ProjectList() {
         return (
           <div
             key={project.id}
-            className="bg-black rounded-lg shadow p-4 border border-gray-800 flex justify-between items-center"
+            className="bg-card rounded-lg shadow p-4 border border-border flex justify-between items-center"
           >
             <div className="flex items-center">
               <span
                 className="w-4 h-4 rounded-full mr-3 flex-shrink-0"
                 style={{ backgroundColor: getBgColor(project.color) }}
               ></span>
-              <span className="text-white font-medium">{project.name}</span>
+              <span className="text-card-foreground font-medium">{project.name}</span>
             </div>
             {/* Add Edit/Archive buttons later */}
             <Link
               href={`/projects/${project.id}`}
-              className="text-sm text-gray-400 hover:text-white hover:underline"
+              className="text-sm text-muted-foreground hover:text-foreground hover:underline"
             >
               View Details
             </Link>

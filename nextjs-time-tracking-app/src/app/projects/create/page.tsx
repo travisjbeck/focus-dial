@@ -4,6 +4,13 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CreateProjectPage() {
   const router = useRouter();
@@ -49,13 +56,17 @@ export default function CreateProjectPage() {
     }
   };
 
+  const handleColorChange = (value: string) => {
+    setColor(value);
+  };
+
   return (
     <div className="container mx-auto px-4">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-100">Create New Project</h1>
+        <h1 className="text-3xl font-bold text-foreground">Create New Project</h1>
         <Link 
           href="/projects" 
-          className="px-4 py-2 text-sm font-medium text-white bg-black rounded-md border border-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center"
+          className="px-4 py-2 text-sm font-medium text-secondary-foreground bg-secondary hover:bg-secondary/80 rounded-md border border-border flex items-center"
         >
           <svg
             className="w-5 h-5 mr-1"
@@ -75,9 +86,9 @@ export default function CreateProjectPage() {
         </Link>
       </div>
 
-      <div className="bg-black rounded-lg shadow-lg border border-gray-800 p-6 max-w-2xl mx-auto">
+      <div className="bg-card rounded-lg shadow-lg border border-border p-6 max-w-2xl mx-auto">
         {error && (
-          <div className="bg-black border border-red-800 text-red-400 px-4 py-3 rounded-md mb-6">
+          <div className="bg-destructive border border-destructive text-destructive-foreground px-4 py-3 rounded-md mb-6">
             <div className="flex items-center">
               <svg
                 className="w-5 h-5 mr-2"
@@ -100,13 +111,13 @@ export default function CreateProjectPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label htmlFor="name" className="block text-gray-300 mb-2">
+            <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-1">
               Project Name
             </label>
             <input
               type="text"
               id="name"
-              className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter project name"
@@ -115,41 +126,52 @@ export default function CreateProjectPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-gray-300 mb-2">Project Color</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Project Color</label>
             <div className="flex items-center">
               <div
-                className="w-10 h-10 rounded-md mr-4 shadow-inner border border-gray-700"
+                className="w-10 h-10 rounded-md mr-4 shadow-inner border border-border"
                 style={{ backgroundColor: color }}
               />
-              <select
-                className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-gray-500"
+              <Select
                 value={color}
-                onChange={(e) => setColor(e.target.value)}
+                onValueChange={handleColorChange}
+                disabled={loading}
               >
-                {colorOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full bg-background border-input text-foreground">
+                  <SelectValue placeholder="Select a color" />
+                </SelectTrigger>
+                <SelectContent>
+                  {colorOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center">
+                        <span 
+                          className="inline-block w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: option.value }}
+                        ></span>
+                        {option.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="flex justify-end space-x-3">
             <Link 
               href="/projects" 
-              className="px-4 py-2 border border-gray-800 rounded-md text-white hover:bg-gray-900"
+              className="px-4 py-2 border border-border rounded-md text-secondary-foreground bg-secondary hover:bg-secondary/80"
             >
               Cancel
             </Link>
             <button
               type="submit"
-              className="px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 flex items-center"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center disabled:opacity-50"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-primary-foreground border-r-transparent mr-2"></div>
                   Creating...
                 </>
               ) : (

@@ -20,8 +20,8 @@ export const createServerComponentSupabaseClient = (cookieStore: ReadonlyRequest
     process.env.SUPABASE_ANON_KEY!, // Use non-public var
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
       },
     }
@@ -37,27 +37,25 @@ export const createActionSupabaseClient = (cookieStore: ReadonlyRequestCookies) 
     process.env.SUPABASE_ANON_KEY!, // Use non-public var
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          // The cookieStore from next/headers might need options mapping
-          // Let's try passing directly first, may need adjustment
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
-            cookieStore.set({ name, value, ...options });
-          } catch {
-            // Fallback if direct spread fails (e.g., due to method mismatch)
-            cookieStore.set(name, value, options);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          // The cookieStore from next/headers might need options mapping
-          // Let's try passing directly first, may need adjustment
-          try {
-            cookieStore.set({ name, value: '', ...options });
-          } catch {
-            // Fallback if direct spread fails
-            cookieStore.set(name, '', options);
+            // Use the set method which is available on the mutable cookie store in Server Actions/Route Handlers
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // The cookieStore from next/headers might need options mapping
+              // Let's try passing directly first, may need adjustment
+              try {
+                cookieStore.set({ name, value, ...options });
+              } catch {
+                // Fallback if direct spread fails (e.g., due to method mismatch)
+                cookieStore.set(name, value, options);
+              }
+            })
+          } catch (error) {
+            // Handle potential errors during the iteration or setting cookies
+            console.error('Error setting cookies in Supabase client:', error);
           }
         },
       },

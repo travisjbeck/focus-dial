@@ -1,0 +1,176 @@
+---
+description: Codebase overview and style guide
+globs: 
+alwaysApply: false
+---
+# Focus Dial Project: Overview & Style Guide
+
+This document provides context and development guidelines for the Focus Dial project, encompassing both the ESP32 firmware and the Next.js web application.
+
+## Overall Goal
+
+To create the "Focus Dial" hardware (an ESP32-based timer device) and a companion Time Tracking Web Application (Next.js SPA) for managing time entries, projects, and potentially invoicing.
+
+---
+
+## 1. Firmware (Focus Dial Hardware: ESP32-S2)
+
+### 1.1 Purpose & Functionality
+
+-   Timer device with rotary dial input, OLED display, and NeoPixel LED feedback.
+-   Allows selecting projects (name/color) before starting timers.
+-   Shows project color on LEDs during timing.
+-   Connects to Wi-Fi.
+-   Sends time tracking data (start/end times, duration, project name) via webhook to the web application backend.
+-   Hosts a configuration web UI (`focus-dial.local`) for managing projects and the webhook URL.
+
+### 1.2 Hardware & Framework
+
+-   **Hardware:** Adafruit QT Py ESP32-S2 (ESP32-S2, 240MHz, 4MB Flash, 2MB PSRAM).
+-   **Framework:** Arduino via PlatformIO.
+
+### 1.3 Code Structure & Key Files
+
+-   **Workspace Directory:** `firmware/`
+-   **PlatformIO Config:** `firmware/platformio.ini` (Board, framework, dependencies)
+-   **Main Source:** `firmware/src/`
+-   **Entry Point:** `firmware/src/main.cpp`
+-   **State Machine:** `firmware/src/StateMachine.cpp`
+-   **States:** `firmware/src/states/` (Implementations for different device modes)
+-   **Controllers:** `firmware/src/controllers/` (Hardware abstractions: Display, LEDs, Input, Network)
+-   **Libraries:** `firmware/lib/` (Custom libraries)
+-   **Headers:** `firmware/include/`
+-   **Data/Assets:** `firmware/data/` (For LittleFS: HTML, CSS, JS for web config UI)
+-   **Partitions:** `firmware/partitions.csv` (Custom flash layout)
+
+### 1.4 Architecture & Key Concepts
+
+-   **Core Logic:** State machine pattern (`StateMachine.cpp`).
+-   **Hardware Interaction:** Managed by specific controller classes.
+-   **Configuration:**
+    -   Hardware pins likely in `Config.h`.
+    -   Persistent storage (projects, webhook URL) uses ESP32 NVS (Non-Volatile Storage), likely via the `Preferences` class.
+-   **Web Config UI:**
+    -   Served from LittleFS using `ESPAsyncWebServer`.
+    -   Backend API endpoints (`/api/projects`, `/api/webhook`) handle data persistence.
+-   **Connectivity:**
+    -   Wi-Fi provisioning likely handled by `WiFiProvisioner` library.
+    -   Webhook logic within `NetworkController`.
+
+### 1.5 Development Workflow
+
+-   **Environment:** Use PlatformIO via VS Code or CLI.
+-   **Build/Upload:** Use PlatformIO commands (e.g., `pio run -e adafruit_qtpy_esp32`, `pio run -t upload -e adafruit_qtpy_esp32`). Activate environment first (`source ~/.platformio/penv/bin/activate`).
+-   **Dependencies:** Manage via `lib_deps` in `platformio.ini`.
+-   **Debugging:** Use `Serial.print()` and PlatformIO monitor (`pio device monitor`).
+
+---
+
+## 2. Web Application (Time Tracking App)
+
+### 2.1 Purpose & Functionality
+
+-   React SPA dashboard to receive time tracking data from the Focus Dial via webhooks.
+-   Stores data in a database (Supabase/Postgres).
+-   Provides features for viewing, managing, and analyzing time entries.
+-   Allows managing projects (CRUD).
+-   Handles user authentication.
+-   Manages API keys for potential external integrations.
+
+### 2.2 Technology Stack
+
+-   **Framework:** Next.js (App Router)
+-   **Language:** TypeScript
+-   **UI Library:** React
+-   **Styling:** Tailwind CSS
+-   **Database:** Supabase (Postgres)
+-   **Data Fetching (Client):** React Query (`@tanstack/react-query`) via custom hooks.
+-   **Mutations/Server Communication:** Next.js Server Actions.
+-   **State Management:** React state (`useState`, `useMemo`), Transitions (`useTransition`).
+
+### 2.3 Code Structure & Key Files
+
+-   **Workspace Directory:** `nextjs-time-tracking-app/`
+-   **Routing & Pages:** `nextjs-time-tracking-app/src/app/` (App Router structure)
+-   **Main Dashboard:** `src/app/page.tsx`
+-   **Layout:** `src/app/layout.tsx`
+-   **Authentication Pages:** `src/app/(auth)/`
+-   **Project Pages:** `src/app/projects/`
+-   **Reusable Components:** `src/components/`
+-   **Custom Hooks:** `src/lib/hooks/` (e.g., `useTimeEntries.ts`, `useProjects.ts`)
+-   **Utility Functions:** `src/lib/utils/` (e.g., `dateUtils.ts`)
+-   **Server Actions:** `src/app/(auth)/actions.ts`, `src/app/settings/actions.ts`
+-   **Supabase Integration:** `src/utils/supabase.ts`, `src/types/supabase.ts`
+-   **Global Styles:** `src/app/globals.css`
+-   **Configuration:** `package.json`, `tsconfig.json`, `tailwind.config.ts`, `.env.local`
+
+### 2.4 Architecture & Patterns
+
+-   **App Router:** Leverages Next.js App Router for routing and server/client component architecture.
+-   **Client Components:** Use `'use client';`. Handle interactivity, state, and data fetching via hooks.
+-   **Server Components:** Used for layout (`layout.tsx`) and potentially data fetching where appropriate (e.g., initial auth state).
+-   **Data Fetching:**
+    -   **Client Reads:** Use custom React Query hooks (`useQuery`) for fetching, caching, and real-time updates (e.g., `useTimeEntries`). Query keys should be consistent (e.g., `['timeEntries']`).
+    -   **Mutations:** Use Server Actions defined in `actions.ts` files. Invoke actions directly from client components, often wrapped in `useTransition` to manage pending UI states. Actions return a standard `{ success: boolean, data?, error? }` shape.
+    -   **Supabase Clients:** Use specific clients based on context:
+        -   `createBrowserSupabaseClient` (in hooks, client components)
+        -   `createActionSupabaseClient` (in Server Actions)
+        -   `createServerComponentSupabaseClient` (in Server Components)
+-   **State Management:** Primarily local state (`useState`), derived state (`useMemo`), and transition pending states (`useTransition`). React Query manages server cache state.
+-   **Styling:** Utility-first approach with Tailwind CSS. Global base styles in `globals.css`. Component-specific styles can use JSX Style blocks (`<style jsx>`) or CSS Modules (`*.module.css`) if preferred for larger components.
+
+---
+
+## 3. General Development Guidelines & Style Guide
+
+### 3.1 Code Style & Formatting
+
+-   Follow standard TypeScript and React best practices.
+-   Use ESLint (`npm run lint`) to identify issues. Assume Prettier is configured for automatic formatting (though no explicit script exists).
+-   Aim for readability, maintainability, and self-documenting code where possible.
+
+### 3.2 Naming Conventions
+
+-   **Components:** `PascalCase` (e.g., `ProjectList.tsx`, `ApiKeyManager.tsx`)
+-   **Files:** `camelCase` or `kebab-case` for utilities/hooks/actions (e.g., `useTimeEntries.ts`, `dateUtils.ts`, `apiKeyActions.ts`), `PascalCase` for component files matching the component name.
+-   **Functions/Variables:** `camelCase` (e.g., `fetchTimeEntries`, `timelineRange`).
+-   **Types/Interfaces:** `PascalCase` (e.g., `TimeEntry`, `DateRange`).
+-   **CSS Classes:** Use Tailwind utility classes.
+
+### 3.3 TypeScript Usage
+
+-   **Strict Typing:** Enable strict mode in `tsconfig.json`. Avoid using `any` type.
+-   **Specific Types:** Use specific types whenever possible. Leverage types derived from the Supabase schema (`Database['public']['Tables']['...']`) for database entities (like `TimeEntry`, `Project`).
+-   **Function Signatures:** Clearly type function parameters and return values. Use the standard Server Action return type (`{ success: boolean, ... }`).
+
+### 3.4 File & Directory Structure
+
+-   Adhere to the existing structure outlined above for both firmware and web app.
+-   Place reusable components in `src/components/`.
+-   Place custom hooks in `src/lib/hooks/`.
+-   Place utility functions in `src/lib/utils/`.
+-   Group Server Actions logically (e.g., by feature area like `auth` or `settings`).
+
+### 3.5 Component Design
+
+-   **Composition:** Favor smaller, focused components over large monolithic ones. (e.g., Consider breaking down `page.tsx` further).
+-   **Props:** Keep component props clear and minimal.
+
+### 3.6 Error Handling
+
+-   **Client-Side:** Use React Query's error state or handle errors returned from Server Actions. Provide feedback to the user.
+-   **Server-Side (Actions/Firmware):** Use `console.error` for logging unexpected issues. Return meaningful error messages in the Server Action response shape.
+
+### 3.7 Git & Commits
+
+-   Follow standard Git flow (feature branches, PRs if applicable).
+-   Write clear, descriptive commit messages (e.g., `feat: Add project creation form`, `fix: Correct timeline filtering logic`, `refactor: Extract timeline marker generation`). Consider Conventional Commits format.
+
+### 3.8 Project Management
+
+-   Use the `.cursor-projects/` directory structure (`planned/`, `active/`, `completed/`).
+-   Follow the defined project lifecycle and file structure.
+-   Review past projects in `completed/` before starting new, related work.
+
+This guide should help maintain consistency and quality across the Focus Dial project.
+
