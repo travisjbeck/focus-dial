@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/datetime-picker"; // Import DateTimePicker
+import { Label } from "@/components/ui/label"; // Import Label for better form structure
 
 // Assuming TimeEntry type is defined similarly in your types
 // If not, define it based on your Supabase schema
@@ -29,6 +31,8 @@ export default function EditTimeEntryPage() {
   const [timeEntry, setTimeEntry] = useState<TimeEntry | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("none");
   const [description, setDescription] = useState<string>("");
+  const [startTime, setStartTime] = useState<Date | undefined>(undefined); // State for start time
+  const [endTime, setEndTime] = useState<Date | undefined>(undefined); // State for end time
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -50,6 +54,7 @@ export default function EditTimeEntryPage() {
     const fetchTimeEntry = async () => {
       setIsLoading(true);
       setError(null);
+      setFormErrors({}); // Clear previous errors
 
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
@@ -66,7 +71,7 @@ export default function EditTimeEntryPage() {
       } = await supabase
         .from("time_entries")
         // Select all fields needed by the TimeEntry type and the form
-        .select("id, project_id, description, start_time, end_time, created_at, duration, user_id") 
+        .select("id, project_id, description, start_time, end_time, created_at, duration, user_id")
         .eq("id", entryId)
         .eq("user_id", sessionData.session.user.id)
         .single();
@@ -79,6 +84,9 @@ export default function EditTimeEntryPage() {
         setTimeEntry(data);
         setSelectedProjectId(data.project_id?.toString() ?? "none");
         setDescription(data.description ?? "");
+        // Initialize date states from fetched data
+        setStartTime(data.start_time ? new Date(data.start_time) : undefined);
+        setEndTime(data.end_time ? new Date(data.end_time) : undefined);
       }
       setIsLoading(false);
     };
@@ -88,13 +96,44 @@ export default function EditTimeEntryPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setFormErrors({});
+    const currentFormErrors: Record<string, string> = {};
     setError(null);
+
+    // Basic validation
+    if (!startTime) {
+        currentFormErrors.startTime = "Start time is required.";
+    }
+    if (startTime && endTime && endTime <= startTime) {
+        currentFormErrors.endTime = "End time must be after start time.";
+    }
+
+    setFormErrors(currentFormErrors);
+
+    if (Object.keys(currentFormErrors).length > 0) {
+        return; // Don't submit if there are errors
+    }
 
     if (!timeEntry) return;
 
     startTransition(async () => {
       const formData = new FormData(event.currentTarget);
+
+      // Add date values manually IF they exist (don't add null/undefined)
+      // FormData expects string values, convert Date to ISO string
+      if (startTime) {
+        formData.set("startTime", startTime.toISOString());
+      }
+      if (endTime) {
+        formData.set("endTime", endTime.toISOString());
+      } else {
+         // Explicitly handle case where end time might be cleared
+         // If your action expects 'null' or simply absence, adjust accordingly
+         // Here, we'll just ensure it's not sent if undefined/cleared in UI
+         formData.delete("endTime");
+         // If you need to explicitly pass null: formData.set("endTime", "null");
+      }
+
+
       const result: ActionResponse = await updateTimeEntry(entryId, formData);
 
       if (result.success) {
@@ -119,16 +158,16 @@ export default function EditTimeEntryPage() {
     return <div className="container mx-auto px-4 text-center py-10 text-gray-400">Loading...</div>;
   }
 
-  if (error && !timeEntry) {
-    // Show error only if we couldn't load the entry at all
+  if (error && !timeEntry && !isLoading) { // Show error only if loading finished and no entry
     return <div className="container mx-auto px-4 text-center py-10 text-red-500">Error: {error}</div>;
   }
 
-  if (!timeEntry) {
+  if (!timeEntry && !isLoading) { // Show not found only if loading finished and no entry
     // Should be covered by error state, but as a fallback
     return <div className="container mx-auto px-4 text-center py-10 text-gray-400">Time entry not found.</div>;
   }
 
+  // Render form only if timeEntry is loaded
   return (
     <div className="container mx-auto px-4">
        <div className="mb-6 flex justify-between items-center">
@@ -147,72 +186,90 @@ export default function EditTimeEntryPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-card p-6 rounded-lg shadow border border-border">
-        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label className="block text-xs uppercase text-muted-foreground mb-1">Start Time</label>
-                <p className="text-muted-foreground">{new Date(timeEntry.start_time).toLocaleString()}</p>
+      {/* Only render form if we have the time entry data */}
+      {timeEntry && (
+          <form onSubmit={handleSubmit} className="bg-card p-6 rounded-lg shadow border border-border">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <Label htmlFor="startTime" className="block text-sm font-medium text-muted-foreground mb-1">Start Time</Label>
+                    <DateTimePicker date={startTime} setDate={setStartTime} disabled={isPending} />
+                    {/* Hidden input to submit ISO string */}
+                    <input type="hidden" name="startTimeValue" value={startTime ? startTime.toISOString() : ''} />
+                    {formErrors.startTime && (
+                        <p id="startTime-error" className="mt-1 text-xs text-red-500">{formErrors.startTime}</p>
+                    )}
+                </div>
+                <div>
+                    <Label htmlFor="endTime" className="block text-sm font-medium text-muted-foreground mb-1">End Time</Label>
+                    <DateTimePicker date={endTime} setDate={setEndTime} disabled={isPending} />
+                    {/* Hidden input to submit ISO string */}
+                    <input type="hidden" name="endTimeValue" value={endTime ? endTime.toISOString() : ''} />
+                    {/* Allow clearing end time maybe? Currently, undefined = not sent */}
+                    {formErrors.endTime && (
+                        <p id="endTime-error" className="mt-1 text-xs text-red-500">{formErrors.endTime}</p>
+                    )}
+                     {timeEntry.end_time === null && !endTime && (
+                        <p className="mt-1 text-xs text-green-500">Entry is currently running. Setting an end time will stop it.</p>
+                    )}
+                </div>
             </div>
-            <div>
-                <label className="block text-xs uppercase text-muted-foreground mb-1">End Time</label>
-                <p className="text-muted-foreground">
-                    {timeEntry.end_time ? new Date(timeEntry.end_time).toLocaleString() : <span className="text-green-500">Still Running</span>}
-                </p>
+
+            <div className="mb-4">
+              <Label htmlFor="projectId" className="block text-sm font-medium text-muted-foreground mb-1">Project</Label>
+              {/* Keep hidden input for compatibility if needed, or rely solely on Select's value */}
+              <input type="hidden" name="projectId" value={selectedProjectId} /> 
+              <Select
+                value={selectedProjectId}
+                onValueChange={handleSelectChange}
+                disabled={isPending}
+                name="projectIdSelect" // Give select a name if hidden input is removed
+              >
+                <SelectTrigger className="w-full bg-background border-input text-foreground">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">-- No Project --</SelectItem>
+                  {projects?.map((project: Project) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.projectId && (
+                  <p id="projectId-error" className="mt-1 text-xs text-red-500">{formErrors.projectId}</p>
+              )}
             </div>
-        </div>
 
-        <div className="mb-4">
-          <label htmlFor="projectId" className="block text-sm font-medium text-muted-foreground mb-1">Project</label>
-          <input type="hidden" name="projectId" value={selectedProjectId} />
-          <Select
-            value={selectedProjectId}
-            onValueChange={handleSelectChange}
-            disabled={isPending}
-          >
-            <SelectTrigger className="w-full bg-background border-input text-foreground">
-              <SelectValue placeholder="Select a project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">-- No Project --</SelectItem>
-              {projects?.map((project: Project) => (
-                <SelectItem key={project.id} value={project.id.toString()}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.projectId && (
-              <p id="projectId-error" className="mt-1 text-xs text-red-500">{formErrors.projectId}</p>
-          )}
-        </div>
+            <div className="mb-6">
+              <Label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-1">Description</Label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="bg-background border border-input text-foreground text-sm rounded-md focus:ring-ring focus:border-input block w-full p-2.5 placeholder-muted-foreground"
+                placeholder="(Optional) Add notes about this time entry..."
+                aria-describedby={formErrors.description ? "description-error" : undefined}
+                disabled={isPending}
+              />
+              {formErrors.description && (
+                  <p id="description-error" className="mt-1 text-xs text-red-500">{formErrors.description}</p>
+              )}
+            </div>
 
-        <div className="mb-6">
-          <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-1">Description</label>
-          <textarea
-            id="description"
-            name="description"
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="bg-background border border-input text-foreground text-sm rounded-md focus:ring-ring focus:border-input block w-full p-2.5 placeholder-muted-foreground"
-            placeholder="(Optional) Add notes about this time entry..."
-            aria-describedby={formErrors.description ? "description-error" : undefined}
-          />
-          {formErrors.description && (
-              <p id="description-error" className="mt-1 text-xs text-red-500">{formErrors.description}</p>
-          )}
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isPending}
-          >
-            {isPending ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </form>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isPending}
+              >
+                {isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+      )}
     </div>
   );
 } 

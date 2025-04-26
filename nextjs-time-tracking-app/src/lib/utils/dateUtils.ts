@@ -88,9 +88,14 @@ export function getDateRangeForOption(option: TimeRangeOption): DateRange {
  */
 export function formatDuration(seconds?: number | null): string {
   if (seconds === null || seconds === undefined) return "—";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+
+  // Ensure we work with a positive number for calculations
+  const positiveSeconds = Math.abs(seconds); 
+
+  const hours = Math.floor(positiveSeconds / 3600);
+  const minutes = Math.floor((positiveSeconds % 3600) / 60);
+  const secs = Math.floor(positiveSeconds % 60); // Use Math.floor to ensure integer seconds
+
   return [hours, minutes, secs]
     .map((v) => v.toString().padStart(2, "0"))
     .join(":");

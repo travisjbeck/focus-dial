@@ -242,8 +242,8 @@ export default function Dashboard() {
           const elapsedSeconds = Math.max(0, Math.floor((now - startTime) / 1000));
           return total + elapsedSeconds;
         } else {
-          // Timer is completed, use stored duration
-          return total + (entry.duration || 0);
+          // Timer is completed, use stored duration, ensuring it's non-negative
+          return total + Math.max(0, entry.duration || 0); 
         }
       },
       0
@@ -392,9 +392,9 @@ export default function Dashboard() {
               Activity Timeline
             </h2>
             {/* Muted text for total */}
-            <span className="text-sm text-muted-foreground">
+            {/* <span className="text-sm text-muted-foreground">
               ({formatDuration(selectedRangeTotalDuration)} total)
-            </span>
+            </span> */}
           </div>
           {/* Right side: Dropdown only */}
           <div className="flex items-center space-x-4">

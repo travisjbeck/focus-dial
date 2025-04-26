@@ -41,7 +41,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <div>
         <label
           htmlFor="email"
-          className="block mb-2 text-sm font-medium text-white"
+          className="block mb-2 text-sm font-medium text-foreground"
         >
           Email
         </label>
@@ -52,7 +52,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           // Remove value and onChange if using uncontrolled form with FormData
           // value={email}
           // onChange={(e) => setEmail(e.target.value)}
-          className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
+          className="form-input"
           placeholder="name@company.com"
           required
           disabled={isPending} // Disable input when pending
@@ -61,7 +61,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <div>
         <label
           htmlFor="password"
-          className="block mb-2 text-sm font-medium text-white"
+          className="block mb-2 text-sm font-medium text-foreground"
         >
           Password
         </label>
@@ -73,7 +73,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
           // value={password}
           // onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="bg-black border border-gray-800 text-white text-sm rounded-md focus:ring-gray-500 focus:border-gray-700 block w-full p-2.5"
+          className="form-input"
           required
           minLength={6}
           disabled={isPending} // Disable input when pending
@@ -82,7 +82,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       <button
         type="submit"
-        className="w-full text-black bg-white hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-gray-500 font-medium rounded-md text-sm px-5 py-2.5 text-center disabled:opacity-50"
+        className="w-full btn-primary py-2.5 text-sm font-medium rounded-md"
         disabled={isPending} // Disable button when pending
       >
         {isPending ? "Processing..." : mode === "login" ? "Log In" : "Sign Up"}
