@@ -75,29 +75,31 @@ The following table and Mermaid diagram show a complete breadboard wiring refere
 | **Gray** | RST (Reset) | Display RST (D1 / GPIO2) |
 | **Brown** | SDA (I²C Data) | Touch-panel & RTC data (D4 / GPIO5) |
 | **White** | SCL (I²C Clock) | Touch-panel & RTC clock (D5 / GPIO6) |
-| **Lime** | NeoPixel DIN | Data-in for 16-LED ring (D6 / GPIO43) |
-| **Purple** | ENC_A | Encoder channel A (D0 / GPIO1) |
-| **Pink** | ENC_B | Encoder channel B (D7 / GPIO44) |
+| **Lime** | NeoPixel DIN | Data-in for 16-LED ring (D0 / GPIO1) |
+| **Purple** | ENC_A | Encoder channel A (D6 / GPIO43) |
+| **Pink** | ENC_B | Encoder channel B (D9 / GPIO8) |
+| **Orange** | TOUCH_INT | Touch Interrupt (Internal, needs D7 / GPIO44) |
 
 ### Connection Table
-| Module | Pin on Module | Wire Color | XIAO Pin |
-|--------|---------------|-----------|----------|
-| **Round Display** | 3V3 | Red | 3V3 |
-| | GND | Black | GND |
-| | D8 | Yellow | D8 (GPIO7) |
-| | D10 | Green | D10 (GPIO9) |
-| | D3 | Blue | D3 (GPIO4) |
-| | D2 | Teal | D2 (GPIO3) |
-| | D1 | Gray | D1 (GPIO2) |
-| | D9 | – | (Not connected) |
-| | D4 | Brown | D4 (GPIO5) |
-| | D5 | White | D5 (GPIO6) |
-| **NeoPixel Ring** | 5V | Orange | 5V |
-| | GND | Black | GND |
-| | DIN | Lime | D6 (GPIO43) |
-| **Bourns Encoder** | GND | Black | GND |
-| | Channel A | Purple | D0 (GPIO1) |
-| | Channel B | Pink | D7 (GPIO44) |
+| Module | Pin on Module | Wire Color | XIAO Pin | Notes |
+|--------|---------------|-----------|----------|-------|
+| **Round Display** | 3V3 | Red | 3V3 | |
+| | GND | Black | GND | |
+| | D8 | Yellow | D8 (GPIO7) | SPI SCK |
+| | D10 | Green | D10 (GPIO9) | SPI MOSI |
+| | D3 | Blue | D3 (GPIO4) | SPI CS |
+| | D2 | Teal | D2 (GPIO3) | SPI DC |
+| | D1 | Gray | D1 (GPIO2) | SPI RST |
+| | D9 | – | (Not connected) | |
+| | D4 | Brown | D4 (GPIO5) | I2C SDA (Touch/RTC) |
+| | D5 | White | D5 (GPIO6) | I2C SCL (Touch/RTC) |
+| | (Internal) | Orange | D7 (GPIO44) | Touch INT Required |
+| **NeoPixel Ring** | 5V | Orange | 5V | |
+| | GND | Black | GND | |
+| | DIN | Lime | D0 (GPIO1) |
+| **Bourns Encoder** | GND | Black | GND | |
+| | Channel A | Purple | D6 (GPIO43) |
+| | Channel B | Pink | D9 (GPIO8) |
 
 > **Tip:** Keep wire lengths short and route the Red/Orange power traces next to a ground line (Black) to minimize noise.
 > **Important Encoder Note:** Verify the pinout (GND, Channel A, Channel B) of your specific Bourns PER35 encoder using its datasheet and physical orientation before wiring. The center pin is often GND, with A and B as the outer pins, but this MUST be confirmed. Swapping A and B will reverse rotation direction.
@@ -116,9 +118,10 @@ flowchart LR
         XIAO_RST[D1 / GPIO2\nRST]
         XIAO_SDA[D4 / GPIO5\nSDA]
         XIAO_SCL[D5 / GPIO6\nSCL]
-        XIAO_NEO[D6 / GPIO43\nNeo DIN]
-        XIAO_ENCA[D0 / GPIO1\nENC_A]
-        XIAO_ENCB[D7 / GPIO44\nENC_B]
+        XIAO_NEO[D0 / GPIO1\nNeo DIN]
+        XIAO_ENCA[D6 / GPIO43\nENC_A]
+        XIAO_ENCB[D9 / GPIO8\nENC_B]
+        XIAO_TOUCHINT[D7 / GPIO44\nTOUCH_INT]
     end
 
     subgraph DISP[1.28" Round Touch Display]
@@ -169,6 +172,9 @@ flowchart LR
     %% Encoder
     XIAO_ENCA -- Purple --> ENC_A
     XIAO_ENCB -- Pink --> ENC_B
+
+    %% Touch Interrupt Note (Implicit Connection)
+    XIAO_TOUCHINT -. Orange .-> DISP((Internal))
 
     %% Legend styles
     classDef power stroke-width:2px,stroke:red;
