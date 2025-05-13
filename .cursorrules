@@ -1,0 +1,32 @@
+# Rule: Managing PlatformIO Serial Monitor Sessions
+
+**Context:** When working with PlatformIO, particularly with commands like `pio run -t upload` or `pio device monitor`, an existing active serial monitor session can occupy the serial port. This prevents new connections, leading to errors during firmware uploads or when attempting to start a new monitor session.
+
+**Rule:** Before initiating a firmware upload or starting a new serial monitor session, ensure any existing PlatformIO monitor processes are terminated.
+
+**Command to Terminate Monitor Sessions:**
+
+To kill any active PlatformIO serial monitor processes, use the following command in your terminal:
+
+```bash
+pkill -f "pio device monitor"
+```
+
+If `pio device monitor` was started via the `platformio` command directly (e.g. `platformio device monitor`), you might need:
+```bash
+pkill -f "platformio device monitor"
+```
+
+**When to Use:**
+Run this command if you suspect an old monitor session is still active, or if you encounter errors such as:
+- "Serial port busy"
+- "Access denied"
+- "Upload failed"
+- "Could not connect to STLink/V2" (or similar programmer/debugger messages related to port access)
+
+This is especially important if you use commands like:
+- `pio run -t upload`
+- `pio device monitor`
+- `pio run -t upload -t monitor`
+
+By ensuring the serial port is free, you can avoid common development interruptions. 

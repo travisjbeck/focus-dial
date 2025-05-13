@@ -192,24 +192,31 @@ With this reference you can wire the modules on any standard breadboard without 
 - [x] Install necessary libraries (`bodmer/TFT_eSPI`, `lvgl/lvgl`, `Seeed-Studio/Seeed_Arduino_RoundDisplay`, `lewisxhe/PCF8563_Library`).
 - [x] Configure `TFT_eSPI` library (`User_Setup.h` or build flags) for the ESP32-S3, GC9A01 controller, and chosen pins.
 - [x] Create a minimal test sketch (`DisplayTest.cpp`) to initialize the display, fill the screen with color, display text, and read the RTC time via Serial Monitor.
-- [ ] Add code to test the 16 LED NeoPixel and verify the Bourns PER35 encoder works correctly.
+- [x] Add code to test the 16 LED NeoPixel and verify the Bourns PER35 encoder works correctly.
+- [x] Implement and verify Non-Volatile Storage (NVS) for persistent data (e.g., run counter test in `MinimalDisplayTest.cpp`).
 - [x] Update `platformio.ini` to include libraries and build the test sketch.
-- [ ] Flash and verify basic display, RTC, NeoPixel, and encoder functionality.
+- [x] Flash and verify basic display, RTC, NeoPixel, NVS, and encoder functionality.
+
+**Note:** Successful initial tests for the Seeed Round Display (including touch), Bourns PER35 encoder (interrupt-driven), WS2812 NeoPixel ring (16 LEDs), and Non-Volatile Storage (NVS) were implemented and verified in `firmware/src/MinimalDisplayTest.cpp`. This sketch serves as a working reference for integrating these components, including basic NVS read/write operations.
 
 ### Phase 2: Firmware Integration - Core Functionality
-- [ ] Integrate the new display driver into the main firmware (`main.cpp`, display controller).
-- [ ] Replace existing display drawing logic with `TFT_eSPI` or `LVGL` calls for basic timer/state display (monochrome initially).
-- [ ] Implement basic touch detection to replace the physical button press for state transitions (e.g., tap to start/stop).
-- [ ] Update pin definitions in `Config.h` or equivalent for moved peripherals (16 LED NeoPixel, Bourns PER35 encoder).
-- [ ] Refactor state machine or input handling logic to use touch input.
-- [ ] Test core timer functionality with the new display and touch input.
+- [ ] Integrate the new display driver into the main firmware (`main.cpp`, display controller) using `lv_xiao_disp_init()` and `lv_xiao_touch_init()`.
+- [ ] Integrate LVGL tick handling (`lv_timer_handler()`) into the main loop.
+- [ ] Replace existing display drawing logic with **LVGL** calls for basic timer/state display.
+- [ ] Implement basic touch detection via LVGL input drivers to replace the physical button press for state transitions.
+- [ ] Update pin definitions in `Config.h` or equivalent, ensuring correct assignment for Display SPI/I2C, Touch INT (D7/GPIO44), Encoder (D6/GPIO43, D9/GPIO8), and NeoPixel (D0/GPIO1).
+- [ ] Integrate **interrupt-driven encoder reading** using `attachInterrupt` on D6 and D9 to call `encoder.tick()`.
+- [ ] Refactor state machine or input handling logic to use touch input and the reliable encoder readings.
+- [ ] Integrate and test the **PCF8563 Real-Time Clock (RTC)** using `lewisxhe/PCF8563_Library`.
+- [ ] Integrate NVS for storing application-specific settings (e.g., last selected project, timer states) leveraging the tested NVS framework.
+- [ ] Test core timer functionality with the new display, touch input, encoder, RTC, and NVS.
 
 ### Phase 3: Firmware Enhancement - Rich UI & LVGL
 - [ ] Design a new UI layout leveraging the round color display using LVGL.
 - [ ] Implement project selection via touch interface (list or carousel).
-- [ ] Display project-specific colors on the screen (not just LEDs).
-- [ ] Configure 16 LED NeoPixel to enhance the visual feedback in coordination with the display.
-- [ ] Utilize LVGL widgets for displaying time, status, and project information.
+- [ ] Display project-specific colors on the screen.
+- [ ] Configure 16 LED NeoPixel to enhance visual feedback.
+- [ ] Utilize LVGL widgets (labels, arcs, buttons, etc.) for displaying time, status, and project information.
 - [ ] Potentially add graphical elements (e.g., progress arc).
 - [ ] Optimize drawing routines for performance and leverage ESP32-S3's dual-core capabilities.
 - [ ] Test all features thoroughly.
@@ -220,9 +227,69 @@ With this reference you can wire the modules on any standard breadboard without 
 - Seeed Studio XIAO ESP32S3 Plus: [https://www.seeedstudio.com/Seeed-Studio-XIAO-ESP32S3-Plus-p-6361.html](https://www.seeedstudio.com/Seeed-Studio-XIAO-ESP32S3-Plus-p-6361.html)
 - XIAO ESP32S3 Plus Pinout and documentation.
 - Seeed LVGL & TFT Guide for Round Display: [https://wiki.seeedstudio.com/using_lvgl_and_tft_on_round_display/](https://wiki.seeedstudio.com/using_lvgl_and_tft_on_round_display/)
-- Required Libraries: `bodmer/TFT_eSPI`, `lvgl/lvgl`, `Seeed-Studio/Seeed_Arduino_RoundDisplay`, `lewisxhe/PCF8563_Library`.
-- The display controller is likely GC9A01.
-- Need to verify touch controller IC for correct library selection.
+- Required Libraries: `lvgl/lvgl`, `Seeed-Studio/Seeed_Arduino_RoundDisplay`, `lewisxhe/PCF8563_Library`, `Adafruit_NeoPixel`, `mathertel/RotaryEncoder`, (potentially `bodmer/TFT_eSPI` as dependency).
+- The display controller is GC9A01.
+- **Touch Interrupt:** Confirmed to require D7 (GPIO44).
+- **Encoder:** Requires interrupt handling on D6 (GPIO43) and D9 (GPIO8) for reliable operation.
 - Need to map and assign pins for NeoPixels, display SPI, I2C for touch/RTC on the XIAO ESP32S3 Plus.
 - Using 16 LED NeoPixel for visual indicators.
 - Bourns PER35 35mm rotary encoder will replace the previous encoder but has the same connection points. 
+
+### NVS (Non-Volatile Storage) Implementation
+- **Tested in:** `firmware/src/MinimalDisplayTest.cpp`
+- **Key Steps:**
+    1. Include headers: `#include "nvs_flash.h"` and `#include "nvs.h"`.
+    2. Initialize NVS flash in `setup()`:
+       ```cpp
+       esp_err_t err; // Declare error variable
+       err = nvs_flash_init();
+       if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+           // NVS partition was truncated and needs to be erased
+           // Retry nvs_flash_init
+           ESP_ERROR_CHECK(nvs_flash_erase());
+           err = nvs_flash_init();
+       }
+       ESP_ERROR_CHECK(err);
+       ```
+    3. Declare an `nvs_handle_t` variable globally or in scope (e.g., `nvs_handle_t my_nvs_handle;`).
+    4. Open NVS with a namespace and mode (e.g., `err = nvs_open("storage", NVS_READWRITE, &my_nvs_handle);`). Handle errors.
+    5. Use `nvs_get_i32()`, `nvs_get_str()`, etc., to read values and `nvs_set_i32()`, `nvs_set_str()`, etc., to write. Handle errors, especially `ESP_ERR_NVS_NOT_FOUND` on first read.
+    6. Commit changes using `err = nvs_commit(my_nvs_handle);`. Handle errors.
+    7. Optionally close the handle with `nvs_close(my_nvs_handle);` when NVS operations for that handle are complete.
+- **Integration into Main Firmware:** The same principles apply. Initialize NVS early in `setup()`. It's good practice to create wrapper functions or a dedicated class to manage NVS read/write operations for specific application settings (e.g., saving current timer state, user preferences, last selected project). This encapsulates NVS logic and makes the main code cleaner. Ensure robust error handling for all NVS operations. The NVS handle can be kept open for the application's lifetime if frequently accessed, or opened/closed as needed.
+
+## Development Workflow & Commands
+
+Use the following PlatformIO commands in your terminal from the project's root directory:
+
+*   **Clean Build Artifacts:**
+    ```bash
+    pio run -t clean
+    ```
+    *Removes previous build files. Useful before a fresh build or if encountering strange build errors.*
+
+*   **Build Firmware:**
+    ```bash
+    pio run
+    ```
+    *Compiles the code and links the firmware binary.*
+
+*   **Build and Upload Firmware:**
+    ```bash
+    pio run -t upload
+    ```
+    *Builds the firmware (if needed) and uploads it to the connected XIAO ESP32S3.*
+
+*   **Open Serial Monitor:**
+    ```bash
+    pio device monitor
+    ```
+    *Connects to the device's serial port to view `Serial.print()` output. Use `Ctrl+C` to exit.*
+
+*   **Upload and Monitor:**
+    ```bash
+    pio run -t upload -t monitor
+    ```
+    *Uploads the firmware and immediately opens the serial monitor.*
+
+**Note:** Ensure the XIAO ESP32S3 is connected via USB and the correct port is selected (PlatformIO usually auto-detects, but may need manual configuration in `platformio.ini` if issues arise). 

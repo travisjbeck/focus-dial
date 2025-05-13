@@ -9,6 +9,8 @@
 #include <Adafruit_NeoPixel.h> // Include the NeoPixel library
 // #include <math.h> // No longer needed for block positioning
 #include <PCF8563.h> // Include RTC library
+#include "nvs_flash.h" // For NVS
+#include "nvs.h"       // For NVS
 
 // Define Encoder Pins
 #define ENCODER_PIN_A 43 // XIAO D6 maps to GPIO43
@@ -30,6 +32,11 @@ static lv_obj_t *progress_arc = NULL; // Changed from encoder_block
 
 // Global RTC object (Using the correct class name)
 PCF8563_Class rtc; // Corrected class name
+
+// NVS Handle
+nvs_handle_t my_nvs_handle;
+const char* NVS_NAMESPACE = "storage";
+const char* NVS_KEY_COUNTER = "run_count";
 
 // Setup NeoPixel object
 // Parameter 1 = number of pixels in strip
@@ -55,7 +62,67 @@ void setup() {
   Serial.begin(115200);
   // Add a small delay to allow serial monitor to connect
   delay(2000); 
-  Serial.println("--- LVGL Minimal Display & Touch Test ---");
+  Serial.println("--- LVGL Minimal Display & Touch Test with NVS & RTC ---");
+
+  // --- NVS Initialization & Test ---
+  esp_err_t err; // Declare err here
+  err = nvs_flash_init();
+  if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      // NVS partition was truncated and needs to be erased
+      // Retry nvs_flash_init
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      err = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(err);
+  Serial.println("NVS flash initialized.");
+
+  // Open NVS
+  err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &my_nvs_handle);
+  if (err != ESP_OK) {
+      Serial.printf("Error (%s) opening NVS handle!\\n", esp_err_to_name(err));
+  } else {
+      Serial.println("NVS handle opened.");
+
+      // Read run counter
+      int32_t run_counter = 0; // default value
+      err = nvs_get_i32(my_nvs_handle, NVS_KEY_COUNTER, &run_counter);
+      switch (err) {
+          case ESP_OK:
+              Serial.printf("NVS: Run counter read = %d\\n", run_counter);
+              break;
+          case ESP_ERR_NVS_NOT_FOUND:
+              Serial.println("NVS: Run counter not initialized yet. Setting to 0.");
+              break;
+          default :
+              Serial.printf("NVS: Error (%s) reading run counter!\\n", esp_err_to_name(err));
+      }
+
+      // Increment counter and write back
+      run_counter++;
+      err = nvs_set_i32(my_nvs_handle, NVS_KEY_COUNTER, run_counter);
+      if (err != ESP_OK) {
+          Serial.printf("NVS: Error (%s) writing run counter!\\n", esp_err_to_name(err));
+      } else {
+        Serial.printf("NVS: Run counter incremented and set to %d\\n", run_counter);
+      }
+      
+      // Commit written value.
+      // After setting any values, nvs_commit() must be called to ensure changes are written
+      // to flash storage. Implementations may write to storage at other times,
+      // but this is not guaranteed.
+      err = nvs_commit(my_nvs_handle);
+      if (err != ESP_OK) {
+        Serial.printf("NVS: Error (%s) committing changes!\\n", esp_err_to_name(err));
+      } else {
+        Serial.println("NVS: Changes committed.");
+      }
+
+      // Close NVS (optional, handle will be closed on nvs_flash_deinit automatically if not closed)
+      // nvs_close(my_nvs_handle); 
+      // For this minimal test, we can leave it open or explicitly close.
+      // If we were to deinit nvs_flash later, open handles would be closed.
+  }
+  // ---------------------------------
 
   // Initialize LVGL core
   lv_init();
