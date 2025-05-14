@@ -233,8 +233,8 @@ With this reference you can wire the modules on any standard breadboard without 
         *   Create a temporary LVGL label (e.g., "Main FW LVGL OK") and display it.
         *   Temporarily comment out initializations for `projectManager`, `inputController`, `displayController`, `ledController`, `networkController`, and the initial `stateMachine.changeState()`.
         *   In `loop()`, add `lv_timer_handler();`. Temporarily comment out `stateMachine.update();` and `displayController.updateAnimation();`.
-    *   **Build & Test:** Compile and upload. Expect to see the "Main FW LVGL OK" label on the round display. This verifies core display/LVGL functionality in `main.cpp`.
-    *   **Commit Point.**
+    *   **Build & Test:** Compile and upload. Expect to see the "Main FW LVGL OK" label on the round display. This verifies core display/LVGL functionality in `main.cpp`. **(DONE - Verified 2025-05-14)**
+    *   **Commit Point.** **(DONE - Phase 1, Step 1 completed and verified)**
 
 **Phase 2: Controller Re-Integration & Hardware Adaptation**
 *   **Goal:** Update individual controllers to work with the new hardware pins and drivers.
