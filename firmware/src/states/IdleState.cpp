@@ -1,5 +1,21 @@
 #include "StateMachine.h"
 #include "Controllers.h"
+#include <lvgl.h> // Added for LVGL events
+
+// Static event callback for screen click
+static void idle_screen_event_cb(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    // We can use the global stateMachine instance as IdleState is tightly coupled with it
+    // and projectSelectState is a static member of StateMachine.
+
+    if (code == LV_EVENT_CLICKED) {
+        Serial.println("IdleState: Screen clicked - Go to Project Select");
+        // Access defaultDuration from the static idleState instance within StateMachine
+        stateMachine.setPendingDuration(StateMachine::idleState.getDefaultDuration()); 
+        stateMachine.changeState(&StateMachine::projectSelectState);
+    }
+}
 
 IdleState::IdleState() : defaultDuration(0), lastActivity(0)
 {
@@ -40,6 +56,17 @@ void IdleState::enter()
                                            stateMachine.changeState(&StateMachine::adjustState); // Transition to Adjust State
                                          });
 
+  // Add LVGL screen click event
+  lv_obj_t *screen = lv_screen_active();
+  if (screen) { // Important to check if screen is not NULL
+      lv_obj_add_event_cb(screen, idle_screen_event_cb, LV_EVENT_CLICKED, nullptr); 
+      // Make sure the screen is clickable - important!
+      lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+      Serial.println("IdleState: LVGL screen click event added.");
+  } else {
+      Serial.println("IdleState::enter() - Error: lv_screen_active() returned NULL when adding event!");
+  }
+
   lastActivity = millis(); // Activity timer
 }
 
@@ -68,6 +95,17 @@ void IdleState::exit()
   Serial.println("Exiting Idle State");
   inputController.releaseHandlers();
   ledController.turnOff();
+
+  // Remove LVGL screen click event
+  lv_obj_t *screen = lv_screen_active();
+  if (screen) { // Check if screen is not NULL
+      lv_obj_remove_event_cb(screen, idle_screen_event_cb);
+      // Optionally remove clickable flag if it causes issues, though usually not necessary
+      // lv_obj_clear_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+      Serial.println("IdleState: LVGL screen click event removed.");
+  } else {
+      Serial.println("IdleState::exit() - Warning: lv_screen_active() returned NULL when removing event!");
+  }
 }
 
 void IdleState::setTimer(int duration)
