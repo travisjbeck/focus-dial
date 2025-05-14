@@ -7,31 +7,31 @@ void PausedState::enter()
 {
   Serial.println("Entering Paused State");
   pauseEnter = millis(); // Record the time when the pause started
-  ledController.setBreath(YELLOW, -1, false, 20);
+  ledController.setBreath(FD_YELLOW, -1, false, 20);
 
   // Register state-specific handlers
-  inputController.onPressHandler([this]()
-                                 {
-                                   Serial.println("Paused State: Button Pressed - Resuming");
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //                                  Serial.println("Paused State: Button Pressed - Resuming");
 
-                                   // Send 'start' action to webhook handler (resume)
-                                   networkController.sendWebhookAction("start", this->duration, this->elapsedTime);
+  //                                  // Send 'start' action to webhook handler (resume)
+  //                                  networkController.sendWebhookAction("start", this->duration, this->elapsedTime);
 
-                                   // Transition back to TimerState with the stored duration and elapsed time
-                                   StateMachine::timerState.setTimer(duration, elapsedTime);
-                                   displayController.showTimerResume();
-                                   stateMachine.changeState(&StateMachine::timerState); // Transition back to Timer State
-                                 });
+  //                                  // Transition back to TimerState with the stored duration and elapsed time
+  //                                  StateMachine::timerState.setTimer(duration, elapsedTime);
+  //                                  displayController.showTimerResume();
+  //                                  stateMachine.changeState(&StateMachine::timerState); // Transition back to Timer State
+  //                                });
 
-  inputController.onDoublePressHandler([this]()
-                                       {
-                                         Serial.println("Paused State: Button Double Pressed - Canceling");
+  // inputController.onDoublePressHandler([this]() // Button deprecated - Phase 1
+  //                                      {
+  //                                        Serial.println("Paused State: Button Double Pressed - Canceling");
 
-                                         // Send 'stop' action to webhook handler (canceled)
-                                         networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
-                                         displayController.showCancel();
-                                         stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
-                                       });
+  //                                        // Send 'stop' action to webhook handler (canceled)
+  //                                        networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+  //                                        displayController.showCancel();
+  //                                        stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
+  //                                      });
 }
 
 void PausedState::update()

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BluetoothA2DPSink.h>
+// #include <BluetoothA2DPSink.h> // Temporarily commented out for LVGL migration - Phase 1
 #include <WiFiProvisioner.h>
 #include <Preferences.h>
 #include <WiFi.h>
@@ -40,7 +40,7 @@ public:
   void startWebServer();
 
 private:
-  BluetoothA2DPSink a2dp_sink;
+  // BluetoothA2DPSink a2dp_sink; // Temporarily commented out for LVGL migration - Phase 1
   Preferences preferences;
   WiFiProvisioner::WiFiProvisioner wifiProvisioner; // Instance of WiFiProvisioner
   AsyncWebServer _server;
@@ -60,7 +60,7 @@ private:
 
   void WiFiProvisionerSettings();
   void saveBluetoothPairedState(bool paired);
-  static void btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj);
+  // static void btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj); // Temporarily commented out for LVGL migration - Phase 1
 
   // Web Server management
   void _setupWebServerRoutes();

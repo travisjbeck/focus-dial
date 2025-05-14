@@ -15,23 +15,23 @@ IdleState::IdleState() : defaultDuration(0), lastActivity(0)
 void IdleState::enter()
 {
   Serial.println("Entering Idle State");
-  ledController.setBreath(BLUE, -1, false, 5);
+  ledController.setBreath(FD_BLUE, -1, false, 5);
 
   // Register state-specific handlers
-  inputController.onPressHandler([this]()
-                                 {
-                                   Serial.println("Idle State: Button pressed - Go to Project Select");
-                                   // Store the current default duration for TimerState later
-                                   stateMachine.setPendingDuration(this->defaultDuration);
-                                   // stateMachine.adjustState.adjustTimer(this->defaultDuration); // No longer needed
-                                   // stateMachine.changeState(&StateMachine::adjustState); // Go to Project Select instead
-                                   stateMachine.changeState(&StateMachine::projectSelectState); });
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //                                  Serial.println("Idle State: Button pressed - Go to Project Select");
+  //                                  // Store the current default duration for TimerState later
+  //                                  stateMachine.setPendingDuration(this->defaultDuration);
+  //                                  // stateMachine.adjustState.adjustTimer(this->defaultDuration); // No longer needed
+  //                                  // stateMachine.changeState(&StateMachine::adjustState); // Go to Project Select instead
+  //                                  stateMachine.changeState(&StateMachine::projectSelectState); });
 
-  inputController.onLongPressHandler([this]()
-                                     {
-                                       Serial.println("Idle State: Button long pressed");
-                                       stateMachine.changeState(&StateMachine::resetState); // Transition to Reset State
-                                     });
+  // inputController.onLongPressHandler([this]() // Button deprecated - Phase 1
+  //                                    {
+  //                                      Serial.println("Idle State: Button long pressed");
+  //                                      stateMachine.changeState(&StateMachine::resetState); // Transition to Reset State
+  //                                    });
 
   inputController.onEncoderRotateHandler([this](int delta)
                                          {
@@ -94,5 +94,5 @@ void IdleState::restoreDefaultLEDPattern()
 {
   Serial.println("IdleState: Restoring default LED pattern");
   // Set the LEDs back to the regular idle state animation
-  ledController.setBreath(BLUE, -1, false, 5);
+  ledController.setBreath(FD_BLUE, -1, false, 5);
 }

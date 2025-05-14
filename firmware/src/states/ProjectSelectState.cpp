@@ -110,32 +110,32 @@ void ProjectSelectState::loadProjects()
 
 void ProjectSelectState::handleInput()
 {
-  inputController.onPressHandler([this]()
-                                 {
-    Serial.println("ProjectSelectState: Button pressed - Confirming project");
-    int duration = stateMachine.getPendingDuration();
-    int indexToSave = (selectedProjectIndex == 0) ? -1 : selectedProjectIndex - 1;
-    projectManager.setLastProjectIndex(indexToSave);
-    Serial.printf("Selected project index %d (saved as %d)\n", selectedProjectIndex, indexToSave);
-    
-    // Get the device_project_id
-    String selectedProjectId = ""; // Empty string indicates "No Project"
-    if (selectedProjectIndex > 0 && selectedProjectIndex < projectsWithNone.size()) {
-        selectedProjectId = projectsWithNone[selectedProjectIndex].device_project_id;
-    }
-    
-    Serial.printf("Selected device_project_id: %s\n", selectedProjectId.c_str());
-    stateMachine.setPendingProjectId(selectedProjectId); // Store the ID
-    
-    StateMachine::timerState.setTimer(duration, 0);
-    displayController.showTimerStart();
-    stateMachine.changeState(&StateMachine::timerState); });
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //   Serial.println("ProjectSelectState: Button pressed - Confirming project");
+  //   int duration = stateMachine.getPendingDuration();
+  //   int indexToSave = (selectedProjectIndex == 0) ? -1 : selectedProjectIndex - 1;
+  //   projectManager.setLastProjectIndex(indexToSave);
+  //   Serial.printf("Selected project index %d (saved as %d)\n", selectedProjectIndex, indexToSave);
+  //   
+  //   // Get the device_project_id
+  //   String selectedProjectId = ""; // Empty string indicates "No Project"
+  //   if (selectedProjectIndex > 0 && selectedProjectIndex < projectsWithNone.size()) {
+  //       selectedProjectId = projectsWithNone[selectedProjectIndex].device_project_id;
+  //   }
+  //   
+  //   Serial.printf("Selected device_project_id: %s\n", selectedProjectId.c_str());
+  //   stateMachine.setPendingProjectId(selectedProjectId); // Store the ID
+  //   
+  //   StateMachine::timerState.setTimer(duration, 0);
+  //   displayController.showTimerStart();
+  //   stateMachine.changeState(&StateMachine::timerState); });
 
   // Add double-click handler to go back to Idle
-  inputController.onDoublePressHandler([this]()
-                                       {
-    Serial.println("ProjectSelectState: Double click - Returning to Idle");
-    stateMachine.changeState(&StateMachine::idleState); });
+  // inputController.onDoublePressHandler([this]() // Button deprecated - Phase 1
+  //                                      {
+  //   Serial.println("ProjectSelectState: Double click - Returning to Idle");
+  //   stateMachine.changeState(&StateMachine::idleState); });
 
   inputController.onEncoderRotateHandler([this](int delta)
                                          {

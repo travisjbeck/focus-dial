@@ -7,7 +7,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <BluetoothA2DPSink.h>
+// #include <BluetoothA2DPSink.h> // Temporarily commented out for LVGL migration - Phase 1
 #include <esp_bt.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
@@ -25,8 +25,8 @@ NetworkController *NetworkController::instance = nullptr;
 extern LEDController ledController;
 
 NetworkController::NetworkController()
-    : a2dp_sink(),
-      _server(80),
+    // : a2dp_sink(), // Temporarily commented out for LVGL migration - Phase 1
+      : _server(80),
       _webServerRunning(false),
       _ws(WS_PATH), // Initialize WebSocket with path
       _lastWsCleanupTime(0),
@@ -190,39 +190,39 @@ void NetworkController::stopProvisioning()
 void NetworkController::reset()
 {
   wifiProvisioner.resetCredentials();
-  if (btPaired)
-  {
-    a2dp_sink.clean_last_connection();
-    saveBluetoothPairedState(false);
-  }
+  // if (btPaired)
+  // {
+  //   a2dp_sink.clean_last_connection(); // Temporarily commented out for LVGL migration - Phase 1
+  //   saveBluetoothPairedState(false);
+  // }
   Serial.println("Reset complete. WiFi credentials and paired state cleared.");
 }
 
 void NetworkController::initializeBluetooth()
 {
-  if (bluetoothTaskHandle == nullptr)
-  {
+  // if (bluetoothTaskHandle == nullptr) // Temporarily commented out for LVGL migration - Phase 1
+  // {
 
-    // Configure the A2DP sink with empty callbacks to use it for the trigger only
-    a2dp_sink.set_stream_reader(nullptr, false);
-    a2dp_sink.set_raw_stream_reader(nullptr);
-    a2dp_sink.set_on_volumechange(nullptr);
-    a2dp_sink.set_avrc_connection_state_callback(nullptr);
-    a2dp_sink.set_avrc_metadata_callback(nullptr);
-    a2dp_sink.set_avrc_rn_playstatus_callback(nullptr);
-    a2dp_sink.set_avrc_rn_track_change_callback(nullptr);
-    a2dp_sink.set_avrc_rn_play_pos_callback(nullptr);
-    a2dp_sink.set_spp_active(false);
-    a2dp_sink.set_output_active(false);
-    a2dp_sink.set_rssi_active(false);
+  //   // Configure the A2DP sink with empty callbacks to use it for the trigger only
+  //   a2dp_sink.set_stream_reader(nullptr, false); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_raw_stream_reader(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_on_volumechange(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_avrc_connection_state_callback(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_avrc_metadata_callback(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_avrc_rn_playstatus_callback(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_avrc_rn_track_change_callback(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_avrc_rn_play_pos_callback(nullptr); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_spp_active(false); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_output_active(false); // Temporarily commented out for LVGL migration - Phase 1
+  //   a2dp_sink.set_rssi_active(false); // Temporarily commented out for LVGL migration - Phase 1
 
-    a2dp_sink.set_on_connection_state_changed(btConnectionStateCallback, this);
+  //   a2dp_sink.set_on_connection_state_changed(btConnectionStateCallback, this); // Temporarily commented out for LVGL migration - Phase 1
 
-    Serial.println("Bluetooth A2DP Sink configured.");
+  //   Serial.println("Bluetooth A2DP Sink configured.");
 
-    // Create task for handling Bluetooth
-    xTaskCreate(bluetoothTask, "Bluetooth Task", 4096, this, 0, &bluetoothTaskHandle);
-  }
+  //   // Create task for handling Bluetooth
+  //   xTaskCreate(bluetoothTask, "Bluetooth Task", 4096, this, 0, &bluetoothTaskHandle); // Temporarily commented out for LVGL migration - Phase 1
+  // }
 }
 
 void NetworkController::startBluetooth()
@@ -238,28 +238,30 @@ void NetworkController::stopBluetooth()
   bluetoothActive = false; // Stop Bluetooth activity
 }
 
+/* // Temporarily commented out for LVGL migration - Phase 1
 void NetworkController::btConnectionStateCallback(esp_a2d_connection_state_t state, void *obj)
 {
   auto *self = static_cast<NetworkController *>(obj);
 
-  if (state == ESP_A2D_CONNECTION_STATE_CONNECTED)
-  {
-    Serial.println("Bluetooth device connected.");
+  // if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) // Temporarily commented out for LVGL migration - Phase 1
+  // {
+  //   Serial.println("Bluetooth device connected.");
 
-    // Save paired state only in provisioning mode
-    if (self->provisioningMode)
-    {
-      self->saveBluetoothPairedState(true);
-      self->btPaired = true;
-      Serial.println("Paired state saved during provisioning.");
-    }
-  }
-  else if (state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
-  {
-    Serial.println("Bluetooth device disconnected.");
-    // No need to set flags; task loop will handle reconnection logic based on is_connected()
-  }
+  //   // Save paired state only in provisioning mode
+  //   if (self->provisioningMode)
+  //   {
+  //     self->saveBluetoothPairedState(true);
+  //     self->btPaired = true; // Update internal state
+  //     Serial.println("Bluetooth paired state saved.");
+  //   }
+  // }
+  // else if (state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
+  // {
+  //   Serial.println("Bluetooth device disconnected.");
+  //   // Optionally handle disconnection logic if needed, e.g., allow re-pairing
+  // }
 }
+*/
 
 void NetworkController::saveBluetoothPairedState(bool paired)
 {
@@ -272,50 +274,30 @@ void NetworkController::saveBluetoothPairedState(bool paired)
 
 void NetworkController::bluetoothTask(void *param)
 {
-  NetworkController *self = static_cast<NetworkController *>(param);
+  // NetworkController *self = static_cast<NetworkController *>(param);
+  // unsigned long lastScanTime = 0;
 
-  while (true)
-  {
-    // If in provisioning mode, start Bluetooth only once
-    if (self->provisioningMode)
-    {
-      if (!self->bluetoothAttempted)
-      {
-        Serial.println("Starting Bluetooth for provisioning...");
-        self->a2dp_sink.start("Focus Dial", true);
-        self->bluetoothAttempted = true; // Mark as attempted to prevent repeated starts
-      }
-    }
-    else
-    {
-      // Normal operation mode
-      if (self->bluetoothActive && !self->bluetoothAttempted)
-      {
-        Serial.println("Starting Bluetooth...");
-        self->a2dp_sink.start("Focus Dial", true); // Auto-reconnect enabled
-        self->bluetoothAttempted = true;
-        self->lastBluetoothtAttempt = millis(); // Record the time of the start attempt
-      }
-
-      // If Bluetooth is active but not connected, attempt reconnect every 2 seconds
-      if (self->bluetoothActive && !self->a2dp_sink.is_connected() && (millis() - self->lastBluetoothtAttempt >= 2000))
-      {
-        Serial.println("Attempting Bluetooth reconnect...");
-        self->a2dp_sink.start("Focus Dial", true);
-        self->lastBluetoothtAttempt = millis(); // Update last attempt time
-      }
-
-      // If Bluetooth is not supposed to be active but is connected, disconnect
-      if (!self->bluetoothActive && self->a2dp_sink.is_connected())
-      {
-        Serial.println("Stopping Bluetooth...");
-        self->a2dp_sink.disconnect();
-        self->bluetoothAttempted = false; // Allow re-attempt later
-      }
-    }
-
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
+  // while (true)
+  // {
+  //   if (self->bluetoothActive)
+  //   {
+  //     if (!self->a2dp_sink.is_connected() && (millis() - lastScanTime > 10000)) // Temporarily commented out for LVGL migration - Phase 1
+  //     {
+  //       Serial.println("Starting Bluetooth A2DP Sink...");
+  //       self->a2dp_sink.start("FocusDial"); // Temporarily commented out for LVGL migration - Phase 1
+  //       lastScanTime = millis();
+  //     }
+  //   }
+  //   else
+  //   {
+  //     if (self->a2dp_sink.is_connected() || self->a2dp_sink.is_running()) // Temporarily commented out for LVGL migration - Phase 1
+  //     {
+  //       Serial.println("Stopping Bluetooth A2DP Sink...");
+  //       self->a2dp_sink.end(true); // Temporarily commented out for LVGL migration - Phase 1
+  //     }
+  //   }
+  //   vTaskDelay(pdMS_TO_TICKS(1000)); // Check every second
+  // }
 }
 
 void NetworkController::sendWebhookAction(const String &action, int durationSetMinutes, unsigned long actualElapsedSeconds)

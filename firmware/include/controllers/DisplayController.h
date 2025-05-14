@@ -1,14 +1,15 @@
 #pragma once
 
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+// #include <Adafruit_SSD1306.h> // Temporarily commented out for LVGL migration - Phase 1
 #include "Animation.h"
 #include "managers/ProjectManager.h"
 
 class DisplayController
 {
 public:
-  DisplayController(uint8_t oledWidth, uint8_t oledHeight, uint8_t oledAddress = 0x3C);
+  // DisplayController(uint8_t oledWidth, uint8_t oledHeight, uint8_t oledAddress = 0x3C);
+  DisplayController(); // Changed to parameterless constructor
 
   void begin();
 
@@ -37,6 +38,6 @@ public:
   void showTimerResume();
 
 private:
-  Adafruit_SSD1306 oled;
+  // Adafruit_SSD1306 oled; // Temporarily commented out for LVGL migration - Phase 1
   Animation animation;
 };

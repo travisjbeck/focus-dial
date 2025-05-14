@@ -1,6 +1,7 @@
 #include "Animation.h"
 
-Animation::Animation(Adafruit_SSD1306* display) : oled(display), animationRunning(false), playInReverse(false) {}
+// Animation::Animation(Adafruit_SSD1306* display) : oled(display), animationRunning(false), playInReverse(false) {}
+Animation::Animation() : animationRunning(false), playInReverse(false) {} // Temporarily modified for LVGL migration - Phase 1
 
 void Animation::start(const byte* frames, int frameCount, bool loop, bool reverse, unsigned long durationMs, int width, int height) {
     animationFrames = frames;
@@ -25,12 +26,12 @@ void Animation::start(const byte* frames, int frameCount, bool loop, bool revers
     animationStartTime = millis();
     lastFrameTime = millis();
 
-    frameX = (oled->width() - frameWidth) / 2;
-    frameY = (oled->height() - frameHeight) / 2;
+    // frameX = (oled->width() - frameWidth) / 2; // Temporarily commented out for LVGL migration - Phase 1
+    // frameY = (oled->height() - frameHeight) / 2; // Temporarily commented out for LVGL migration - Phase 1
 
-    oled->clearDisplay();
-    oled->drawBitmap(frameX, frameY, &animationFrames[currentFrame * 288], frameWidth, frameHeight, 1);
-    oled->display();
+    // oled->clearDisplay(); // Temporarily commented out for LVGL migration - Phase 1
+    // oled->drawBitmap(frameX, frameY, &animationFrames[currentFrame * 288], frameWidth, frameHeight, 1); // Temporarily commented out for LVGL migration - Phase 1
+    // oled->display(); // Temporarily commented out for LVGL migration - Phase 1
 }
 
 void Animation::update() {
@@ -71,9 +72,9 @@ void Animation::update() {
         }
 
         // Display the current frame
-        oled->clearDisplay();
-        oled->drawBitmap(frameX, frameY, &animationFrames[currentFrame * 288], frameWidth, frameHeight, 1);
-        oled->display();
+        // oled->clearDisplay(); // Temporarily commented out for LVGL migration - Phase 1
+        // oled->drawBitmap(frameX, frameY, &animationFrames[currentFrame * 288], frameWidth, frameHeight, 1); // Temporarily commented out for LVGL migration - Phase 1
+        // oled->display(); // Temporarily commented out for LVGL migration - Phase 1
     }
 }
 

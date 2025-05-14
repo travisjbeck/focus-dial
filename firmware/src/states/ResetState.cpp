@@ -1,5 +1,6 @@
 #include "StateMachine.h"
 #include "Controllers.h"
+#include "Config.h"
 
 bool resetSelected = false; // button selection
 
@@ -7,7 +8,7 @@ void ResetState::enter()
 {
   Serial.println("Entering Reset State");
 
-  ledController.setBreath(MAGENTA, -1, false, 10);
+  ledController.setBreath(FD_MAGENTA, -1, false, 10);
 
   // Register state-specific handlers
   inputController.onEncoderRotateHandler([this](int delta)
@@ -18,18 +19,18 @@ void ResetState::enter()
             resetSelected = false;  // Select "CANCEL"
         } });
 
-  inputController.onPressHandler([this]()
-                                 {
-        if (resetSelected) {
-            Serial.println("Reset State: RESET button pressed, rebooting.");
-            displayController.showReset();
-            networkController.reset();
-            resetStartTime = millis();
-        } else {
-            Serial.println("Reset State: CANCEL button pressed, returning to Idle.");
-            displayController.showCancel();
-            stateMachine.changeState(&StateMachine::idleState);
-        } });
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //       if (resetSelected) {
+  //           Serial.println("Reset State: RESET button pressed, rebooting.");
+  //           displayController.showReset();
+  //           networkController.reset();
+  //           resetStartTime = millis();
+  //       } else {
+  //           Serial.println("Reset State: CANCEL button pressed, returning to Idle.");
+  //           displayController.showCancel();
+  //           stateMachine.changeState(&StateMachine::idleState);
+  //       } });
 }
 
 void ResetState::update()

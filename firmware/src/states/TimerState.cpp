@@ -71,35 +71,35 @@ void TimerState::enter()
   }
 
   // Setup Input Handlers
-  inputController.onPressHandler([this]()
-                                 {
-                                   // Send 'stop' action first (applies to both modes)
-                                   networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //                                  // Send 'stop' action first (applies to both modes)
+  //                                  networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
 
-                                   if (this->duration == 0) // Indeterminate mode
-                                   {
-                                     Serial.println("Timer State: Button Pressed - Stopping Indeterminate Timer");
-                                     // Pass final elapsed time to DoneState via StateMachine
-                                     stateMachine.setPendingElapsedTime(this->elapsedTime);
-                                     displayController.showTimerDone(); // Show done animation
-                                     stateMachine.changeState(&StateMachine::doneState);
-                                   }
-                                   else // Countdown mode
-                                   {
-                                     Serial.println("Timer State: Button Pressed - Pausing Countdown Timer");
-                                     displayController.showTimerPause();
-                                     // Pass current duration and elapsed time to PausedState
-                                     StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
-                                     stateMachine.changeState(&StateMachine::pausedState);
-                                   } });
+  //                                  if (this->duration == 0) // Indeterminate mode
+  //                                  {
+  //                                    Serial.println("Timer State: Button Pressed - Stopping Indeterminate Timer");
+  //                                    // Pass final elapsed time to DoneState via StateMachine
+  //                                    stateMachine.setPendingElapsedTime(this->elapsedTime);
+  //                                    displayController.showTimerDone(); // Show done animation
+  //                                    stateMachine.changeState(&StateMachine::doneState);
+  //                                  }
+  //                                  else // Countdown mode
+  //                                  {
+  //                                    Serial.println("Timer State: Button Pressed - Pausing Countdown Timer");
+  //                                    displayController.showTimerPause();
+  //                                    // Pass current duration and elapsed time to PausedState
+  //                                    StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
+  //                                    stateMachine.changeState(&StateMachine::pausedState);
+  //                                  } });
 
-  inputController.onDoublePressHandler([this]()
-                                       {
-                                         Serial.println("Timer State: Button Double Pressed - Canceling");
-                                         // Send 'stop' action with current elapsed time
-                                         networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
-                                         displayController.showCancel();
-                                         stateMachine.changeState(&StateMachine::idleState); });
+  // inputController.onDoublePressHandler([this]() // Button deprecated - Phase 1
+  //                                      {
+  //                                        Serial.println("Timer State: Button Double Pressed - Canceling");
+  //                                        // Send 'stop' action with current elapsed time
+  //                                        networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+  //                                        displayController.showCancel();
+  //                                        stateMachine.changeState(&StateMachine::idleState); });
 
   // Send 'start' action ONLY on initial entry
   if (elapsedTime == 0)

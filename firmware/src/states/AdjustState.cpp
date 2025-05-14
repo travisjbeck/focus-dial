@@ -10,19 +10,19 @@ void AdjustState::enter()
   Serial.printf("Adjust State: Starting duration = %d\n", adjustDuration);
 
   lastActivity = millis();
-  ledController.setSolid(AMBER);
+  ledController.setSolid(FD_COLOR_AMBER);
 
   // Register state-specific handlers
-  inputController.onPressHandler([this]()
-                                 {
-                                   Serial.println("Adjust State: Button pressed - Saving duration");
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //                                  Serial.println("Adjust State: Button pressed - Saving duration");
 
-                                   // Update the actual default duration in IdleState
-                                   StateMachine::idleState.setTimer(this->adjustDuration);
+  //                                  // Update the actual default duration in IdleState
+  //                                  StateMachine::idleState.setTimer(this->adjustDuration);
 
-                                   displayController.showConfirmation();               // Show confirmation briefly
-                                   stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
-                                 });
+  //                                  displayController.showConfirmation();               // Show confirmation briefly
+  //                                  stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
+  //                                });
 
   inputController.onEncoderRotateHandler([this](int delta)
                                          {

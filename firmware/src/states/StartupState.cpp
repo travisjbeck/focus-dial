@@ -8,7 +8,7 @@ void StartupState::enter()
   Serial.println("Entering Splash State");
 
   displayController.drawSplashScreen();
-  ledController.setSpinner(TEAL, -1);
+  ledController.setSpinner(FD_TEAL, -1);
 
   startEnter = millis();
 }

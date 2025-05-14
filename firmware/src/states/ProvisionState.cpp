@@ -7,7 +7,7 @@ void ProvisionState::enter()
   Serial.println("Entering Provision State");
   inputController.releaseHandlers();
   displayController.drawProvisionScreen();
-  ledController.setSolid(FD_COLOR_YELLOW);
+  ledController.setSolid(FD_YELLOW);
   networkController.startProvisioning();
 }
 

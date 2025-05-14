@@ -1,5 +1,6 @@
 #include "StateMachine.h"
 #include "Controllers.h"
+#include "Config.h"
 
 void SleepState::enter()
 {
@@ -9,15 +10,17 @@ void SleepState::enter()
   displayController.clear();
 
   // Register state-specific handlers
-  inputController.onPressHandler([]()
+  /* // Button deprecated - Phase 1
+  inputController.onPressHandler([]() 
                                  {
         Serial.println("Sleep State: Button pressed");
         stateMachine.changeState(&StateMachine::idleState); });
 
-  inputController.onLongPressHandler([]()
+  inputController.onLongPressHandler([]() 
                                      {
         Serial.println("Sleep State: long pressed");
         stateMachine.changeState(&StateMachine::idleState); });
+  */
 
   inputController.onEncoderRotateHandler([this](int delta)
                                          {

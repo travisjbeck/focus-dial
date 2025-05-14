@@ -8,13 +8,14 @@ void DoneState::enter()
   Serial.println("Entering Done State");
 
   doneEnter = millis();
-  ledController.setBreath(GREEN, -1, true, 2);
+  ledController.setBreath(FD_GREEN, 10, true, 50); // Changed from GREEN, Breath green 10 times, then solid
 
   // Register state-specific handlers
-  inputController.onPressHandler([]()
-                                 {
-        Serial.println("Done State: Button pressed");
-        stateMachine.changeState(&StateMachine::idleState); });
+  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
+  //                                {
+  //                                  Serial.println("Done State: Button Pressed - Returning to Idle");
+  //                                  stateMachine.changeState(&StateMachine::idleState); // Transition back to Idle State
+  //                                });
 
   // Send 'stop' action to webhook handler (which will fetch project details) - MOVED to TimerState exit/handlers
   // networkController.sendWebhookAction("stop");

@@ -393,3 +393,16 @@ Use the following PlatformIO commands in your terminal from the project's root d
     *Uploads the firmware and immediately opens the serial monitor.*
 
 **Note:** Ensure the XIAO ESP32S3 is connected via USB and the correct port is selected (PlatformIO usually auto-detects, but may need manual configuration in `platformio.ini` if issues arise). 
+
+**DONE - Partially (Button handlers in States)** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `PausedState.cpp`, `ProjectSelectState.cpp`, `ProvisionState.cpp`, `ResetState.cpp`, `SleepState.cpp`, `StartupState.cpp`, `TimerState.cpp`).
+    *   **DONE** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `PausedState.cpp`, `ProjectSelectState.cpp`, `ProvisionState.cpp`, `ResetState.cpp`, `SleepState.cpp`, `StartupState.cpp`, `TimerState.cpp`).
+        *   **DONE:** `AdjustState.cpp` - `onPressHandler` commented.
+        *   **DONE:** `DoneState.cpp` - `onPressHandler` commented.
+        *   **DONE:** `IdleState.cpp` - `onPressHandler`, `onLongPressHandler` commented.
+        *   **DONE:** `PausedState.cpp` - `onPressHandler`, `onDoublePressHandler` commented.
+        *   **DONE:** `ProjectSelectState.cpp` - `onPressHandler`, `onDoublePressHandler` commented.
+        *   **DONE:** `ProvisionState.cpp` - No button handlers found.
+        *   **DONE:** `ResetState.cpp` - `onPressHandler` commented.
+        *   **DONE:** `SleepState.cpp` - `onPressHandler`, `onLongPressHandler` commented.
+        *   **DONE:** `StartupState.cpp` - No button handlers found.
+        *   **DONE:** `TimerState.cpp` - `onPressHandler`, `onDoublePressHandler` commented. 

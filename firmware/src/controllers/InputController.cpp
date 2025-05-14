@@ -11,6 +11,7 @@ void InputController::handleEncoderInterrupt()
   }
 }
 
+/* // Button deprecated - Phase 1
 void InputController::handleButtonInterrupt()
 {
   if (instancePtr)
@@ -18,35 +19,34 @@ void InputController::handleButtonInterrupt()
     instancePtr->button.tick();
   }
 }
+*/
 
-InputController::InputController(uint8_t buttonPin, uint8_t encoderPinA, uint8_t encoderPinB)
-    : button(buttonPin, true),
-      encoder(encoderPinA, encoderPinB, RotaryEncoder::LatchMode::TWO03),
+InputController::InputController(uint8_t encoderPinA, uint8_t encoderPinB) // Modified for no button
+    : encoder(encoderPinA, encoderPinB, RotaryEncoder::LatchMode::TWO03),
       lastPosition(0),
-      buttonPin(buttonPin),
       encoderPinA(encoderPinA),
       encoderPinB(encoderPinB)
 {
 
   // Attach click, double-click, and long-press handlers using OneButton library
-  button.attachClick([](void *scope)
-                     { static_cast<InputController *>(scope)->onButtonClick(); }, this);
-  button.attachDoubleClick([](void *scope)
-                           { static_cast<InputController *>(scope)->onButtonDoubleClick(); }, this);
-  button.attachLongPressStart([](void *scope)
-                              { static_cast<InputController *>(scope)->onButtonLongPress(); }, this);
+  // button.attachClick([](void *scope)
+  //                    { static_cast<InputController *>(scope)->onButtonClick(); }, this); // Button deprecated
+  // button.attachDoubleClick([](void *scope)
+  //                          { static_cast<InputController *>(scope)->onButtonDoubleClick(); }, this); // Button deprecated
+  // button.attachLongPressStart([](void *scope)
+  //                             { static_cast<InputController *>(scope)->onButtonLongPress(); }, this); // Button deprecated
 
   instancePtr = this; // Set the global instance pointer to this instance
 }
 
 void InputController::begin()
 {
-  button.setDebounceMs(20);
-  button.setClickMs(150);
-  button.setPressMs(400);
+  // button.setDebounceMs(20); // Button deprecated
+  // button.setClickMs(150); // Button deprecated
+  // button.setPressMs(400); // Button deprecated
   lastPosition = encoder.getPosition();
 
-  pinMode(buttonPin, INPUT_PULLUP);
+  // pinMode(buttonPin, INPUT_PULLUP); // Button deprecated
   pinMode(encoderPinA, INPUT_PULLUP);
   pinMode(encoderPinB, INPUT_PULLUP);
 
@@ -55,13 +55,14 @@ void InputController::begin()
   attachInterrupt(digitalPinToInterrupt(encoderPinB), handleEncoderInterrupt, CHANGE);
 
   // Set up interrupt for button handling
-  attachInterrupt(digitalPinToInterrupt(buttonPin), handleButtonInterrupt, CHANGE); // Interrupt on button state change
+  // attachInterrupt(digitalPinToInterrupt(buttonPin), handleButtonInterrupt, CHANGE); // Button deprecated
 }
 
 void InputController::update()
 {
-  button.tick();
-  encoder.tick();
+  // button.tick(); // Button deprecated
+  encoder.tick(); // Still needed if not relying purely on ISR, or for certain encoder types/modes.
+                  // Per plan, encoder is ISR-driven but keeping tick() call here is fine as it is often harmless or beneficial.
 
   // Check encoder position and calculate delta
   int currentPosition = encoder.getPosition();
@@ -75,6 +76,7 @@ void InputController::update()
 }
 
 // Register state-specific handlers
+/* // Button deprecated - Phase 1
 void InputController::onPressHandler(std::function<void()> handler)
 {
   pressHandler = handler;
@@ -89,6 +91,7 @@ void InputController::onLongPressHandler(std::function<void()> handler)
 {
   longPressHandler = handler;
 }
+*/
 
 void InputController::onEncoderRotateHandler(std::function<void(int delta)> handler)
 {
@@ -98,16 +101,17 @@ void InputController::onEncoderRotateHandler(std::function<void(int delta)> hand
 // Method to release all handlers
 void InputController::releaseHandlers()
 {
-  pressHandler = nullptr;
-  doublePressHandler = nullptr;
-  longPressHandler = nullptr;
+  // pressHandler = nullptr; // Button deprecated
+  // doublePressHandler = nullptr; // Button deprecated
+  // longPressHandler = nullptr; // Button deprecated
   encoderRotateHandler = nullptr;
 
-  button.reset();                       // Reset button state machine
+  // button.reset(); // Button deprecated
   lastPosition = encoder.getPosition(); // Reset encoder position tracking
 }
 
 // Internal event handlers that call the registered state handlers
+/* // Button deprecated - Phase 1
 void InputController::onButtonClick()
 {
   if (pressHandler != nullptr)
@@ -131,6 +135,7 @@ void InputController::onButtonLongPress()
     longPressHandler();
   }
 }
+*/
 
 void InputController::onEncoderRotate(int delta)
 {
