@@ -13,6 +13,7 @@ public:
     void update();
 
     void onEncoderRotateHandler(std::function<void(int delta)> handler);
+    int getEncoderPosition();
 
     void releaseHandlers();
 

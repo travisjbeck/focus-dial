@@ -144,3 +144,11 @@ void InputController::onEncoderRotate(int delta)
     encoderRotateHandler(-delta); // Pass delta to the handler
   }
 }
+
+int InputController::getEncoderPosition() // Added getter for encoder position
+{
+  return encoder.getPosition();
+}
+
+// Global instance initialization is typically done in main.cpp or similar
+// InputController inputController(ENCODER_A_PIN, ENCODER_B_PIN); // Example, actual pins from Config.h

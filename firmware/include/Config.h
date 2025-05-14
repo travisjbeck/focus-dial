@@ -8,7 +8,8 @@
 // #define OLED_ADDR 0x3C // Removed, specific to old display
 
 #define LED_PIN 1 // XIAO D0
-#define NUM_LEDS 16
+// #define NUM_LEDS 16
+#define NUM_LEDS 24 // Updated to match project plan and hardware
 #define NEOPIXEL_TYPE NEO_GRB + NEO_KHZ800
 #define LED_BRIGHTNESS 100
 

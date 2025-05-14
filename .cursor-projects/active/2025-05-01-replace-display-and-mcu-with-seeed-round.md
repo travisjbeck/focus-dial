@@ -4,7 +4,7 @@
 - **Last Updated**: 2025-05-14
 
 ## Context & Requirements
-This project focuses on upgrading the existing system by replacing its original microcontroller and square monochrome OLED display. The new hardware suite will consist of a Seeed Studio XIAO ESP32S3 Plus microcontroller and a Seeed Studio 1.28" Round Color Touch Display. This requires hardware wiring changes and significant firmware updates. The existing rotary encoder will be replaced with a smaller Bourns PER35 35mm rotary encoder that has the same connection points and functionality. The separate physical button will be replaced by the touch screen interaction. The project will now use a 16 LED NeoPixel for visual indicators. The target board, the Seeed Studio XIAO ESP32S3 Plus, features a dual-core ESP32-S3 processor, 20 GPIOs, WiFi, BLE 5.0, 8MB PSRAM, and 16MB Flash.
+This project focuses on upgrading the existing system by replacing its original microcontroller and square monochrome OLED display. The new hardware suite will consist of a Seeed Studio XIAO ESP32S3 Plus microcontroller and a Seeed Studio 1.28" Round Color Touch Display. This requires hardware wiring changes and significant firmware updates. The existing rotary encoder will be replaced with a smaller Bourns PER35 35mm rotary encoder that has the same connection points and functionality. The separate physical button will be replaced by the touch screen interaction. The project will now use a 24 LED NeoPixel for visual indicators. The target board, the Seeed Studio XIAO ESP32S3 Plus, features a dual-core ESP32-S3 processor, 20 GPIOs, WiFi, BLE 5.0, 8MB PSRAM, and 16MB Flash.
 
 **References:** 
 
@@ -61,7 +61,7 @@ This project focuses on upgrading the existing system by replacing its original 
 
 ## Wiring Diagram (Breadboard Setup)
 
-The following table and Mermaid diagram show a complete breadboard wiring reference for connecting the Seeed Studio XIAO ESP32S3 Plus to the 1.28″ Round Touch Display, 16-LED NeoPixel ring, and the Bourns PER35 35mm rotary encoder.
+The following table and Mermaid diagram show a complete breadboard wiring reference for connecting the Seeed Studio XIAO ESP32S3 Plus to the 1.28″ Round Touch Display, 24-LED NeoPixel ring, and the Bourns PER35 35mm rotary encoder.
 
 ### Color-coded Wire Legend
 | Color | Signal | Notes |
@@ -76,7 +76,7 @@ The following table and Mermaid diagram show a complete breadboard wiring refere
 | **Gray** | RST (Reset) | Display RST (D1 / GPIO2) |
 | **Brown** | SDA (I²C Data) | Touch-panel & RTC data (D4 / GPIO5) |
 | **White** | SCL (I²C Clock) | Touch-panel & RTC clock (D5 / GPIO6) |
-| **Lime** | NeoPixel DIN | Data-in for 16-LED ring (D0 / GPIO1) |
+| **Lime** | NeoPixel DIN | Data-in for 24-LED ring (D0 / GPIO1) |
 | **Purple** | ENC_A | Encoder channel A (D6 / GPIO43) |
 | **Pink** | ENC_B | Encoder channel B (D9 / GPIO8) |
 | **Orange** | TOUCH_INT | Touch Interrupt (Internal, needs D7 / GPIO44) |
@@ -97,7 +97,7 @@ The following table and Mermaid diagram show a complete breadboard wiring refere
 | | (Internal) | Orange | D7 (GPIO44) | Touch INT Required |
 | **NeoPixel Ring** | 5V | Orange | 5V | |
 | | GND | Black | GND | |
-| | DIN | Lime | D0 (GPIO1) |
+| | DIN | Lime | D0 (GPIO1) | Data-in for 24-LED ring |
 | **Bourns Encoder** | GND | Black | GND | |
 | | Channel A | Purple | D6 (GPIO43) |
 | | Channel B | Pink | D9 (GPIO8) |
@@ -137,7 +137,7 @@ flowchart LR
         DISP_SCL[SCL]
     end
 
-    subgraph NEO[NeoPixel Ring 16 LED]
+    subgraph NEO[NeoPixel Ring 24 LED]
         NEO_VCC[5V]
         NEO_GND((GND))
         NEO_DIN[DIN]
@@ -241,8 +241,8 @@ With this reference you can wire the modules on any standard breadboard without 
 1.  **[ ] Update `LEDController` (`firmware/src/controllers/LEDController.cpp`):**
     *   **Action:** Since `Config.h` will be updated (Phase 0), `LEDController` should use the new `LED_PIN`. Verify `Adafruit_NeoPixel` usage is standard.
     *   In `main.cpp -> setup()`, uncomment `ledController.begin();`. Add a test call (e.g., `ledController.setSolid(0x00FF00);`).
-    *   **Build & Test:** Verify LEDs initialize and respond as expected.
-    *   **Commit Point.**
+    *   **Build & Test:** Verify LEDs initialize and respond as expected. (Also updated `Config.h` `NUM_LEDS` to 24 and verified). **(DONE - Verified 2025-05-14)**
+    *   **Commit Point.** **(DONE - Phase 2, Step 1 completed and verified)**
 2.  **[ ] Update `InputController` for Encoder (`firmware/src/controllers/InputController.cpp`):**
     *   **Action:**
         *   Constructor will receive updated encoder pins from `Config.h`.
@@ -253,8 +253,8 @@ With this reference you can wire the modules on any standard breadboard without 
         *   Modify `InputController::update()` to remove button polling. Encoder position is now ISR-driven.
     *   In `main.cpp -> setup()`, uncomment `inputController.begin();`.
     *   In `main.cpp -> loop()`, add temporary serial printing of encoder position (may need to add/expose a getter in `InputController`).
-    *   **Build & Test:** Verify encoder values are correctly read via interrupts.
-    *   **Commit Point.**
+    *   **Build & Test:** Verify encoder values are correctly read via interrupts. **(DONE - Verified 2025-05-14)**
+    *   **Commit Point.** **(DONE - Phase 2, Step 2 completed and verified)**
 3.  **[ ] Refactor `DisplayController` - Phase 1: Decouple Old Display, Basic LVGL Structure**
     *   **Goal:** Remove old display dependencies and prepare `DisplayController` for LVGL.
     *   **Action (`DisplayController.h`):**
@@ -276,8 +276,8 @@ With this reference you can wire the modules on any standard breadboard without 
                 }
                 ```
     *   In `main.cpp -> setup()`, uncomment `displayController.begin();`.
-    *   **Build & Test:** Firmware should compile and run. Serial logs should indicate when draw methods are called (if other logic is re-enabled). Placeholder LVGL screens should appear if state machine logic calls these stubs.
-    *   **Commit Point.**
+    *   **Build & Test:** Firmware should compile and run. Serial logs should indicate when draw methods are called (if other logic is re-enabled). Placeholder LVGL screens should appear if state machine logic calls these stubs. **(DONE - Verified 2025-05-14 - Build successful, visual test pending re-enablement of state machine)**
+    *   **Commit Point.** **(DONE - Phase 2, Step 3 completed and verified)**
 
 **Phase 3: State-by-State UI Migration to LVGL & Touch Integration**
 *   **Goal:** Iteratively rewrite the UI for each state using LVGL and integrate touch interactions.
@@ -287,8 +287,8 @@ With this reference you can wire the modules on any standard breadboard without 
     *   **Action (`StartupState::enter` or `update`):** Ensure it calls `displayController.drawSplashScreen()`.
     *   In `main.cpp -> setup()`, uncomment `stateMachine.changeState(&StateMachine::startupState);` and `projectManager.begin();` (if `StartupState` depends on it). Also uncomment `networkController.begin();` if needed by early states.
     *   In `main.cpp -> loop()`, uncomment `stateMachine.update();`.
-    *   **Build & Test:** Verify the new LVGL splash screen appears.
-    *   **Commit Point.**
+    *   **Build & Test:** Verify the new LVGL splash screen appears. **(DONE - Verified 2025-05-15 - StartupState entered, "SPLASH SCREEN NOW!" displayed with teal LEDs, then correctly transitioned to ProvisionState, and "Screen: Provision" displayed with amber LEDs.)**
+    *   **Commit Point.** **(DONE - Phase 3, Step 1 completed and verified)**
 2.  **[ ] Idle State UI & Basic "Touch" Interaction:**
     *   **Files:** `firmware/src/states/IdleState.cpp`, `DisplayController.cpp`.
     *   **Action (`DisplayController::drawIdleScreen`):** Design and implement the idle screen using LVGL. Include a touchable area/widget (e.g., full-screen `lv_obj` or `lv_button`) for interaction.
@@ -335,7 +335,7 @@ This detailed plan should serve as a good roadmap. We will tackle Phase 0 first.
 - **Touch Interrupt:** Confirmed to require D7 (GPIO44).
 - **Encoder:** Requires interrupt handling on D6 (GPIO43) and D9 (GPIO8) for reliable operation.
 - Need to map and assign pins for NeoPixels, display SPI, I2C for touch/RTC on the XIAO ESP32S3 Plus.
-- Using 16 LED NeoPixel for visual indicators.
+- Using 24 LED NeoPixel for visual indicators.
 - Bourns PER35 35mm rotary encoder will replace the previous encoder but has the same connection points. 
 
 ### NVS (Non-Volatile Storage) Stabilization in Main Firmware
@@ -394,15 +394,4 @@ Use the following PlatformIO commands in your terminal from the project's root d
 
 **Note:** Ensure the XIAO ESP32S3 is connected via USB and the correct port is selected (PlatformIO usually auto-detects, but may need manual configuration in `platformio.ini` if issues arise). 
 
-**DONE - Partially (Button handlers in States)** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `PausedState.cpp`, `ProjectSelectState.cpp`, `ProvisionState.cpp`, `ResetState.cpp`, `SleepState.cpp`, `StartupState.cpp`, `TimerState.cpp`).
-    *   **DONE** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `PausedState.cpp`, `ProjectSelectState.cpp`, `ProvisionState.cpp`, `ResetState.cpp`, `SleepState.cpp`, `StartupState.cpp`, `TimerState.cpp`).
-        *   **DONE:** `AdjustState.cpp` - `onPressHandler` commented.
-        *   **DONE:** `DoneState.cpp` - `onPressHandler` commented.
-        *   **DONE:** `IdleState.cpp` - `onPressHandler`, `onLongPressHandler` commented.
-        *   **DONE:** `PausedState.cpp` - `onPressHandler`, `onDoublePressHandler` commented.
-        *   **DONE:** `ProjectSelectState.cpp` - `onPressHandler`, `onDoublePressHandler` commented.
-        *   **DONE:** `ProvisionState.cpp` - No button handlers found.
-        *   **DONE:** `ResetState.cpp` - `onPressHandler` commented.
-        *   **DONE:** `SleepState.cpp` - `onPressHandler`, `onLongPressHandler` commented.
-        *   **DONE:** `StartupState.cpp` - No button handlers found.
-        *   **DONE:** `TimerState.cpp` - `onPressHandler`, `onDoublePressHandler` commented. 
+**DONE - Partially (Button handlers in States)** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `

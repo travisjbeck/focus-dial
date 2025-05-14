@@ -64,32 +64,40 @@ void setup()
   // nvs_flash_init() performed above.
 
   // Initialize Project Manager first (loads data needed by others)
-  // if (!projectManager.begin()) // projectManager.begin() calls _preferences.begin() internally // Commented out for Phase 1, Step 1
-  // {
-  //   Serial.println("FATAL: Failed to initialize Project Manager!");
-  //   // Optional: Enter a safe error state? Loop forever?
-  //   while (1)
-  //   {
-  //     delay(1000);
-  //   }
-  // }
+  if (!projectManager.begin()) // Uncommented for Phase 3, Step 1
+  {
+    Serial.println("FATAL: Failed to initialize Project Manager!");
+    // Optional: Enter a safe error state? Loop forever?
+    while (1)
+    {
+      delay(1000);
+    }
+  }
 
   // Initialize controllers
-  // inputController.begin(); // Commented out for Phase 1, Step 1
+  inputController.begin(); // Uncommented for Phase 2, Step 2
   displayController.begin(); // Reinstated, though it's a no-op for now
-  // ledController.begin();     // Assumes old LED setup // Commented out for Phase 1, Step 1
-  // networkController.begin(); // Uses global preferences object // Commented out for Phase 1, Step 1
+  ledController.begin();     // Uncommented for Phase 2, Step 1
+  ledController.setSolid(FD_GREEN); // Test call for Phase 2, Step 1 - Will be overridden by StartupState
+  networkController.begin(); // Uncommented for Phase 3, Step 1
 
   // Startup state
-  // stateMachine.changeState(&StateMachine::startupState); // Commented out for Phase 1, Step 1
+  stateMachine.begin(); // ADDED: Calls enter() on the initial state (startupState)
 }
 
 void loop()
 {
-  lv_timer_handler(); // Added for Phase 1, Step 1
+  lv_timer_handler();
+  stateMachine.update(); // Uncommented for Phase 3, Step 1
+  // displayController.updateAnimation(); // Commented out for Phase 1, Step 1
 
-  // Update state machine
-  // stateMachine.update(); // Commented out for Phase 1, Step 1
-  // If any animation needs to run
-  // displayController.updateAnimation(); // Might cause issues if displayController init failed // Commented out for Phase 1, Step 1
+  // Temporary encoder test for Phase 2, Step 2
+  static long lastEncoderPrintTime = 0;
+  if (millis() - lastEncoderPrintTime > 250) { // Print every 250ms
+    Serial.print("Encoder Position: ");
+    Serial.println(inputController.getEncoderPosition());
+    lastEncoderPrintTime = millis();
+  }
+
+  delay(5); // Small delay for stability
 }

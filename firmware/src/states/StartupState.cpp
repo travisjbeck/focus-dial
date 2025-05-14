@@ -5,12 +5,20 @@ StartupState::StartupState() : startEnter(0) {}
 
 void StartupState::enter()
 {
-  Serial.println("Entering Splash State");
+  Serial.println("StartupState::enter() - TOP");
 
+  Serial.println("StartupState::enter() - Calling drawSplashScreen()...");
   displayController.drawSplashScreen();
+  Serial.println("StartupState::enter() - Returned from drawSplashScreen().");
+
+  Serial.println("StartupState::enter() - Calling ledController.setSpinner(FD_TEAL)...");
   ledController.setSpinner(FD_TEAL, -1);
+  Serial.println("StartupState::enter() - Returned from ledController.setSpinner().");
 
   startEnter = millis();
+  Serial.print("StartupState::enter() - startEnter set to: ");
+  Serial.println(startEnter);
+  Serial.println("StartupState::enter() - BOTTOM (Finished)");
 }
 
 void StartupState::update()

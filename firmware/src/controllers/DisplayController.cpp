@@ -4,6 +4,7 @@
 #include "fonts/Org_01.h"
 #include "bitmaps.h"
 #include <Fonts/FreeSansBold9pt7b.h>
+#include <lvgl.h>
 
 DisplayController::DisplayController()
     // : oled(oledWidth, oledHeight, &Wire, -1), animation(&oled) // Temporarily commented out for LVGL migration - Phase 1
@@ -21,6 +22,18 @@ void DisplayController::begin()
 
 void DisplayController::drawSplashScreen()
 {
+  Serial.println("DisplayController::drawSplashScreen called (ENTRY POINT)");
+  if (lv_screen_active()) {
+    Serial.println("DisplayController::drawSplashScreen - lv_screen_active() is TRUE");
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "SPLASH SCREEN NOW!"); // Changed text for clear identification
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    Serial.println("DisplayController::drawSplashScreen - new label created.");
+    lv_refr_now(NULL); // Ensure splash refreshes
+  } else {
+    Serial.println("DisplayController::drawSplashScreen - lv_screen_active() is FALSE");
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // oled.drawBitmap(16, 3, focusdial_logo, 99, 45, 1);
@@ -34,6 +47,14 @@ void DisplayController::drawSplashScreen()
 
 void DisplayController::drawIdleScreen(int durationMinutes, bool wifi)
 {
+  Serial.println("DisplayController::drawIdleScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Idle\nDuration: %d\nWiFi: %s", durationMinutes, wifi ? "On" : "Off");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // if (isAnimationRunning())
   //   return;
@@ -97,6 +118,14 @@ void DisplayController::drawIdleScreen(int durationMinutes, bool wifi)
 
 void DisplayController::drawTimerScreen(int timeValue, bool isCountUp)
 {
+  Serial.println("DisplayController::drawTimerScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Timer\nTime: %d\nCountUp: %s", timeValue, isCountUp ? "Yes" : "No");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // if (isAnimationRunning())
   //   return;
@@ -166,6 +195,14 @@ void DisplayController::drawTimerScreen(int timeValue, bool isCountUp)
 
 void DisplayController::drawPausedScreen(int remainingSeconds)
 {
+  Serial.println("DisplayController::drawPausedScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Paused\nRemaining: %ds", remainingSeconds);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // if (isAnimationRunning())
   //   return;
@@ -229,6 +266,14 @@ void DisplayController::drawPausedScreen(int remainingSeconds)
 
 void DisplayController::drawResetScreen(bool resetSelected)
 {
+  Serial.println("DisplayController::drawResetScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Reset\nSelected: %s", resetSelected ? "Yes" : "No");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // oled.setTextColor(1);
@@ -268,6 +313,14 @@ void DisplayController::drawResetScreen(bool resetSelected)
 
 void DisplayController::drawDoneScreen(unsigned long finalElapsedTime)
 {
+  Serial.println("DisplayController::drawDoneScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Done\nElapsed: %lus", finalElapsedTime);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // int hours = finalElapsedTime / 3600;
@@ -303,6 +356,14 @@ void DisplayController::drawDoneScreen(unsigned long finalElapsedTime)
 
 void DisplayController::drawAdjustScreen(int duration, bool wifi)
 {
+  Serial.println("DisplayController::drawAdjustScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Adjust\nDuration: %d\nWiFi: %s", duration, wifi ? "On" : "Off");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // char durationStr[6];
@@ -330,6 +391,14 @@ void DisplayController::drawAdjustScreen(int duration, bool wifi)
 
 void DisplayController::drawProvisionScreen()
 {
+  Serial.println("DisplayController::drawProvisionScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Provision");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL); // Attempt to force an immediate refresh
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // oled.setTextColor(1);
@@ -350,6 +419,15 @@ void DisplayController::drawProvisionScreen()
 
 void DisplayController::clear()
 {
+  Serial.println("DisplayController::clear called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    // Optionally, set a background color or a "Cleared" label
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "Screen: Cleared");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // oled.display();
@@ -427,6 +505,15 @@ void DisplayController::showTimerResume()
 
 void DisplayController::drawProjectSelectionScreen(const ProjectList &projects, int selectedIndex, int topIndex, int numToShow)
 {
+  Serial.println("DisplayController::drawProjectSelectionScreen called");
+  if (lv_screen_active()) {
+    lv_obj_clean(lv_screen_active());
+    lv_obj_t* label = lv_label_create(lv_screen_active());
+    // We can make this more informative later if needed
+    lv_label_set_text_fmt(label, "Screen: Project Select\nSelected: %d\nTop: %d", selectedIndex, topIndex);
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_refr_now(NULL);
+  }
   // Temporarily commented out for LVGL migration - Phase 1
   // oled.clearDisplay();
   // oled.setTextColor(SSD1306_WHITE);
