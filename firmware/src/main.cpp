@@ -91,13 +91,14 @@ void loop()
   stateMachine.update(); // Uncommented for Phase 3, Step 1
   // displayController.updateAnimation(); // Commented out for Phase 1, Step 1
 
-  // Temporary encoder test for Phase 2, Step 2
+  /* // Temporary encoder test for Phase 2, Step 2 - Commented out as functionality verified
   static long lastEncoderPrintTime = 0;
   if (millis() - lastEncoderPrintTime > 250) { // Print every 250ms
     Serial.print("Encoder Position: ");
     Serial.println(inputController.getEncoderPosition());
     lastEncoderPrintTime = millis();
   }
+  */
 
   delay(5); // Small delay for stability
 }

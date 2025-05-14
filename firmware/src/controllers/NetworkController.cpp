@@ -152,13 +152,13 @@ void NetworkController::update()
 bool NetworkController::isWiFiProvisioned()
 {
   // Check for stored WiFi credentials
-  // preferences.begin("network", true);
-  // String storedSSID = preferences.getString("ssid", "");
-  // preferences.end();
+  preferences.begin("network", true);
+  String storedSSID = preferences.getString("ssid", "");
+  preferences.end();
 
-  // return !storedSSID.isEmpty(); // Return true if credentials are found
-  Serial.println("NetworkController::isWiFiProvisioned - TEMPORARILY RETURNING TRUE FOR IDLE STATE TEST");
-  return true; // Temporarily force true for testing IdleState transition
+  return !storedSSID.isEmpty(); // Return true if credentials are found
+  // Serial.println("NetworkController::isWiFiProvisioned - TEMPORARILY RETURNING TRUE FOR IDLE STATE TEST");
+  // return true; // Temporarily force true for testing IdleState transition
 }
 
 bool NetworkController::isWiFiConnected()

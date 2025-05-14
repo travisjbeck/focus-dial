@@ -296,8 +296,8 @@ With this reference you can wire the modules on any standard breadboard without 
         *   Remove `inputController.onPressHandler(...)` for the physical button.
         *   In `DisplayController::drawIdleScreen` (or called from `IdleState::enter`), create the touchable LVGL object and assign an LVGL event callback. This callback will perform actions previously done by the physical button press (e.g., `stateMachine.changeState(&StateMachine::projectSelectState);`).
     *   Encoder interactions (`onEncoderRotateHandler`) should remain functional.
-    *   **Build & Test:** Verify LVGL idle screen. Test touch interaction transitions to `ProjectSelectState` (which will show its placeholder LVGL screen). Test encoder rotation.
-    *   **Commit Point.**
+    *   **Build & Test:** Verify LVGL idle screen. Test touch interaction transitions to `ProjectSelectState` (which will show its placeholder LVGL screen). Test encoder rotation. **(DONE - Verified 2025-05-15 - StartupState correctly transitions to IdleState (when WiFi provisioned is forced true). IdleState displays placeholder. Touch on Idle screen transitions to ProjectSelectState placeholder. Encoder rotation on Idle screen transitions to AdjustState placeholder. No further interactions in Adjust/ProjectSelect yet, as expected.)**
+    *   **Commit Point.** **(DONE - Phase 3, Step 2 completed and verified)**
 3.  **[ ] Project Select State UI & Touch:**
     *   **Files:** `firmware/src/states/ProjectSelectState.cpp`, `DisplayController.cpp`.
     *   **Action (`DisplayController::drawProjectSelectionScreen`):** Implement using LVGL (e.g., `lv_roller` or list of `lv_button`s).
