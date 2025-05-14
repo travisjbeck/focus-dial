@@ -4,15 +4,6 @@
 IdleState::IdleState() : defaultDuration(0), lastActivity(0)
 {
 
-  if (nvs_flash_init() != ESP_OK)
-  {
-    Serial.println("NVS Flash Init Failed");
-  }
-  else
-  {
-    Serial.println("NVS initialized successfully.");
-  }
-
   // Load the default duration
   if (preferences.begin("focusdial", true))
   {
@@ -83,9 +74,15 @@ void IdleState::setTimer(int duration)
 {
   defaultDuration = duration;
 
-  preferences.begin("focusdial", true);
-  preferences.putInt("timer", defaultDuration);
-  preferences.end();
+  if (preferences.begin("focusdial", false))
+  {
+    preferences.putInt("timer", defaultDuration);
+    preferences.end();
+  }
+  else
+  {
+    Serial.println("IdleState: Failed to open NVS for writing timer duration.");
+  }
 }
 
 int IdleState::getDefaultDuration() const
