@@ -300,19 +300,34 @@ With this reference you can wire the modules on any standard breadboard without 
     *   **Commit Point.** **(DONE - Phase 3, Step 2 completed and verified)**
 3.  **[ ] Project Select State UI & Touch:**
     *   **Files:** `firmware/src/states/ProjectSelectState.cpp`, `DisplayController.cpp`.
-    *   **Action (`DisplayController::drawProjectSelectionScreen`):** Implement using LVGL (e.g., `lv_roller` or list of `lv_button`s).
-    *   **Action (`ProjectSelectState::enter` and `update`):**
-        *   Populate LVGL list/roller from `projectManager.getProjects()`.
-        *   LVGL event callbacks on list items/roller update selection.
-        *   A "Confirm" LVGL button or similar interaction triggers state change.
-    *   **Build & Test:** Verify project list display, selection, and transition.
-    *   **Commit Point.**
+    *   **Action (`DisplayController::drawProjectSelectionScreen`):** No longer directly called by `ProjectSelectState`. State now creates its own UI (title, roller).
+    *   **Action (`ProjectSelectState::enter` and `update`):
+        *   UI Creation: Creates LVGL title label and roller for project names.
+        *   Populate LVGL roller from `projectManager.getProjects()` (prepended with "No Project").
+        *   Roller `LV_EVENT_VALUE_CHANGED` event updates internal selection and LED color.
+        *   Encoder input scrolls the roller.
+        *   Screen tap (`LV_EVENT_CLICKED` on screen) confirms selection and transitions to `TimerState`.
+        *   Screen long press (`LV_EVENT_LONG_PRESSED` on screen) transitions back to `IdleState`.
+        *   Timeout (30s) transitions back to `IdleState`.
+    *   **Build & Test:** Verify project list display (currently only "No Project"), encoder scroll, tap-to-confirm, long-press-to-go-back. **(DONE - Verified 2025-05-15 - Basic UI with roller, encoder scroll, tap-to-confirm, and long-press-to-back are functional. Needs testing with actual projects.)**
+    *   **Future Refinement:** Implement swipe gesture for "back" if desired. Full testing required once project creation via web UI is available.
+    *   **Commit Point.** **(DONE - Phase 3, Step 3 completed and verified at current level)**
 4.  **[ ] Continue for other states (AdjustState, TimerState, PausedState, DoneState, etc.):**
     *   For each state:
-        *   Implement its UI in `DisplayController::draw...Screen()` using LVGL.
+        *   Implement its UI in `DisplayController::draw...Screen()` using LVGL. (Note: States are now creating their own UI directly in `State::enter()`)
         *   Adapt `State::enter()` for LVGL event callbacks for touch, replacing old physical button handlers.
     *   **Build & Test each state's UI and basic interaction.**
     *   **Commit frequently.**
+    *   **AdjustState:**
+        *   **UI:** Title ("Adjust Duration"), Duration Label (e.g., "25 min"). (Instruction label to be re-added)
+        *   **Encoder:** Modifies duration on the label (respects MIN/MAX_TIMER).
+        *   **Screen Tap:** Saves duration to IdleState, transitions to IdleState.
+        *   **Status: (DONE - Verified 2025-05-15 - Simplified UI with title and duration label, encoder adjustment, and tap-to-save are functional. Instruction label to be re-added. Font issue workaround applied - using Montserrat 14.)**
+    *   **TimerState:** (Next)
+    *   **PausedState:**
+    *   **DoneState:**
+    *   **ResetState:**
+    *   **SleepState:**
 
 **Phase 4: Refinements**
 *   **Goal:** Finalize UI, animations, and conduct thorough testing.
@@ -320,6 +335,8 @@ With this reference you can wire the modules on any standard breadboard without 
 2.  **[ ] Network State & Provisioning UI:** Update `ProvisionState` and `DisplayController::drawProvisionScreen()` for LVGL.
 3.  **[ ] Error Handling and Edge Cases:** Thoroughly test all transitions and interactions.
 4.  **[ ] Code Cleanup:** Remove dead code from the old UI system.
+5.  **[ ] Future Refinement:** Enable more Montserrat font sizes in `lv_conf.h` if larger/varied fonts are desired for `AdjustState` and other UIs.
+    *   **Commit Point.**
 
 ---
 This detailed plan should serve as a good roadmap. We will tackle Phase 0 first.

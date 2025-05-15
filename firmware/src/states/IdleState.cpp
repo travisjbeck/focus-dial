@@ -79,8 +79,10 @@ void IdleState::update()
   ledController.update();
   networkController.update();
 
-  // Restore unconditional redraw
-  displayController.drawIdleScreen(defaultDuration, networkController.isWiFiConnected());
+  // Restore unconditional redraw ONLY if IdleState is the current state
+  if (stateMachine.getCurrentState() == this) {
+    displayController.drawIdleScreen(defaultDuration, networkController.isWiFiConnected());
+  }
 
   // Check if sleep timeout is reached
   if (millis() - lastActivity >= (SLEEP_TIMOUT * 60 * 1000))
