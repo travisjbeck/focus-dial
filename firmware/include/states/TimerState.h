@@ -13,6 +13,8 @@ public:
   void exit() override;
 
   void setTimer(int duration, unsigned long elapsedTime);
+  // Method to set all project details including ID
+  void setCurrentProjectDetails(const String& id, const String& name, uint32_t color);
 
   // Public helper methods for LVGL events
   void processScreenTap();
@@ -22,12 +24,14 @@ private:
   unsigned long startTime;
   int duration;                  // Total duration in minutes
   unsigned long elapsedTime;     // Elapsed time in seconds
-  uint32_t currentLedColor;      // Store the color for this timer session
-  String currentProjectName;     // Store the name for this session
-  // String currentProjectColorHex; // Not strictly needed if currentLedColor is stored
+  
+  // Store project details for the current session
+  String currentProjectId;       
+  String currentProjectName;     
+  uint32_t currentLedColor;      
 
   // LVGL UI Object Pointers
   lv_obj_t *projectNameLabel;
   lv_obj_t *timeDisplayLabel;
-  lv_obj_t *timerProgressBar; // Optional, for visual progress
+  lv_obj_t *timerProgressBar; 
 };

@@ -2,137 +2,135 @@
 #include "Controllers.h"
 #include "managers/ProjectManager.h" // Potentially for project name display if needed
 #include <lvgl.h>                  // For LVGL objects
+#include "states/PausedState.h" // Ensure this path is correct
 
-// Static event handlers for PausedState (if needed for its own UI later)
-// static void paused_screen_tap_event_handler(lv_event_t *e);
-// static void paused_screen_long_press_event_handler(lv_event_t *e);
+// Static LVGL event handlers for PausedState
+static void paused_screen_tap_event_handler(lv_event_t *e);
+static void paused_screen_long_press_event_handler(lv_event_t *e);
 
 PausedState::PausedState() : 
-    duration(0), 
-    elapsedTimeAtPause(0), // Renamed from elapsedTime for clarity
-    pauseEnter(0),
-    pausedLedColor(0),
-    pausedProjectName("No Project"),
-    pausedTimeLabel(nullptr),
-    pausedProjectNameLabel(nullptr),
-    instructionLabel(nullptr)
-{}
+    activeProjectId(""),
+    originalDurationMinutes(0),
+    pausedElapsedTimeSeconds(0),
+    activeLedColor(0),
+    activeProjectName("Paused"),
+    pausedLabel(nullptr),
+    timeDisplayLabel(nullptr),
+    projectNameLabel(nullptr) {}
 
-// Public helper methods for LVGL events
-void PausedState::processScreenTap() {
-    Serial.println("Paused State: Screen Tapped - Resuming");
-    // Send 'start' action to webhook handler (resume)
-    networkController.sendWebhookAction("start", this->duration, this->elapsedTimeAtPause); 
+void PausedState::setPause(const String& projectId, int totalDurationMinutes, unsigned long elapsedSeconds, uint32_t ledColor, const String& projectName) {
+    this->activeProjectId = projectId;
+    this->originalDurationMinutes = totalDurationMinutes;
+    this->pausedElapsedTimeSeconds = elapsedSeconds;
+    this->activeLedColor = ledColor;
+    this->activeProjectName = projectName;
+    Serial.printf("PausedState::setPause - ID: %s, Duration: %d min, Elapsed: %lu sec, Project: %s\n", 
+                  activeProjectId.c_str(), originalDurationMinutes, pausedElapsedTimeSeconds, activeProjectName.c_str());
+}
 
-    StateMachine::timerState.setTimer(duration, elapsedTimeAtPause); 
-    // Pass back color and name to TimerState if they were stored from TimerState
-    // This requires TimerState::setTimer to accept them, or TimerState::enter to re-fetch if only ID is passed.
-    // For now, TimerState::enter handles re-fetching color/name if elapsedTime is 0,
-    // but on resume, it reuses its own stored currentLedColor & currentProjectName.
-    // We need to ensure TimerState can be updated with these upon resume.
-    // One way: TimerState could have a resumeTimer(color, name) method, 
-    // or setTimer could be enhanced. 
-    // Let's assume for now TimerState will correctly use its own currentLedColor/Name upon resume if elapsedTime > 0.
+void PausedState::processResume() {
+    Serial.println("PausedState: Resuming timer.");
+    StateMachine::timerState.setTimer(this->originalDurationMinutes, this->pausedElapsedTimeSeconds);
+    StateMachine::timerState.setCurrentProjectDetails(this->activeProjectId, this->activeProjectName, this->activeLedColor);
+    stateMachine.changeState(&StateMachine::timerState);
+}
+
+void PausedState::processStop() {
+    Serial.println("PausedState: Stopping timer (transition to Idle).");
+    // Consider if a webhook for "cancel" or "stop" from pause is needed.
+    // For now, just go to idle.
+    networkController.sendWebhookAction("stop", this->originalDurationMinutes, this->pausedElapsedTimeSeconds);
+    stateMachine.changeState(&StateMachine::idleState);
+}
+
+static void paused_screen_tap_event_handler(lv_event_t *e) {
+    PausedState* self = (PausedState*)lv_event_get_user_data(e);
+    if (lv_event_get_code(e) == LV_EVENT_CLICKED && self) {
+        if (millis() - self->getEntryTime() < State::TAP_DEBOUNCE_MS) {
+            Serial.println("PausedState: Tap ignored (debounce)");
+            return;
+        }
+        self->processResume();
+    }
+}
+
+static void paused_screen_long_press_event_handler(lv_event_t *e) {
+    PausedState* self = (PausedState*)lv_event_get_user_data(e);
+    if (lv_event_get_code(e) == LV_EVENT_LONG_PRESSED && self) {
+        self->processStop();
+    }
+}
+
+void PausedState::enter() {
+    State::enter();
+    Serial.println("Entering Paused State");
+
+    // LED indication for paused state - e.g., pulsing the active color slowly
+    ledController.setPulse(activeLedColor, 1500, 1500); // Pulse active color, 1.5s on, 1.5s off
+
+    lv_obj_t *screen = lv_screen_active();
+    if (!screen) { Serial.println("PausedState::enter() - FATAL: screen is NULL"); return; }
+    lv_obj_clean(screen);
+
+    pausedLabel = lv_label_create(screen);
+    lv_label_set_text(pausedLabel, "Timer Paused");
+    lv_obj_set_style_text_font(pausedLabel, &lv_font_montserrat_14, 0);
+    lv_obj_align(pausedLabel, LV_ALIGN_TOP_MID, 0, 10);
+
+    projectNameLabel = lv_label_create(screen);
+    lv_label_set_text(projectNameLabel, activeProjectName.c_str());
+    lv_obj_set_style_text_font(projectNameLabel, &lv_font_montserrat_14, 0);
+    lv_obj_align(projectNameLabel, LV_ALIGN_TOP_MID, 0, 35);
+
+    timeDisplayLabel = lv_label_create(screen);
+    char timeStr[10];
+    int displaySeconds = (originalDurationMinutes == 0) ? pausedElapsedTimeSeconds : (originalDurationMinutes * 60 - pausedElapsedTimeSeconds);
+    if (originalDurationMinutes > 0 && displaySeconds < 0) displaySeconds = 0; // Ensure countdown doesn't show negative if paused at exact end
     
-    // displayController.showTimerResume(); // TODO: LVGL animation
-    stateMachine.changeState(&StateMachine::timerState); 
+    int hours = displaySeconds / 3600;
+    int minutes = (displaySeconds % 3600) / 60;
+    int seconds = displaySeconds % 60;
+    if (originalDurationMinutes == 0) { // Count-up mode was paused
+        if (hours > 0) sprintf(timeStr, "%02d:%02d", hours, minutes);
+        else sprintf(timeStr, "%02d:%02d", minutes, seconds);
+    } else { // Countdown mode was paused - show remaining time
+        if (hours > 0) sprintf(timeStr, "%02d:%02d", hours, minutes); 
+        else sprintf(timeStr, "%02d:%02d", minutes, seconds);
+    }
+    lv_label_set_text(timeDisplayLabel, timeStr);
+    lv_obj_set_style_text_font(timeDisplayLabel, &lv_font_montserrat_14, 0);
+    lv_obj_align(timeDisplayLabel, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t* instructionLabel = lv_label_create(screen);
+    lv_label_set_text(instructionLabel, "Tap to Resume\nLong Press to Stop");
+    lv_obj_set_style_text_align(instructionLabel, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(instructionLabel, &lv_font_montserrat_14, 0);
+    lv_obj_align(instructionLabel, LV_ALIGN_BOTTOM_MID, 0, -20);
+
+    lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(screen, paused_screen_tap_event_handler, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(screen, paused_screen_long_press_event_handler, LV_EVENT_LONG_PRESSED, this);
+    
+    Serial.println("PausedState::enter - UI created, event handlers added.");
 }
 
-void PausedState::processScreenLongPress() {
-    Serial.println("Paused State: Screen Long Pressed - Canceling");
-    networkController.sendWebhookAction("stop", this->duration, this->elapsedTimeAtPause);
-    // displayController.showCancel(); // TODO: LVGL animation
-    stateMachine.changeState(&StateMachine::idleState); 
+void PausedState::update() {
+    inputController.update(); 
+    ledController.update(); 
+    // No specific logic needed in update for PausedState as it's event-driven
 }
 
-// Static event handlers linking to public methods
-// static void paused_screen_tap_event_handler(lv_event_t *e) {
-//     PausedState* self = (PausedState*)lv_event_get_user_data(e);
-//     if (lv_event_get_code(e) == LV_EVENT_CLICKED && self) {
-//         self->processScreenTap();
-//     }
-// }
-
-// static void paused_screen_long_press_event_handler(lv_event_t *e) {
-//     PausedState* self = (PausedState*)lv_event_get_user_data(e);
-//     if (lv_event_get_code(e) == LV_EVENT_LONG_PRESSED && self) {
-//         self->processScreenLongPress();
-//     }
-// }
-
-void PausedState::enter()
-{
-  Serial.println("Entering Paused State");
-  pauseEnter = millis(); 
-  ledController.setBreath(FD_YELLOW, -1, false, 20); // Yellow breathing for paused
-
-  // For now, PausedState will use the placeholder screen from DisplayController
-  // The actual UI (labels for paused time, project name, instructions) will be built here in a later step.
-  // When we build the UI, we will also add the tap/long-press handlers to the screen like in other states.
-  int remainingTime = (duration * 60) - elapsedTimeAtPause;
-  if (remainingTime < 0) remainingTime = 0;
-  displayController.drawPausedScreen(remainingTime); // Uses placeholder for now
-
-  // TODO: Setup LVGL UI for PausedState here
-  // Example:
-  // lv_obj_t *screen = lv_screen_active();
-  // lv_obj_clean(screen);
-  // pausedProjectNameLabel = lv_label_create(screen, ...);
-  // lv_label_set_text(pausedProjectNameLabel, pausedProjectName.c_str());
-  // pausedTimeLabel = lv_label_create(screen, ...);
-  // lv_label_set_text_fmt(pausedTimeLabel, "%02d:%02d", minutes, seconds);
-  // instructionLabel = lv_label_create(screen, ...);
-  // lv_label_set_text(instructionLabel, "Tap to Resume\nLong Press to Cancel");
-  // lv_obj_add_event_cb(screen, paused_screen_tap_event_handler, LV_EVENT_CLICKED, this);
-  // lv_obj_add_event_cb(screen, paused_screen_long_press_event_handler, LV_EVENT_LONG_PRESSED, this);
-  // lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
-  // lv_refr_now(NULL);
-}
-
-void PausedState::update()
-{
-  inputController.update(); // Though no handlers are set for PausedState yet
-  ledController.update();   // For breathing animation
-
-  // If not building specific UI in enter(), keep calling drawPausedScreen for placeholder
-  // Once specific UI is built in enter(), this call might not be needed or would update specific elements.
-  int remainingTime = (duration * 60) - elapsedTimeAtPause;
-  if (remainingTime < 0) remainingTime = 0;
-  displayController.drawPausedScreen(remainingTime); // Uses placeholder for now
-
-  unsigned long currentTime = millis();
-  if (currentTime - pauseEnter >= (PAUSE_TIMEOUT * 60 * 1000)) {
-    Serial.println("Paused State: Timeout - Canceling timer");
-    networkController.sendWebhookAction("stop", this->duration, this->elapsedTimeAtPause);
-    // displayController.showCancel(); // TODO: LVGL animation
-    stateMachine.changeState(&StateMachine::idleState); 
-  }
-}
-
-void PausedState::exit()
-{
-  Serial.println("Exiting Paused State");
-  // inputController.releaseHandlers(); // No handlers registered in this version of enter yet
-  
-  // TODO: Clean up LVGL objects if created in enter()
-  // lv_obj_t *screen = lv_screen_active();
-  // if (screen) {
-  //   lv_obj_remove_event_cb_with_user_data(screen, paused_screen_tap_event_handler, this);
-  //   lv_obj_remove_event_cb_with_user_data(screen, paused_screen_long_press_event_handler, this);
-  //   lv_obj_clear_flag(screen, LV_OBJ_FLAG_CLICKABLE);
-  // }
-  // if(pausedTimeLabel) { lv_obj_del(pausedTimeLabel); pausedTimeLabel = nullptr; }
-  // if(pausedProjectNameLabel) { lv_obj_del(pausedProjectNameLabel); pausedProjectNameLabel = nullptr; }
-  // if(instructionLabel) { lv_obj_del(instructionLabel); instructionLabel = nullptr; }
-}
-
-// Updated to accept and store color and project name
-void PausedState::setPause(int dur, unsigned long elapsed, uint32_t ledCol, const String& projName)
-{
-  this->duration = dur;
-  this->elapsedTimeAtPause = elapsed; // Store the elapsed time at the moment of pausing
-  this->pausedLedColor = ledCol;
-  this->pausedProjectName = projName;
-  Serial.printf("PausedState::setPause - Duration: %d, ElapsedAtPause: %lu, Color: %06X, Project: %s\n", 
-                this->duration, this->elapsedTimeAtPause, this->pausedLedColor, this->pausedProjectName.c_str());
+void PausedState::exit() {
+    Serial.println("Exiting Paused State");
+    lv_obj_t *screen = lv_screen_active();
+    if (screen) {
+        lv_obj_remove_event_cb_with_user_data(screen, paused_screen_tap_event_handler, this);
+        lv_obj_remove_event_cb_with_user_data(screen, paused_screen_long_press_event_handler, this);
+        lv_obj_clear_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+    }
+    // LVGL objects are children of the screen, lv_obj_clean in enter() handles old ones.
+    // No explicit lv_obj_del needed here if enter always cleans the screen.
+    pausedLabel = nullptr;
+    timeDisplayLabel = nullptr;
+    projectNameLabel = nullptr;
 }

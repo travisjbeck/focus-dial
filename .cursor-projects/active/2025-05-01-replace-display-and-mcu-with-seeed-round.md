@@ -196,9 +196,10 @@ With this reference you can wire the modules on any standard breadboard without 
 
 **Overall Strategy for Upgrade:**
 1.  **Core Hardware First:** Get the fundamental new hardware (ESP32S3, display, touch, encoder, NeoPixel on new pins) working with basic drivers and LVGL *within the existing firmware structure*, initially bypassing or stubbing out complex application logic.
-2.  **Controller by Controller:** Update individual controllers to work with the new hardware pins and drivers.
-3.  **State by State UI Migration:** Rewrite the UI for each state using LVGL, replacing the old display methods. Integrate touch interactions.
-4.  **Iterative Testing:** Compile and test (at least for basic functionality/no crashes) after each significant small step. Commit working changes frequently.
+2.  **Adopt LVGL Best Practices:** Transition to using LVGL's native event system for robust gesture handling (tap, long-press, swipe) across the entire screen for each state. Implement a structured screen management system where each state controls its own LVGL screen object, utilizing LVGL's screen loading and transition mechanisms.
+3.  **Controller by Controller (Revised):** Update individual peripheral controllers (`LEDController`, `InputController` for encoder) to work with the new hardware pins and drivers, ensuring they integrate cleanly with the LVGL-based state management. The `DisplayController`'s role will be re-evaluated, likely minimizing or removing its direct screen drawing responsibilities.
+4.  **State by State UI & Interaction Migration (LVGL-centric):** Rewrite/refactor the UI and interaction logic for each state. Each state will be responsible for creating its LVGL UI on its own screen object and handling gestures via LVGL events.
+5.  **Iterative Testing:** Compile and test (at least for basic functionality/no crashes) after each significant small step. Commit working changes frequently.
 
 ---
 
@@ -206,7 +207,7 @@ With this reference you can wire the modules on any standard breadboard without 
 
 **Phase 0: Preparation & Configuration (Essential Groundwork)**
 *   **Goal:** Align main firmware configuration with new hardware and ensure necessary libraries are linked.
-1.  **[ ] Update `firmware/include/Config.h`:**
+1.  **[X] Update `firmware/include/Config.h`:**
     *   **Action:**
         *   Change `ENCODER_A_PIN` to `43` (XIAO D6).
         *   Change `ENCODER_B_PIN` to `8` (XIAO D9).
@@ -214,7 +215,7 @@ With this reference you can wire the modules on any standard breadboard without 
         *   Comment out or remove `BUTTON_PIN` (e.g., `#define BUTTON_PIN 26 // Deprecated, replaced by touch`).
         *   Remove `OLED_WIDTH`, `OLED_HEIGHT`, `OLED_ADDR` (specific to old display).
     *   **Rationale:** Match pin definitions to the new hardware setup verified in `MinimalDisplayTest.cpp`.
-2.  **[ ] Update `platformio.ini` (if necessary):**
+2.  **[X] Update `platformio.ini` (if necessary):**
     *   **Action:**
         *   Verify `lib_deps` includes:
             *   `lvgl/lvgl`
@@ -225,7 +226,7 @@ With this reference you can wire the modules on any standard breadboard without 
 
 **Phase 1: Core System & LVGL Initialization in `main.cpp`**
 *   **Goal:** Initialize the new display, touch, and LVGL within `main.cpp`, achieving a basic visual output.
-1.  **[ ] Modify `firmware/src/main.cpp` - Basic LVGL Setup:**
+1.  **[X] Modify `firmware/src/main.cpp` - Basic LVGL Setup:**
     *   **Action:**
         *   Include LVGL and the XIAO round screen helper: `lvgl.h`, `lv_xiao_round_screen.h`.
         *   In `setup()`, after NVS init, add LVGL core init, display init (`lv_xiao_disp_init()`), touch init (`lv_xiao_touch_init()`), and LVGL tick setup. Refer to `MinimalDisplayTest.cpp` for exact calls.
@@ -236,14 +237,52 @@ With this reference you can wire the modules on any standard breadboard without 
     *   **Build & Test:** Compile and upload. Expect to see the "Main FW LVGL OK" label on the round display. This verifies core display/LVGL functionality in `main.cpp`. **(DONE - Verified 2025-05-14)**
     *   **Commit Point.** **(DONE - Phase 1, Step 1 completed and verified)**
 
-**Phase 2: Controller Re-Integration & Hardware Adaptation**
-*   **Goal:** Update individual controllers to work with the new hardware pins and drivers.
-1.  **[ ] Update `LEDController` (`firmware/src/controllers/LEDController.cpp`):**
+**Phase 1.5: Adopt LVGL Best Practices for Touch, Gestures & Screen Management**
+*   **Goal:** Transition to a robust and maintainable UI interaction model using LVGL's native capabilities.
+1.  **[ ] Research LVGL Gesture & Screen Management Capabilities:**
+    *   **Action:** Investigate LVGL's built-in gesture system (tap, long-press, swipe), event handling for full-screen objects, screen creation (`lv_obj_create(NULL)`), screen loading (`lv_screen_load`, `lv_screen_load_anim`), and `lv_tileview` for swipe-based navigation.
+    *   **Rationale:** Understand best practices before refactoring.
+    *   **Status: (DONE - Initial research complete, confirming LVGL's suitability. See notes below plan.)**
+2.  **[ ] Review LVGL Configuration for Gestures:**
+    *   **Action:** Inspect `lv_conf.h` (and any configurations within `lv_xiao_round_screen.h` or dependent libraries) for settings related to gesture detection, such as `LV_INDEV_DEF_LONG_PRESS_TIME`, `LV_INDEV_DEF_GESTURE_LIMIT`, etc. Ensure they are reasonably configured for the Seeed Round Display.
+    *   **Rationale:** Ensure LVGL's gesture recognition is tuned for the hardware.
+3.  **[ ] Refactor States for LVGL Native Full-Screen Gestures:**
+    *   **Goal:** Replace custom touch handling (manual debounce, etc.) with LVGL's event system for consistent system-wide gestures on each state's view.
+    *   **General Action for each state:**
+        *   Modify `State::enter()` to add event callbacks (e.g., `LV_EVENT_CLICKED`, `LV_EVENT_LONG_PRESSED`, `LV_EVENT_GESTURE` for swipes if applicable) directly to the state's primary viewable object (initially `lv_screen_active()`, later the state's own screen object).
+        *   Ensure the target object has `LV_OBJ_FLAG_CLICKABLE` and other relevant flags for gesture detection.
+        *   Remove custom debounce logic, relying on LVGL's built-in mechanisms.
+    *   **Specific States to Refactor (Iterative Process):**
+        *   **[ ] `IdleState`:** Refactor touch to `ProjectSelectState` and encoder to `AdjustState` using LVGL events. Implement long-press for `ResetState` (if desired).
+        *   **[ ] `ProjectSelectState`:** Refactor tap-to-confirm (`TimerState`) and long-press-to-back (`IdleState`) using LVGL events on the screen/roller.
+        *   **[ ] `AdjustState`:** Refactor tap-to-save (`IdleState`) using LVGL events.
+        *   **[ ] `TimerState`:** Refactor tap-to-pause/done and long-press-to-cancel (`IdleState`) using LVGL events. (Long press re-integration pending).
+        *   **[ ] Other states as they are developed/refactored.**
+    *   **Build & Test each refactored state for responsive and correct gesture handling.**
+    *   **Commit frequently.**
+4.  **[ ] Implement Dedicated LVGL Screens per State & Screen Transitions:**
+    *   **Goal:** Structure the UI such that each FSM state manages its own distinct LVGL screen, improving modularity and enabling animated transitions.
+    *   **General Action for each state:**
+        *   In `State::enter()`:
+            *   Create a new screen object: `lv_obj_t* screen = lv_obj_create(NULL);`.
+            *   Store this screen pointer in the state object.
+            *   Build all UI elements for the state as children of this `screen`.
+            *   Attach gesture event handlers to this `screen` object.
+            *   Load the screen: `lv_screen_load(screen);` or `lv_screen_load_anim(screen, LV_SCR_LOAD_ANIM_FADE_ON, 300, 0, true);` (example transition).
+        *   In `State::exit()`:
+            *   If not using `auto_del_old_scr` with `lv_screen_load_anim`, ensure the state's screen is deleted (e.g., `lv_obj_del_async(screen_to_delete_later);` or `lv_obj_del(old_screen_ptr);` if done carefully after new screen is loaded).
+    *   **[ ] Consider `lv_tileview` for Core Navigation (Optional):** If primary navigation between a set of core states is swipe-based, explore using `lv_tileview`. Each tile would host a state's screen content.
+    *   **Build & Test screen creation, loading, transitions, and cleanup for each state.**
+    *   **Commit frequently.**
+
+**Phase 2: Controller Re-Integration & Hardware Adaptation (Aligning with LVGL-centric UI)**
+*   **Goal:** Ensure peripheral controllers are well-integrated with the new LVGL-based UI and state management.
+1.  **[X] Update `LEDController` (`firmware/src/controllers/LEDController.cpp`):**
     *   **Action:** Since `Config.h` will be updated (Phase 0), `LEDController` should use the new `LED_PIN`. Verify `Adafruit_NeoPixel` usage is standard.
     *   In `main.cpp -> setup()`, uncomment `ledController.begin();`. Add a test call (e.g., `ledController.setSolid(0x00FF00);`).
     *   **Build & Test:** Verify LEDs initialize and respond as expected. (Also updated `Config.h` `NUM_LEDS` to 24 and verified). **(DONE - Verified 2025-05-14)**
     *   **Commit Point.** **(DONE - Phase 2, Step 1 completed and verified)**
-2.  **[ ] Update `InputController` for Encoder (`firmware/src/controllers/InputController.cpp`):**
+2.  **[X] Update `InputController` for Encoder (`firmware/src/controllers/InputController.cpp`):**
     *   **Action:**
         *   Constructor will receive updated encoder pins from `Config.h`.
         *   Modify `InputController::begin()`:
@@ -255,118 +294,82 @@ With this reference you can wire the modules on any standard breadboard without 
     *   In `main.cpp -> loop()`, add temporary serial printing of encoder position (may need to add/expose a getter in `InputController`).
     *   **Build & Test:** Verify encoder values are correctly read via interrupts. **(DONE - Verified 2025-05-14)**
     *   **Commit Point.** **(DONE - Phase 2, Step 2 completed and verified)**
-3.  **[ ] Refactor `DisplayController` - Phase 1: Decouple Old Display, Basic LVGL Structure**
-    *   **Goal:** Remove old display dependencies and prepare `DisplayController` for LVGL.
-    *   **Action (`DisplayController.h`):**
-        *   Remove `Adafruit_SSD1306 oled;` member.
-        *   Adjust constructor (remove old OLED params).
-    *   **Action (`DisplayController.cpp`):**
-        *   `DisplayController::begin()`: Remove all old `oled.*` calls. Can be minimal for now.
-        *   For *every* drawing method (e.g., `drawSplashScreen`, `drawIdleScreen`, etc.):
-            *   Comment out all existing `oled.*` drawing commands.
-            *   Add `Serial.println("DisplayController::methodName called");`.
-            *   Add a placeholder LVGL action (e.g., clear screen, show a label with method name).
-                ```cpp
-                // Example for drawIdleScreen
-                if (lv_screen_active()) { // Check if screen is active
-                    lv_obj_clean(lv_screen_active()); 
-                    lv_obj_t* label = lv_label_create(lv_screen_active());
-                    lv_label_set_text_fmt(label, "Screen: Placeholder for Idle");
-                    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
-                }
-                ```
-    *   In `main.cpp -> setup()`, uncomment `displayController.begin();`.
-    *   **Build & Test:** Firmware should compile and run. Serial logs should indicate when draw methods are called (if other logic is re-enabled). Placeholder LVGL screens should appear if state machine logic calls these stubs. **(DONE - Verified 2025-05-14 - Build successful, visual test pending re-enablement of state machine)**
-    *   **Commit Point.** **(DONE - Phase 2, Step 3 completed and verified)**
+3.  **[ ] Re-evaluate `DisplayController` Role:**
+    *   **Goal:** Minimize or eliminate direct screen drawing methods from `DisplayController`.
+    *   **Action:**
+        *   The previous refactoring (commenting out `oled.*` calls and adding placeholders) is now **superseded** by the "Dedicated LVGL Screens per State" approach.
+        *   Identify any remaining essential functions in `DisplayController` (e.g., global brightness control if any, or methods that might assist states in creating common UI *elements* rather than full screens).
+        *   Refactor or remove `DisplayController` methods like `drawIdleScreen`, `drawTimerScreen` as states will manage their own UI construction on their dedicated LVGL screens.
+    *   **Rationale:** States become self-contained in their UI representation, aligning with LVGL best practices. `DisplayController` might become a thin hardware abstraction or be mostly absorbed by individual states or a new UI manager/helper class if complex reusable UI components are needed.
+    *   **Build & Test:** Ensure system stability after refactoring `DisplayController`'s role.
 
-**Phase 3: State-by-State UI Migration to LVGL & Touch Integration**
-*   **Goal:** Iteratively rewrite the UI for each state using LVGL and integrate touch interactions.
-1.  **[ ] Startup State & Splash Screen:**
-    *   **Files:** `firmware/src/states/StartupState.cpp`, `DisplayController.cpp`.
-    *   **Action (`DisplayController::drawSplashScreen`):** Implement the actual splash screen using LVGL objects (e.g., `lv_image`, `lv_label`).
-    *   **Action (`StartupState::enter` or `update`):** Ensure it calls `displayController.drawSplashScreen()`.
-    *   In `main.cpp -> setup()`, uncomment `stateMachine.changeState(&StateMachine::startupState);` and `projectManager.begin();` (if `StartupState` depends on it). Also uncomment `networkController.begin();` if needed by early states.
-    *   In `main.cpp -> loop()`, uncomment `stateMachine.update();`.
-    *   **Build & Test:** Verify the new LVGL splash screen appears. **(DONE - Verified 2025-05-15 - StartupState entered, "SPLASH SCREEN NOW!" displayed with teal LEDs, then correctly transitioned to ProvisionState, and "Screen: Provision" displayed with amber LEDs.)**
-    *   **Commit Point.** **(DONE - Phase 3, Step 1 completed and verified)**
-2.  **[ ] Idle State UI & Basic "Touch" Interaction:**
-    *   **Files:** `firmware/src/states/IdleState.cpp`, `DisplayController.cpp`.
-    *   **Action (`DisplayController::drawIdleScreen`):** Design and implement the idle screen using LVGL. Include a touchable area/widget (e.g., full-screen `lv_obj` or `lv_button`) for interaction.
-    *   **Action (`IdleState::enter`):**
-        *   Remove `inputController.onPressHandler(...)` for the physical button.
-        *   In `DisplayController::drawIdleScreen` (or called from `IdleState::enter`), create the touchable LVGL object and assign an LVGL event callback. This callback will perform actions previously done by the physical button press (e.g., `stateMachine.changeState(&StateMachine::projectSelectState);`).
-    *   Encoder interactions (`onEncoderRotateHandler`) should remain functional.
-    *   **Build & Test:** Verify LVGL idle screen. Test touch interaction transitions to `ProjectSelectState` (which will show its placeholder LVGL screen). Test encoder rotation. **(DONE - Verified 2025-05-15 - StartupState correctly transitions to IdleState (when WiFi provisioned is forced true). IdleState displays placeholder. Touch on Idle screen transitions to ProjectSelectState placeholder. Encoder rotation on Idle screen transitions to AdjustState placeholder. No further interactions in Adjust/ProjectSelect yet, as expected.)**
-    *   **Commit Point.** **(DONE - Phase 3, Step 2 completed and verified)**
-3.  **[ ] Project Select State UI & Touch:**
-    *   **Files:** `firmware/src/states/ProjectSelectState.cpp`, `DisplayController.cpp`.
-    *   **Action (`DisplayController::drawProjectSelectionScreen`):** No longer directly called by `ProjectSelectState`. State now creates its own UI (title, roller).
-    *   **Action (`ProjectSelectState::enter` and `update`):
-        *   UI Creation: Creates LVGL title label and roller for project names.
-        *   Populate LVGL roller from `projectManager.getProjects()` (prepended with "No Project").
-        *   Roller `LV_EVENT_VALUE_CHANGED` event updates internal selection and LED color.
-        *   Encoder input scrolls the roller.
-        *   Screen tap (`LV_EVENT_CLICKED` on screen) confirms selection and transitions to `TimerState`.
-        *   Screen long press (`LV_EVENT_LONG_PRESSED` on screen) transitions back to `IdleState`.
-        *   Timeout (30s) transitions back to `IdleState`.
-    *   **Build & Test:** Verify project list display (currently only "No Project"), encoder scroll, tap-to-confirm, long-press-to-go-back. **(DONE - Verified 2025-05-15 - Basic UI with roller, encoder scroll, tap-to-confirm, and long-press-to-back are functional. Needs testing with actual projects.)**
-    *   **Future Refinement:** Implement swipe gesture for "back" if desired. Full testing required once project creation via web UI is available.
-    *   **Commit Point.** **(DONE - Phase 3, Step 3 completed and verified at current level)**
+**Phase 3: State-by-State UI Migration & Interaction (LVGL-centric - In Progress)**
+*   **Goal:** Iteratively implement or refactor the UI and interaction logic for each state using dedicated LVGL screens and native LVGL gesture events.
+1.  **[X] Startup State & Splash Screen:**
+    *   **Files:** `firmware/src/states/StartupState.cpp`.
+    *   **Action:** `StartupState::enter` creates its UI elements on an LVGL screen (currently `lv_screen_active()`, to be refactored to its own screen per Phase 1.5 Step 4).
+    *   **Status: (DONE - Verified 2025-05-15 - Functionality achieved. Needs update for dedicated screen & optimized gesture handling per Phase 1.5)**
+2.  **[X] Idle State UI & Interactions:**
+    *   **Files:** `firmware/src/states/IdleState.cpp`.
+    *   **Action:** UI created in `IdleState::enter`. Interactions (tap, encoder) trigger state changes.
+    *   **Status: (DONE - Verified 2025-05-15 - Functionality achieved. Needs update for dedicated screen & LVGL native gestures per Phase 1.5)**
+3.  **[X] Project Select State UI & Interactions:**
+    *   **Files:** `firmware/src/states/ProjectSelectState.cpp`.
+    *   **Action:** UI (title, roller) created in `ProjectSelectState::enter`. Interactions (encoder, tap, long-press) handled.
+    *   **Status: (DONE - Verified 2025-05-15 - Functionality achieved. Needs update for dedicated screen & LVGL native gestures per Phase 1.5)**
 4.  **[ ] Continue for other states (AdjustState, TimerState, PausedState, DoneState, etc.):**
     *   For each state:
-        *   Implement its UI in `DisplayController::draw...Screen()` using LVGL. (Note: States are now creating their own UI directly in `State::enter()`)
-        *   Adapt `State::enter()` for LVGL event callbacks for touch, replacing old physical button handlers.
-    *   **Build & Test each state's UI and basic interaction.**
+        *   Implement its UI on its own dedicated LVGL screen object (Phase 1.5 Step 4).
+        *   Use LVGL native gesture events for touch interactions (Phase 1.5 Step 3).
+    *   **Build & Test each state's UI and interaction.**
     *   **Commit frequently.**
     *   **AdjustState:**
-        *   **UI:** Title ("Adjust Duration"), Duration Label (e.g., "25 min"), Instruction Label ("Turn to adjust / Tap to save").
-        *   **Encoder:** Modifies duration on the label (respects MIN/MAX_TIMER).
-        *   **Screen Tap:** Saves duration to IdleState, transitions to IdleState.
-        *   **Status: (DONE - Verified 2025-05-15 - UI with title, duration, and instruction labels, encoder adjustment, and tap-to-save are fully functional. Font issue workaround applied - using Montserrat 14.)**
-        *   **Commit Point.** **(DONE - Phase 3, Step 4a completed and verified)**
+        *   **UI:** Title, Duration Label, Instruction Label.
+        *   **Encoder:** Modifies duration.
+        *   **Screen Tap:** Saves duration, transitions to IdleState.
+        *   **Status: (DONE for initial functionality - Verified 2025-05-15. Needs update for dedicated screen & LVGL native gestures per Phase 1.5).**
     *   **TimerState:**
-        *   **UI:** LVGL UI displaying Project Name, dynamically updating Time Display (HH:MM or MM:SS based on duration), and a Progress Bar for countdown mode.
-        *   **Encoder Interaction:** Not applicable within `TimerState` itself (duration is set by `AdjustState` or `ProjectSelectState` for "No Project" indeterminate).
-        *   **Screen Tap Interaction:**
-            *   Countdown mode: Handler implemented to pause timer and transition to `PausedState`.
-            *   Indeterminate (count-up) mode: Handler implemented to stop timer and transition to `DoneState`.
-        *   **Screen Long Press Interaction:** Handler defined to cancel timer and transition to `IdleState`. (Needs to be re-enabled in `TimerState::enter()` and tested).
-        *   **LEDs:**
-            *   Countdown mode: Fill/decay effect with project color. (Implemented).
-            *   Indeterminate mode: Breathing effect with project color. (Implemented, user to verify).
-        *   **Progress Bar:** Implemented and updates during countdown mode.
-        *   **Status: (In Progress - Core UI, timer logic for count-up/countdown, and LED effects for both modes are implemented. Tap handlers are in place. Progress bar functional. Long press handler needs re-integration and full testing. Verification of all interactions is crucial.)**
-        *   **Commit Point for current progress.**
-    *   **PausedState:** (Next)
-    *   **DoneState:** (After PausedState or in parallel if `TimerState` indeterminate mode is fully tested first)
-    *   **ResetState:**
-    *   **SleepState:**
+        *   **UI:** Project Name, Time Display, Progress Bar.
+        *   **Screen Tap:** Pause/Done.
+        *   **Screen Long Press:** Cancel (Needs re-integration and testing after Phase 1.5 refactor).
+        *   **LEDs:** Countdown (fill/decay), Indeterminate (breathing).
+        *   **Status: (In Progress - Core UI and timer logic functional. LED effects implemented. Tap handlers in place. Needs update for dedicated screen & LVGL native gestures, and long-press re-integration per Phase 1.5.)**
+    *   **[ ] PausedState:** (Next, after TimerState is stable with new gesture/screen model)
+        *   **UI:** "Paused", project name, paused time.
+        *   **Interactions:** Tap to resume (to `TimerState`), Long-press to cancel (to `IdleState`).
+        *   **LEDs:** Distinct "paused" pattern.
+    *   **[ ] DoneState:**
+        *   **UI:** "Done!", project name, total time.
+        *   **Interactions:** Tap to acknowledge (to `IdleState`).
+        *   **LEDs:** "Completion" pattern.
+    *   **[ ] ResetState:**
+    *   **[ ] SleepState:**
 
 **Phase 4: Refinements**
 *   **Goal:** Finalize UI, animations, and conduct thorough testing.
-1.  **[ ] Animations:** Adapt old bitmap animations or implement new LVGL animations. Test `displayController.updateAnimation()`.
-2.  **[ ] Network State & Provisioning UI:** Update `ProvisionState` and `DisplayController::drawProvisionScreen()` for LVGL.
+1.  **[ ] Animations:** Implement LVGL screen transitions and widget animations.
+2.  **[ ] Network State & Provisioning UI:** Update `ProvisionState` for LVGL, using dedicated screen and native gestures.
 3.  **[ ] Error Handling and Edge Cases:** Thoroughly test all transitions and interactions.
-4.  **[ ] Code Cleanup:** Remove dead code from the old UI system.
-5.  **[ ] Future Refinement:** Enable more Montserrat font sizes in `lv_conf.h` if larger/varied fonts are desired for `AdjustState` and other UIs.
-    *   **Commit Point.**
+4.  **[ ] Code Cleanup:** Remove dead code, especially from any remnants of the old UI system or `DisplayController`.
+5.  **[ ] Future Refinement:** Enable more Montserrat font sizes in `lv_conf.h` if needed. Optimize LVGL performance and memory usage.
 
 ---
 This detailed plan should serve as a good roadmap. We will tackle Phase 0 first.
 
-## Notes & References
+## Notes & References (Updated Context)
+- **LVGL as Primary UI/Interaction Framework:** The project will now fully leverage LVGL for screen management (each state having its own `lv_obj_t` screen, loaded with `lv_screen_load` or `lv_screen_load_anim`) and gesture detection (using LVGL events like `LV_EVENT_CLICKED`, `LV_EVENT_LONG_PRESSED`, `LV_EVENT_GESTURE` on full-screen objects).
+- **Superseded Approaches:** Direct screen drawing via a centralized `DisplayController` and custom touch/debounce logic within states are now considered superseded by LVGL's native capabilities.
 - Original Wiring Diagram (provided).
 - Seeed Display Docs: [https://wiki.seeedstudio.com/get_start_round_display/](https://wiki.seeedstudio.com/get_start_round_display/)
 - Seeed Studio XIAO ESP32S3 Plus: [https://www.seeedstudio.com/Seeed-Studio-XIAO-ESP32S3-Plus-p-6361.html](https://www.seeedstudio.com/Seeed-Studio-XIAO-ESP32S3-Plus-p-6361.html)
 - XIAO ESP32S3 Plus Pinout and documentation.
 - Seeed LVGL & TFT Guide for Round Display: [https://wiki.seeedstudio.com/using_lvgl_and_tft_on_round_display/](https://wiki.seeedstudio.com/using_lvgl_and_tft_on_round_display/)
-- Required Libraries: `lvgl/lvgl`, `Seeed-Studio/Seeed_Arduino_RoundDisplay`, `lewisxhe/PCF8563_Library`, `Adafruit_NeoPixel`, `mathertel/RotaryEncoder`, (potentially `bodmer/TFT_eSPI` as dependency).
+- Required Libraries: `lvgl/lvgl`, `Seeed-Studio/Seeed_Arduino_RoundDisplay`, `lewisxhe/PCF8563_Library`, `Adafruit_NeoPixel`, `mathertel/RotaryEncoder`.
 - The display controller is GC9A01.
 - **Touch Interrupt:** Confirmed to require D7 (GPIO44).
-- **Encoder:** Requires interrupt handling on D6 (GPIO43) and D9 (GPIO8) for reliable operation.
-- Need to map and assign pins for NeoPixels, display SPI, I2C for touch/RTC on the XIAO ESP32S3 Plus.
+- **Encoder:** Requires interrupt handling on D6 (GPIO43) and D9 (GPIO8).
 - Using 24 LED NeoPixel for visual indicators.
-- Bourns PER35 35mm rotary encoder will replace the previous encoder but has the same connection points. 
+- Bourns PER35 35mm rotary encoder.
 
 ### NVS (Non-Volatile Storage) Stabilization in Main Firmware
 - **Context:** The main firmware utilizes the Arduino `Preferences` library for NVS operations. Issues with NVS reliability were encountered when migrating to new hardware (XIAO ESP32S3).

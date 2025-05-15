@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PAUSED_STATE_H
+#define PAUSED_STATE_H
 
 #include "State.h"
 #include <Arduino.h> // For String
@@ -13,23 +14,34 @@ public:
   void exit() override;
 
   // Updated to accept color and project name
-  void setPause(int duration, unsigned long elapsedTime, uint32_t ledColor, const String& projectName);
+  void setPause(const String& projectId, int totalDurationMinutes, unsigned long elapsedSeconds, uint32_t ledColor, const String& projectName);
 
   // Public helper methods for LVGL events (if needed for this state's UI)
   void processScreenTap(); // To resume
   void processScreenLongPress(); // To cancel
 
 private:
-  int duration;
-  unsigned long pauseEnter; // Time when pause state was entered
-  unsigned long elapsedTimeAtPause; // Elapsed time when pause began
-  
-  // Store color and name to pass back to TimerState or display
-  uint32_t pausedLedColor;
-  String pausedProjectName;
+  String activeProjectId;
+  int originalDurationMinutes;
+  unsigned long pausedElapsedTimeSeconds;
+  uint32_t activeLedColor;
+  String activeProjectName;
 
   // LVGL UI Object Pointers (if PausedState has its own distinct UI)
-  lv_obj_t *pausedTimeLabel;
-  lv_obj_t *pausedProjectNameLabel;
-  lv_obj_t *instructionLabel; // e.g., "Tap to Resume / Long Press to Cancel"
+  lv_obj_t *pausedLabel;
+  lv_obj_t *timeDisplayLabel;
+  lv_obj_t *projectNameLabel;
+  // For simplicity, let's make the whole screen tappable for resume, and a specific area/gesture for stop,
+  // or use two distinct areas. For now, one tap to resume, long press to stop.
+  // lv_obj_t* resumeButtonLabel; 
+  // lv_obj_t* stopButtonLabel;
+
+  static void screen_tap_event_handler(lv_event_t* e);
+  static void screen_long_press_event_handler(lv_event_t* e);
+
+  // Changed back to private as they are called by static handlers
+  void processResume();
+  void processStop();
 };
+
+#endif // PAUSED_STATE_H
