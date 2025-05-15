@@ -1,154 +1,243 @@
 #include "StateMachine.h"
 #include "Controllers.h"
+#include "managers/ProjectManager.h" // Required for getProjectManagerInstance
+#include <lvgl.h>                  // For LVGL objects
 
-// Remove local storage for name/color, only need LED color
-TimerState::TimerState() : duration(0), elapsedTime(0), startTime(0), currentLedColor(0) {}
+// Static LVGL event handlers
+static void timer_screen_tap_event_handler(lv_event_t *e);
+static void timer_screen_long_press_event_handler(lv_event_t *e);
+
+TimerState::TimerState() : 
+    duration(0), 
+    elapsedTime(0), 
+    startTime(0), 
+    currentLedColor(0),
+    projectNameLabel(nullptr),
+    timeDisplayLabel(nullptr),
+    timerProgressBar(nullptr) 
+{
+    currentProjectName = "No Project"; // Default
+}
+
+void TimerState::processScreenTap() {
+    Serial.println("TimerState: Screen Tapped");
+    networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+
+    if (this->duration == 0) { // Indeterminate mode
+        Serial.println("TimerState: Stopping Indeterminate Timer");
+        stateMachine.setPendingElapsedTime(this->elapsedTime);
+        stateMachine.changeState(&StateMachine::doneState);
+    } else { // Countdown mode
+        Serial.println("TimerState: Pausing Countdown Timer");
+        StateMachine::pausedState.setPause(this->duration, this->elapsedTime, this->currentLedColor, this->currentProjectName);
+        stateMachine.changeState(&StateMachine::pausedState);
+    }
+}
+
+void TimerState::processScreenLongPress() {
+    Serial.println("TimerState: Screen Long Pressed - Canceling");
+    networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+    stateMachine.changeState(&StateMachine::idleState);
+}
+
+static void timer_screen_tap_event_handler(lv_event_t *e) {
+    TimerState* self = (TimerState*)lv_event_get_user_data(e);
+    if (lv_event_get_code(e) == LV_EVENT_CLICKED && self) {
+        if (millis() - self->getEntryTime() < State::TAP_DEBOUNCE_MS) { // Use getter and State::
+            Serial.println("TimerState: Tap ignored (debounce)");
+            return;
+        }
+        self->processScreenTap();
+    }
+}
+
+static void timer_screen_long_press_event_handler(lv_event_t *e) {
+    TimerState* self = (TimerState*)lv_event_get_user_data(e);
+    if (lv_event_get_code(e) == LV_EVENT_LONG_PRESSED && self) {
+        // Long press might not need the same immediate debounce after state entry,
+        // but consider if rapidly re-entering and long-pressing is an issue.
+        // For now, no specific debounce beyond LVGL's own long-press time.
+        self->processScreenLongPress();
+    }
+}
 
 void TimerState::enter()
 {
-  Serial.println("Entering Timer State");
-  startTime = millis() - (elapsedTime * 1000); // Adjust start time based on potentially elapsed time
+  State::enter(); 
+  Serial.println("Entering Timer State (Testing CLICK Event Handler)");
+  startTime = millis() - (elapsedTime * 1000); 
 
-  // On initial entry (not resume), fetch project color based on stored ID
-  if (elapsedTime == 0)
-  {
+  // Determine currentProjectName and currentLedColor
+  if (elapsedTime == 0) {
     Serial.println("Timer State: Initial entry");
     String pendingId = stateMachine.getPendingProjectId();
-    String projectColorHex = "#FFFFFF"; // Default to White
-
-    if (!pendingId.isEmpty())
-    {
-      // Find project by ID
+    String projectColorHex = "#FFFFFF"; 
+    currentProjectName = "No Project";
+    if (!pendingId.isEmpty()) {
       const auto &allProjects = getProjectManagerInstance().getProjects();
-      bool found = false;
-      for (const auto &p : allProjects)
-      {
-        if (p.device_project_id == pendingId)
-        {
+      for (const auto &p : allProjects) {
+        if (p.device_project_id == pendingId) {
+          currentProjectName = p.name;
           projectColorHex = p.color;
-          Serial.printf("Found project for timer: ID=%s, Color=%s\n", pendingId.c_str(), projectColorHex.c_str());
-          found = true;
           break;
         }
       }
-      if (!found)
-      {
-        Serial.printf("Warning: Could not find project color for pending ID: %s. Using default white.\n", pendingId.c_str());
-      }
     }
-    else
-    {
-      Serial.println("Timer started with no project selected.");
-    }
-
     currentLedColor = LEDController::hexColorToUint32(projectColorHex);
-    // StateMachine no longer stores name/color, clear only ID
-    // stateMachine.clearPendingProject(); // ID cleared implicitly when used by webhook
-  }
-  else
-  {
-    Serial.printf("Timer State: Resuming with stored color %06X\n", currentLedColor);
+  } else { 
+    Serial.printf("Timer State: Resuming. Project: %s, Color: %06X\n", currentProjectName.c_str(), currentLedColor);
   }
 
-  // Handle LED state based on duration
-  if (this->duration == 0) // Indeterminate mode
-  {
-    Serial.println("Timer State: Indeterminate mode - starting Radar Sweep LED animation.");
-    ledController.startRadarSweep(currentLedColor); // Start new sweep animation
-  }
-  else // Countdown mode
-  {
-    // Start LED Fill and Decay Animation using stored color and REMAINING duration
+  // LED setup logic (radar sweep still commented for duration 0)
+  if (this->duration == 0) {
+    Serial.println("TimerState: Indeterminate mode. Starting breathing LED effect.");
+    ledController.setBreath(currentLedColor, -1, false, 5); // Breathe with project color (or default white)
+  } else {
     uint32_t remainingDurationMs = (this->duration * 60 - this->elapsedTime) * 1000;
-    if (remainingDurationMs > 0)
-    {
-      ledController.startFillAndDecay(currentLedColor, remainingDurationMs);
-    }
-    else
-    {
-      ledController.turnOff(); // Turn off if timer already expired on resume
-    }
+    if (remainingDurationMs > 0) { ledController.startFillAndDecay(currentLedColor, remainingDurationMs); }
+    else { ledController.turnOff(); }
   }
 
-  // Setup Input Handlers
-  // inputController.onPressHandler([this]() // Button deprecated - Phase 1
-  //                                {
-  //                                  // Send 'stop' action first (applies to both modes)
-  //                                  networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
+  lv_obj_t *screen = lv_screen_active();
+  if (!screen) { Serial.println("TimerState::enter() - FATAL: screen is NULL"); return; }
+  lv_obj_clean(screen);
+  Serial.println("TimerState: Screen cleaned.");
 
-  //                                  if (this->duration == 0) // Indeterminate mode
-  //                                  {
-  //                                    Serial.println("Timer State: Button Pressed - Stopping Indeterminate Timer");
-  //                                    // Pass final elapsed time to DoneState via StateMachine
-  //                                    stateMachine.setPendingElapsedTime(this->elapsedTime);
-  //                                    displayController.showTimerDone(); // Show done animation
-  //                                    stateMachine.changeState(&StateMachine::doneState);
-  //                                  }
-  //                                  else // Countdown mode
-  //                                  {
-  //                                    Serial.println("Timer State: Button Pressed - Pausing Countdown Timer");
-  //                                    displayController.showTimerPause();
-  //                                    // Pass current duration and elapsed time to PausedState
-  //                                    StateMachine::pausedState.setPause(this->duration, this->elapsedTime);
-  //                                    stateMachine.changeState(&StateMachine::pausedState);
-  //                                  } });
+  // Create projectNameLabel
+  projectNameLabel = lv_label_create(screen);
+  Serial.printf("TimerState::enter - projectNameLabel pointer: %p\n", (void*)projectNameLabel);
+  if(projectNameLabel) {
+    lv_label_set_text(projectNameLabel, currentProjectName.c_str());
+    lv_obj_set_style_text_font(projectNameLabel, &lv_font_montserrat_14, 0);
+    lv_obj_align(projectNameLabel, LV_ALIGN_TOP_MID, 0, 15);
+    Serial.println("TimerState::enter - projectNameLabel created and styled.");
+  } else { Serial.println("TimerState: projectNameLabel creation FAILED"); }
 
-  // inputController.onDoublePressHandler([this]() // Button deprecated - Phase 1
-  //                                      {
-  //                                        Serial.println("Timer State: Button Double Pressed - Canceling");
-  //                                        // Send 'stop' action with current elapsed time
-  //                                        networkController.sendWebhookAction("stop", this->duration, this->elapsedTime);
-  //                                        displayController.showCancel();
-  //                                        stateMachine.changeState(&StateMachine::idleState); });
-
-  // Send 'start' action ONLY on initial entry
-  if (elapsedTime == 0)
-  {
-    networkController.sendWebhookAction("start", this->duration, 0); // Pass set duration, 0 elapsed
+  // Create timeDisplayLabel
+  timeDisplayLabel = lv_label_create(screen);
+  Serial.printf("TimerState::enter - timeDisplayLabel pointer: %p\n", (void*)timeDisplayLabel);
+  if(timeDisplayLabel) {
+    lv_obj_set_style_text_font(timeDisplayLabel, &lv_font_montserrat_14, 0); 
+    // Let's use the dynamic text setting now that we suspect event handlers
+    char timeStr[10];
+    int initialDisplaySeconds = (duration == 0) ? elapsedTime : (duration * 60 - elapsedTime);
+    if (initialDisplaySeconds < 0) initialDisplaySeconds = 0;
+    int hours = initialDisplaySeconds / 3600;
+    int minutes = (initialDisplaySeconds % 3600) / 60;
+    int seconds = initialDisplaySeconds % 60;
+    if (hours > 0) { sprintf(timeStr, "%02d:%02d", hours, minutes); } 
+    else { sprintf(timeStr, "%02d:%02d", minutes, seconds); }
+    lv_label_set_text(timeDisplayLabel, timeStr);
+    lv_obj_align(timeDisplayLabel, LV_ALIGN_CENTER, 0, 0);
+    Serial.println("TimerState::enter - timeDisplayLabel created with font and DYNAMIC initial text.");
+  } else { Serial.println("TimerState: timeDisplayLabel creation FAILED"); }
+  
+  if (duration > 0) { 
+      timerProgressBar = lv_bar_create(screen);
+      if(timerProgressBar) {
+        lv_obj_set_size(timerProgressBar, lv_pct(80), 10);
+        lv_obj_align(timerProgressBar, LV_ALIGN_BOTTOM_MID, 0, -30);
+        lv_bar_set_range(timerProgressBar, 0, duration * 60);
+        lv_bar_set_value(timerProgressBar, elapsedTime, LV_ANIM_OFF); 
+      } else { Serial.println("TimerState: timerProgressBar creation failed"); }
   }
+
+  // RE-ADDING CLICK EVENT HANDLER ONLY
+  lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_event_cb(screen, timer_screen_tap_event_handler, LV_EVENT_CLICKED, this);
+  // lv_obj_add_event_cb(screen, timer_screen_long_press_event_handler, LV_EVENT_LONG_PRESSED, this); // Keep long press commented
+  Serial.println("TimerState: Screen CLICK event ADDED. Long press NOT added.");
+
+  if (elapsedTime == 0) {
+    networkController.sendWebhookAction("start", this->duration, 0);
+  }
+  // lv_refr_now(NULL); // Force an immediate redraw - Potentially problematic
+  Serial.println("TimerState::enter - finished (CLICK Event Handler Test).");
 }
 
 void TimerState::update()
 {
+  // Restore dynamic text update for timeDisplayLabel
   inputController.update();
-  ledController.update(); // This now handles RadarSweep update automatically
+  ledController.update(); 
 
   unsigned long currentTime = millis();
   elapsedTime = (currentTime - startTime) / 1000;
+  int displaySeconds;
+  char timeStr[10]; 
 
-  if (duration == 0) // Indeterminate Mode
-  {
-    // Display elapsed time counting up
-    displayController.drawTimerScreen(elapsedTime, true);
-    // No automatic completion check, relies on button press
-  }
-  else // Countdown Mode
-  {
-    int remainingSeconds = duration * 60 - elapsedTime;
+  if (duration == 0) { 
+    displaySeconds = elapsedTime;
+    int hours = displaySeconds / 3600;
+    int minutes = (displaySeconds % 3600) / 60;
+    int seconds = displaySeconds % 60;
+    if (hours > 0) {
+        sprintf(timeStr, "%02d:%02d", hours, minutes);
+    } else {
+        sprintf(timeStr, "%02d:%02d", minutes, seconds);
+    }
+    if (timeDisplayLabel && lv_obj_is_valid(timeDisplayLabel)) {
+        lv_label_set_text(timeDisplayLabel, timeStr);
+    } else if (timeDisplayLabel) { 
+        Serial.println("TimerState::update - timeDisplayLabel exists but is invalid (count up)");
+    } else { 
+        Serial.println("TimerState::update - timeDisplayLabel is NULL (count up)");
+    }
+  } else { 
+    displaySeconds = duration * 60 - elapsedTime;
+    if (displaySeconds < 0) displaySeconds = 0;
+    int hours = displaySeconds / 3600;
+    int minutes = (displaySeconds % 3600) / 60;
+    int seconds = displaySeconds % 60;
+    if (hours > 0) {
+        sprintf(timeStr, "%02d:%02d", hours, minutes);
+    } else {
+        sprintf(timeStr, "%02d:%02d", minutes, seconds);
+    }
+    if (timeDisplayLabel && lv_obj_is_valid(timeDisplayLabel)) {
+        lv_label_set_text(timeDisplayLabel, timeStr);
+    } else if (timeDisplayLabel) { 
+        Serial.println("TimerState::update - timeDisplayLabel exists but is invalid (count down)");
+    } else { 
+        Serial.println("TimerState::update - timeDisplayLabel is NULL (count down)");
+    }
 
-    displayController.drawTimerScreen(remainingSeconds, false);
+    // Progress bar logic (still not created in enter for this test)
+    // if (timerProgressBar && lv_obj_is_valid(timerProgressBar)) { ... }
 
-    // Check if the timer is done
-    if (remainingSeconds <= 0)
-    {
+    if (displaySeconds <= 0) {
       Serial.println("Timer State: Done (Countdown)");
-      // Pass final elapsed time (which is duration * 60) to DoneState via StateMachine
       stateMachine.setPendingElapsedTime(this->duration * 60);
-      displayController.showTimerDone();
-      stateMachine.changeState(&StateMachine::doneState); // Transition to Done State
+      stateMachine.changeState(&StateMachine::doneState); 
     }
   }
 }
 
 void TimerState::exit()
 {
-  inputController.releaseHandlers();
-  // ledController.stopCurrentAnimation(); // Ensure animation stops - Likely handled by next state's LED call
-  Serial.println("Exiting Timer State");
+  Serial.println("Exiting Timer State (CLICK Event Handler Test)");
+  
+  lv_obj_t *screen = lv_screen_active();
+  if (screen) { 
+    lv_obj_remove_event_cb_with_user_data(screen, timer_screen_tap_event_handler, this);
+    // lv_obj_remove_event_cb_with_user_data(screen, timer_screen_long_press_event_handler, this); // Keep commented
+    lv_obj_clear_flag(screen, LV_OBJ_FLAG_CLICKABLE); // Still clear flag if it was added
+    Serial.println("TimerState: Screen CLICK event removed.");
+  }
+
+  if (projectNameLabel) { lv_obj_del(projectNameLabel); projectNameLabel = nullptr; }
+  if (timeDisplayLabel) { lv_obj_del(timeDisplayLabel); timeDisplayLabel = nullptr; }
+  if (timerProgressBar) { lv_obj_del(timerProgressBar); timerProgressBar = nullptr; }
+  Serial.println("TimerState: LVGL objects cleaned.");
 }
 
-void TimerState::setTimer(int duration, unsigned long elapsedTime)
+void TimerState::setTimer(int durationMinutes, unsigned long elapsedSeconds)
 {
-  this->duration = duration;
-  this->elapsedTime = elapsedTime;
+  this->duration = durationMinutes;
+  this->elapsedTime = elapsedSeconds;
+  // Initial color and name will be set in enter() if elapsedTime is 0
+  Serial.printf("TimerState::setTimer called - Duration: %d min, Elapsed: %lu sec\n", this->duration, this->elapsedTime);
 }
+
+// PausedState will also need a way to pass back currentLedColor and currentProjectName
+// when resuming. Modify PausedState::setPause and TimerState::enter for this.

@@ -55,4 +55,6 @@ private:
   // Static event handlers (can be declared here or defined as static in .cpp before use)
   // For simplicity if they are only used by this class and defined in its .cpp, explicit declaration here might not be needed.
   // However, it can be good practice for clarity if they were more complex or needed by other .cpp files via this header.
+
+  static const unsigned long PROJECT_SELECT_TIMEOUT_MS = 30000; // Timeout for this state (30 seconds)
 };

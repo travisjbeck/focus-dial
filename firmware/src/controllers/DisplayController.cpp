@@ -47,11 +47,11 @@ void DisplayController::drawSplashScreen()
 
 void DisplayController::drawIdleScreen(int durationMinutes, bool wifi)
 {
-  Serial.println("DisplayController::drawIdleScreen called");
+  // Serial.println("DisplayController::drawIdleScreen called"); // REMOVED as requested
   if (lv_screen_active()) {
     lv_obj_clean(lv_screen_active());
     lv_obj_t* label = lv_label_create(lv_screen_active());
-    lv_label_set_text_fmt(label, "Screen: Idle\nDuration: %d\nWiFi: %s", durationMinutes, wifi ? "On" : "Off");
+    lv_label_set_text_fmt(label, "Screen: Idle\nDuration: %d min\nWiFi: %s", durationMinutes, wifi ? "On" : "Off");
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     lv_refr_now(NULL);
   }
@@ -68,7 +68,7 @@ void DisplayController::drawIdleScreen(int durationMinutes, bool wifi)
   // }
   // oled.clearDisplay();
   // oled.setFont(&Picopixel);
-  // oled.setTextSize(1);
+    // oled.setTextSize(1);
   // oled.setTextColor(1);
   // oled.setCursor(40, 58);
   // oled.print("PRESS TO START");
@@ -199,7 +199,16 @@ void DisplayController::drawPausedScreen(int remainingSeconds)
   if (lv_screen_active()) {
     lv_obj_clean(lv_screen_active());
     lv_obj_t* label = lv_label_create(lv_screen_active());
-    lv_label_set_text_fmt(label, "Screen: Paused\nRemaining: %ds", remainingSeconds);
+    char timeStr[10];
+  int hours = remainingSeconds / 3600;
+  int minutes = (remainingSeconds % 3600) / 60;
+  int seconds = remainingSeconds % 60;
+    if (hours > 0) {
+        sprintf(timeStr, "%02d:%02d", hours, minutes);
+    } else {
+        sprintf(timeStr, "%02d:%02d", minutes, seconds);
+    }
+    lv_label_set_text_fmt(label, "Screen: PAUSED\n%s", timeStr);
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     lv_refr_now(NULL);
   }
@@ -369,8 +378,8 @@ void DisplayController::drawAdjustScreen(int duration, bool wifi)
   // char durationStr[6];
   // sprintf(durationStr, "%d min", duration);
   // oled.setTextColor(1);
-  // oled.setTextSize(1);
-  // oled.setFont(&Picopixel);
+    // oled.setTextSize(1);
+    // oled.setFont(&Picopixel);
   // int textWidth = strlen(durationStr) * 6;
   // oled.setCursor((oled.width() - textWidth) / 2, 25);
   // oled.print(durationStr);

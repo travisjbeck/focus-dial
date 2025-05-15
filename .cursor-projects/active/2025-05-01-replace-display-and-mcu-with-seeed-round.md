@@ -319,13 +319,26 @@ With this reference you can wire the modules on any standard breadboard without 
     *   **Build & Test each state's UI and basic interaction.**
     *   **Commit frequently.**
     *   **AdjustState:**
-        *   **UI:** Title ("Adjust Duration"), Duration Label (e.g., "25 min"). (Instruction label to be re-added)
+        *   **UI:** Title ("Adjust Duration"), Duration Label (e.g., "25 min"), Instruction Label ("Turn to adjust / Tap to save").
         *   **Encoder:** Modifies duration on the label (respects MIN/MAX_TIMER).
         *   **Screen Tap:** Saves duration to IdleState, transitions to IdleState.
-        *   **Status: (DONE - Verified 2025-05-15 - Simplified UI with title and duration label, encoder adjustment, and tap-to-save are functional. Instruction label to be re-added. Font issue workaround applied - using Montserrat 14.)**
-    *   **TimerState:** (Next)
-    *   **PausedState:**
-    *   **DoneState:**
+        *   **Status: (DONE - Verified 2025-05-15 - UI with title, duration, and instruction labels, encoder adjustment, and tap-to-save are fully functional. Font issue workaround applied - using Montserrat 14.)**
+        *   **Commit Point.** **(DONE - Phase 3, Step 4a completed and verified)**
+    *   **TimerState:**
+        *   **UI:** LVGL UI displaying Project Name, dynamically updating Time Display (HH:MM or MM:SS based on duration), and a Progress Bar for countdown mode.
+        *   **Encoder Interaction:** Not applicable within `TimerState` itself (duration is set by `AdjustState` or `ProjectSelectState` for "No Project" indeterminate).
+        *   **Screen Tap Interaction:**
+            *   Countdown mode: Handler implemented to pause timer and transition to `PausedState`.
+            *   Indeterminate (count-up) mode: Handler implemented to stop timer and transition to `DoneState`.
+        *   **Screen Long Press Interaction:** Handler defined to cancel timer and transition to `IdleState`. (Needs to be re-enabled in `TimerState::enter()` and tested).
+        *   **LEDs:**
+            *   Countdown mode: Fill/decay effect with project color. (Implemented).
+            *   Indeterminate mode: Breathing effect with project color. (Implemented, user to verify).
+        *   **Progress Bar:** Implemented and updates during countdown mode.
+        *   **Status: (In Progress - Core UI, timer logic for count-up/countdown, and LED effects for both modes are implemented. Tap handlers are in place. Progress bar functional. Long press handler needs re-integration and full testing. Verification of all interactions is crucial.)**
+        *   **Commit Point for current progress.**
+    *   **PausedState:** (Next)
+    *   **DoneState:** (After PausedState or in parallel if `TimerState` indeterminate mode is fully tested first)
     *   **ResetState:**
     *   **SleepState:**
 
@@ -370,45 +383,3 @@ This detailed plan should serve as a good roadmap. We will tackle Phase 0 first.
         ESP_ERROR_CHECK(nvs_err);
         Serial.println("NVS: Flash initialized successfully by main.cpp.");
         ```
-    2.  **Removed Redundant `nvs_flash_init()`:** The direct call to `nvs_flash_init()` in `firmware/src/states/IdleState.cpp` was removed to centralize initialization in `main.cpp`.
-    3.  **Corrected `Preferences` Usage:** Ensured `Preferences.begin()` is called with the correct `readOnly` flag (e.g., `false` for write operations, as corrected in `IdleState::setTimer`).
-- **Impact:** These changes make the existing `Preferences`-based NVS system in the main firmware more resilient, particularly for initial deployment on new or different hardware where the NVS partition state might be uncertain.
-- **Further Testing:** While the NVS foundation is now more stable, full verification of all NVS-dependent application features (project saving/loading, settings persistence) will occur as other hardware components are integrated and the application logic is fully testable on the new platform.
-
-## Development Workflow & Commands
-
-Use the following PlatformIO commands in your terminal from the project's root directory:
-
-*   **Clean Build Artifacts:**
-    ```bash
-    pio run -t clean
-    ```
-    *Removes previous build files. Useful before a fresh build or if encountering strange build errors.*
-
-*   **Build Firmware:**
-    ```bash
-    pio run
-    ```
-    *Compiles the code and links the firmware binary.*
-
-*   **Build and Upload Firmware:**
-    ```bash
-    pio run -t upload
-    ```
-    *Builds the firmware (if needed) and uploads it to the connected XIAO ESP32S3.*
-
-*   **Open Serial Monitor:**
-    ```bash
-    pio device monitor
-    ```
-    *Connects to the device's serial port to view `Serial.print()` output. Use `Ctrl+C` to exit.*
-
-*   **Upload and Monitor:**
-    ```bash
-    pio run -t upload -t monitor
-    ```
-    *Uploads the firmware and immediately opens the serial monitor.*
-
-**Note:** Ensure the XIAO ESP32S3 is connected via USB and the correct port is selected (PlatformIO usually auto-detects, but may need manual configuration in `platformio.ini` if issues arise). 
-
-**DONE - Partially (Button handlers in States)** Temporarily comment out or adapt any direct usage of `DisplayController` methods that rely on the old OLED, `Animation` class usages, and `InputController` methods that rely on the physical button (e.g., `onPressHandler`, `onDoublePressHandler`, `onLongPressHandler`) within each state file (`AdjustState.cpp`, `DoneState.cpp`, `IdleState.cpp`, `

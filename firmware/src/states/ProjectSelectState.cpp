@@ -3,7 +3,8 @@
 #include "Controllers.h"
 #include <lvgl.h> // Ensure LVGL is included
 
-#define PROJECT_SELECT_TIMEOUT 30000 // 30 seconds
+// #define PROJECT_SELECT_TIMEOUT 30000 // This is in the .h if still needed, or can be a static const in class
+// #define TAP_DEBOUNCE_MS 500 // ERRONEOUS - REMOVE THIS. Use State::TAP_DEBOUNCE_MS
 
 // Static LVGL event handlers
 static void roller_event_handler(lv_event_t *e);
@@ -58,6 +59,10 @@ static void screen_tap_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
 
     if (code == LV_EVENT_CLICKED && self) {
+        if (millis() - self->getEntryTime() < State::TAP_DEBOUNCE_MS) {
+            Serial.println("ProjectSelectState: Tap ignored (debounce)");
+            return;
+        }
         self->processScreenTap();
     }
 }
@@ -87,6 +92,7 @@ ProjectSelectState::ProjectSelectState(StateMachine &sm, DisplayController &disp
 
 void ProjectSelectState::enter()
 {
+  State::enter(); // Call base class enter to set entryTime
   Serial.println("Entering Project Select State");
 
   loadProjects(); 
@@ -139,7 +145,7 @@ void ProjectSelectState::update()
   inputController.update(); 
   ledController.update();
 
-  if (millis() - lastActivityTime >= PROJECT_SELECT_TIMEOUT)
+  if (millis() - lastActivityTime >= ProjectSelectState::PROJECT_SELECT_TIMEOUT_MS)
   {
     Serial.println("ProjectSelectState: Timeout - Returning to Idle");
     stateMachine.changeState(&StateMachine::idleState);
@@ -216,10 +222,10 @@ void ProjectSelectState::handleInput()
 
                                            current_sel += delta;
                                            current_sel = (current_sel % listSize + listSize) % listSize; 
-                                           
+
                                            lv_roller_set_selected(roller, current_sel, LV_ANIM_ON);
                                            // The LV_EVENT_VALUE_CHANGED on the roller will handle updating selectedProjectIndex and LED color
-                                           
+
                                            Serial.printf("ProjectSelectState: Encoder Delta: %d, Roller new sel: %d\n", delta, current_sel);
                                            lastActivityTime = millis(); 
                                          });
