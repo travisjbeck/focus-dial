@@ -31,17 +31,17 @@ To create the "Focus Dial" hardware (an ESP32-based timer device) and a companio
 
 ### 1.3 Code Structure & Key Files
 
--   **Workspace Directory:** `firmware/`
--   **PlatformIO Config:** `firmware/platformio.ini` (Board, framework, dependencies)
--   **Main Source:** `firmware/src/`
--   **Entry Point:** `firmware/src/main.cpp`
--   **State Machine:** `firmware/src/StateMachine.cpp`
--   **States:** `firmware/src/states/` (Implementations for different device modes)
--   **Controllers:** `firmware/src/controllers/` (Hardware abstractions: Display, LEDs, Input, Network)
--   **Libraries:** `firmware/lib/` (Custom libraries)
--   **Headers:** `firmware/include/`
--   **Data/Assets:** `firmware/data/` (For LittleFS: HTML, CSS, JS for web config UI)
--   **Partitions:** `firmware/partitions.csv` (Custom flash layout)
+-   **Workspace Directory:** `Device/`
+-   **PlatformIO Config:** `Device/platformio.ini` (Board, framework, dependencies)
+-   **Main Source:** `Device/src/`
+-   **Entry Point:** `Device/src/main.cpp`
+-   **State Machine:** `Device/src/StateMachine.cpp`
+-   **States:** `Device/src/states/` (Implementations for different device modes)
+-   **Controllers:** `Device/src/controllers/` (Hardware abstractions: Display, LEDs, Input, Network)
+-   **Libraries:** `Device/lib/` (Custom libraries)
+-   **Headers:** `Device/include/`
+-   **Data/Assets:** `Device/data/` (For LittleFS: HTML, CSS, JS for web config UI)
+-   **Partitions:** `Device/partitions.csv` (Custom flash layout)
 
 ### 1.4 Architecture & Key Concepts
 
@@ -90,18 +90,18 @@ To create the "Focus Dial" hardware (an ESP32-based timer device) and a companio
 
 ### 2.3 Code Structure & Key Files
 
--   **Workspace Directory:** `nextjs-time-tracking-app/`
--   **Routing & Pages:** `nextjs-time-tracking-app/src/app/` (App Router structure)
--   **Main Dashboard:** `src/app/page.tsx`
--   **Layout:** `src/app/layout.tsx`
--   **Authentication Pages:** `src/app/(auth)/`
--   **Project Pages:** `src/app/projects/`
--   **Reusable Components:** `src/components/`
--   **Custom Hooks:** `src/lib/hooks/` (e.g., `useTimeEntries.ts`, `useProjects.ts`)
--   **Utility Functions:** `src/lib/utils/` (e.g., `dateUtils.ts`)
--   **Server Actions:** `src/app/(auth)/actions.ts`, `src/app/settings/actions.ts`
--   **Supabase Integration:** `src/utils/supabase.ts`, `src/types/supabase.ts`
--   **Global Styles:** `src/app/globals.css`
+-   **Workspace Directory:** `App/nextjs-time-tracking-app/`
+-   **Routing & Pages:** `App/nextjs-time-tracking-app/src/app/` (App Router structure)
+-   **Main Dashboard:** `App/nextjs-time-tracking-app/src/app/page.tsx`
+-   **Layout:** `App/nextjs-time-tracking-app/src/app/layout.tsx`
+-   **Authentication Pages:** `App/nextjs-time-tracking-app/src/app/(auth)/`
+-   **Project Pages:** `App/nextjs-time-tracking-app/src/app/projects/`
+-   **Reusable Components:** `App/nextjs-time-tracking-app/src/components/`
+-   **Custom Hooks:** `App/nextjs-time-tracking-app/src/lib/hooks/` (e.g., `useTimeEntries.ts`, `useProjects.ts`)
+-   **Utility Functions:** `App/nextjs-time-tracking-app/src/lib/utils/` (e.g., `dateUtils.ts`)
+-   **Server Actions:** `App/nextjs-time-tracking-app/src/app/(auth)/actions.ts`, `App/nextjs-time-tracking-app/src/app/settings/actions.ts`
+-   **Supabase Integration:** `App/nextjs-time-tracking-app/src/utils/supabase.ts`, `App/nextjs-time-tracking-app/src/types/supabase.ts`
+-   **Global Styles:** `App/nextjs-time-tracking-app/src/app/globals.css`
 -   **Configuration:** `package.json`, `tsconfig.json`, `tailwind.config.ts`, `.env.local`
 
 ### 2.4 Architecture & Patterns
