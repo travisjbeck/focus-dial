@@ -434,7 +434,7 @@ esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && sleep 0.5 &&
 ### Method 2: Full Build, Upload, Reset and Monitor
 ```bash
 # Complete workflow with proper startup capture
-cd /Users/Travis/Developer/waveshare_hardware_test/TheTimerArduino && \
+cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
 arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc --build-property "build.psram_type=opi" && \
 arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc && \
 sleep 2 && \
@@ -469,7 +469,7 @@ Type 'test' again to run tests, or continue normal operation...
 ### Method 4: Wake from Sleep and Upload
 ```bash
 # Wake ESP32-S3 from auto-sleep mode and upload firmware
-esptool.py --port /dev/cu.usbmodem32301 --before default_reset --after hard_reset chip_id && sleep 1 && cd "/Users/Travis/Developer/waveshare_hardware_test/TheTimerArduino" && arduino-cli upload --fqbn esp32:esp32:esp32s3 --port /dev/cu.usbmodem32301 .
+esptool.py --port /dev/cu.usbmodem32301 --before default_reset --after hard_reset chip_id && sleep 1 && cd "/Users/Travis/Developer/ProjectTimerDevice/firmware" && arduino-cli upload --fqbn esp32:esp32:esp32s3 --port /dev/cu.usbmodem32301 .
 ```
 
 ### Key Points:
