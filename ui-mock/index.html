@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muji Timer UI - Round Display 466x466</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Font Pairings -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&family=JetBrains+Mono:wght@500;600;700&family=Roboto:wght@300;400&family=Roboto+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@300;400&family=IBM+Plex+Mono:wght@500;600;700&family=Work+Sans:wght@300;400&family=Space+Mono:wght@400;700&family=Montserrat:wght@300;400&family=Fira+Code:wght@500;600;700&family=Source+Sans+Pro:wght@300;400&family=Source+Code+Pro:wght@500;600;700&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-zinc-800 p-8" data-theme="dark">
+    <div class="container mx-auto">
+        <h1 class="text-2xl font-light text-center mb-8 text-stone-200">Muji Timer UI - Japanese Minimalism</h1>
+        
+        <!-- Font Pairing Selector -->
+        <div class="flex justify-center mb-4">
+            <select id="fontPairing" class="font-pairing-select">
+                <option value="system">System Native</option>
+                <option value="muji">Muji Classic - Helvetica + SF Mono</option>
+                <option value="technical">Technical - Inter + JetBrains Mono</option>
+                <option value="industrial">Industrial - Roboto + Roboto Mono</option>
+                <option value="corporate">Corporate - IBM Plex</option>
+                <option value="editorial">Editorial - Work Sans + Space Mono</option>
+                <option value="geometric">Geometric - Montserrat + Fira Code</option>
+                <option value="minimal">Minimal Swiss - Arial + SF Mono</option>
+                <option value="startup">Tech Startup - Inter + Source Code Pro</option>
+                <option value="bold" selected>Bold Statement - Barlow + Roboto Mono</option>
+                <option value="developer">Developer - Source Sans + Fira Code</option>
+            </select>
+        </div>
+        
+        <!-- Animation Controls -->
+        <div class="flex justify-center items-center gap-4 mb-4">
+            <button onclick="toggleAnimation()" class="animation-toggle-btn" id="animationToggle">
+                Animation Off
+            </button>
+            <select id="animationStyleSelector" class="color-scheme-select">
+                <option value="nebula">Nebula</option>
+                <option value="aurora">Aurora Borealis</option>
+                <option value="void">Void</option>
+                <option value="dmt">DMT</option>
+            </select>
+            <select id="colorSchemeSelector" class="color-scheme-select">
+                <option value="cosmic-rainbow">Cosmic Rainbow</option>
+                <option value="deep-abyss">Deep Abyss</option>
+                <option value="dusk">Dusk</option>
+                <option value="mist">Mist</option>
+            </select>
+        </div>
+        
+        
+        <!-- Display Container -->
+        <div class="flex flex-wrap justify-center gap-8">
+            
+            <!-- Screen 1: Idle Screen -->
+            <div class="display-container">
+                <h2 class="theme-name">Idle Screen</h2>
+                <div class="round-display" id="screen-1" data-theme="dark">
+                    <!-- Idle Animation Layer -->
+                    <div class="idle-animation" data-animation="none">
+                        <div class="animation-layer-1"></div>
+                        <div class="animation-layer-2"></div>
+                        <div class="animation-layer-3"></div>
+                    </div>
+                    <div class="screen-content idle-screen">
+                        <!-- Status Icons -->
+                        <div class="status-icons">
+                            <i class="fas fa-wifi wifi-icon"></i>
+                            <i class="fas fa-battery-three-quarters battery-icon"></i>
+                        </div>
+                        
+                        <!-- Timer Duration Display -->
+                        <div class="timer-duration-display">
+                            <div class="duration-main">25<span class="colon">:</span>00</div>
+                        </div>
+                        
+                        <!-- Date -->
+                        <div class="current-date">Friday, December 15</div>
+                    </div>
+                </div>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #FAFAF8;"></div>
+                    <div class="color-swatch" style="background: #A8A5A0;"></div>
+                    <div class="color-swatch" style="background: #57544F;"></div>
+                    <div class="color-swatch" style="background: #000000;"></div>
+                </div>
+            </div>
+
+            <!-- Screen 2: Project Selection -->
+            <div class="display-container">
+                <h2 class="theme-name">Project Selection</h2>
+                <div class="round-display" id="screen-2" data-theme="dark">
+                    <div class="screen-content project-selection">
+                        <div class="project-list">
+                            <div class="project-item active" data-color="#A855F7">Work Focus</div>
+                            <div class="project-item" data-color="#3B82F6">Reading</div>
+                            <div class="project-item" data-color="#10B981">Exercise</div>
+                            <div class="project-item" data-color="#F59E0B">Meditation</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #A855F7;" title="Purple-500"></div>
+                    <div class="color-swatch" style="background: #3B82F6;" title="Blue-500"></div>
+                    <div class="color-swatch" style="background: #10B981;" title="Emerald-500"></div>
+                    <div class="color-swatch" style="background: #F59E0B;" title="Amber-500"></div>
+                </div>
+            </div>
+
+            <!-- Screen 3: Timer Duration -->
+            <div class="display-container">
+                <h2 class="theme-name">Timer Running</h2>
+                <div class="round-display" id="screen-3" data-theme="dark">
+                    <div class="screen-content timer-running" style="--project-color: #A855F7;">
+                        <div class="spacer-top"></div>
+                        <div class="timer-display">
+                            <div class="time-remaining">24<span class="colon">:</span>35</div>
+                        </div>
+                        <div class="project-label">Work Focus</div>
+                    </div>
+                </div>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #FAFAF8;"></div>
+                    <div class="color-swatch" style="background: #A8A5A0;"></div>
+                    <div class="color-swatch" style="background: #57544F;"></div>
+                    <div class="color-swatch" style="background: #000000;"></div>
+                </div>
+            </div>
+
+            <!-- Screen 4: Timer Selection Duration -->
+            <div class="display-container">
+                <h2 class="theme-name">Duration Selection</h2>
+                <div class="round-display" id="screen-4" data-theme="dark">
+                    <div class="screen-content duration-selection">
+                        <div class="duration-display">
+                            <div class="duration-time">25<span class="colon">:</span>00</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="color-palette">
+                    <div class="color-swatch" style="background: #FAFAF8;"></div>
+                    <div class="color-swatch" style="background: #A8A5A0;"></div>
+                    <div class="color-swatch" style="background: #57544F;"></div>
+                    <div class="color-swatch" style="background: #000000;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+    <script>
+        // Font pairing definitions
+        const fontPairings = {
+            system: {
+                text: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                number: '"SF Mono", "Monaco", "Consolas", monospace',
+                textWeight: 300,
+                numberWeight: 700
+            },
+            muji: {
+                text: 'Helvetica, Arial, sans-serif',
+                number: '"SF Mono", "Monaco", "Consolas", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            technical: {
+                text: '"Inter", sans-serif',
+                number: '"JetBrains Mono", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            industrial: {
+                text: '"Roboto", sans-serif',
+                number: '"Roboto Mono", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            corporate: {
+                text: '"IBM Plex Sans", sans-serif',
+                number: '"IBM Plex Mono", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            editorial: {
+                text: '"Work Sans", sans-serif',
+                number: '"Space Mono", monospace',
+                textWeight: 300,
+                numberWeight: 700
+            },
+            geometric: {
+                text: '"Montserrat", sans-serif',
+                number: '"Fira Code", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            minimal: {
+                text: 'Arial, Helvetica, sans-serif',
+                number: '"SF Mono", "Monaco", "Consolas", monospace',
+                textWeight: 300,
+                numberWeight: 700
+            },
+            startup: {
+                text: '"Inter", sans-serif',
+                number: '"Source Code Pro", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            },
+            bold: {
+                text: '"Barlow", sans-serif',
+                number: '"Roboto Mono", monospace',
+                textWeight: 400,
+                numberWeight: 600
+            },
+            developer: {
+                text: '"Source Sans Pro", sans-serif',
+                number: '"Fira Code", monospace',
+                textWeight: 300,
+                numberWeight: 600
+            }
+        };
+        
+        // Font pairing switching
+        function changeFontPairing(pairingName) {
+            const pairing = fontPairings[pairingName];
+            if (pairing) {
+                document.documentElement.style.setProperty('--text-font-family', pairing.text);
+                document.documentElement.style.setProperty('--number-font-family', pairing.number);
+                document.documentElement.style.setProperty('--text-font-weight', pairing.textWeight);
+                document.documentElement.style.setProperty('--number-font-weight', pairing.numberWeight);
+            }
+        }
+        
+        
+        // Set up project color handling and click events
+        document.querySelectorAll('.project-item').forEach(item => {
+            const color = item.getAttribute('data-color');
+            if (color) {
+                item.style.setProperty('--project-color', color);
+            }
+            
+            // Add click handler
+            item.addEventListener('click', function() {
+                // Remove active class from all items
+                document.querySelectorAll('.project-item').forEach(p => p.classList.remove('active'));
+                
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Update timer running screen
+                const timerScreen = document.querySelector('#screen-3 .timer-running');
+                const projectLabel = document.querySelector('#screen-3 .project-label');
+                
+                if (timerScreen && color) {
+                    timerScreen.style.setProperty('--project-color', color);
+                }
+                
+                if (projectLabel) {
+                    projectLabel.textContent = this.textContent;
+                }
+            });
+        });
+        
+        // Set up font pairing selector
+        document.getElementById('fontPairing').addEventListener('change', function(e) {
+            changeFontPairing(e.target.value);
+        });
+        
+        // Initialize with Bold Statement fonts
+        changeFontPairing('bold');
+        
+        // Animation toggle
+        let animationOn = false;
+        let currentColorScheme = 'cosmic-rainbow';
+        let currentAnimationStyle = 'nebula';
+        
+        function toggleAnimation() {
+            animationOn = !animationOn;
+            const animationContainer = document.querySelector('.idle-animation');
+            const toggleBtn = document.getElementById('animationToggle');
+            const colorSelector = document.getElementById('colorSchemeSelector');
+            const styleSelector = document.getElementById('animationStyleSelector');
+            
+            if (animationOn) {
+                // Turn on animation
+                animationContainer.setAttribute('data-animation', `${currentAnimationStyle}-webgl`);
+                
+                // Destroy any existing shader instances
+                if (window.nebulaShaders && window.nebulaShaders['screen-1']) {
+                    window.nebulaShaders['screen-1'].destroy();
+                    delete window.nebulaShaders['screen-1'];
+                }
+                if (window.auroraShaders && window.auroraShaders['screen-1']) {
+                    window.auroraShaders['screen-1'].destroy();
+                    delete window.auroraShaders['screen-1'];
+                }
+                if (window.voidShaders && window.voidShaders['screen-1']) {
+                    window.voidShaders['screen-1'].destroy();
+                    delete window.voidShaders['screen-1'];
+                }
+                if (window.dmtShaders && window.dmtShaders['screen-1']) {
+                    window.dmtShaders['screen-1'].destroy();
+                    delete window.dmtShaders['screen-1'];
+                }
+                
+                // Clear any remaining canvases
+                const canvases = animationContainer.querySelectorAll('canvas');
+                canvases.forEach(canvas => canvas.remove());
+                
+                // Start the selected animation
+                if (currentAnimationStyle === 'nebula') {
+                    window.handleNebulaAnimation('screen-1', true, currentColorScheme);
+                } else if (currentAnimationStyle === 'aurora') {
+                    window.handleAuroraAnimation('screen-1', true, currentColorScheme);
+                } else if (currentAnimationStyle === 'void') {
+                    window.handleVoidAnimation('screen-1', true, currentColorScheme);
+                } else if (currentAnimationStyle === 'dmt') {
+                    window.handleDMTAnimation('screen-1', true, currentColorScheme);
+                }
+                
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = 'Animation On';
+            } else {
+                // Turn off all animations
+                if (window.handleNebulaAnimation) {
+                    window.handleNebulaAnimation('screen-1', false);
+                }
+                if (window.handleAuroraAnimation) {
+                    window.handleAuroraAnimation('screen-1', false);
+                }
+                if (window.handleVoidAnimation) {
+                    window.handleVoidAnimation('screen-1', false);
+                }
+                if (window.handleDMTAnimation) {
+                    window.handleDMTAnimation('screen-1', false);
+                }
+                animationContainer.setAttribute('data-animation', 'none');
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = 'Animation Off';
+            }
+        }
+        
+        // Animation style change handler
+        document.getElementById('animationStyleSelector').addEventListener('change', function(e) {
+            currentAnimationStyle = e.target.value;
+            if (animationOn) {
+                // Destroy existing shader instances completely
+                if (window.nebulaShaders && window.nebulaShaders['screen-1']) {
+                    window.nebulaShaders['screen-1'].destroy();
+                    delete window.nebulaShaders['screen-1'];
+                }
+                if (window.auroraShaders && window.auroraShaders['screen-1']) {
+                    window.auroraShaders['screen-1'].destroy();
+                    delete window.auroraShaders['screen-1'];
+                }
+                if (window.voidShaders && window.voidShaders['screen-1']) {
+                    window.voidShaders['screen-1'].destroy();
+                    delete window.voidShaders['screen-1'];
+                }
+                if (window.dmtShaders && window.dmtShaders['screen-1']) {
+                    window.dmtShaders['screen-1'].destroy();
+                    delete window.dmtShaders['screen-1'];
+                }
+                
+                // Clear the animation container
+                const animationContainer = document.querySelector('.idle-animation');
+                // Remove all canvas elements
+                const canvases = animationContainer.querySelectorAll('canvas');
+                canvases.forEach(canvas => canvas.remove());
+                
+                // Start new animation style
+                animationContainer.setAttribute('data-animation', `${currentAnimationStyle}-webgl`);
+                
+                setTimeout(() => {
+                    if (currentAnimationStyle === 'nebula') {
+                        window.handleNebulaAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'aurora') {
+                        window.handleAuroraAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'void') {
+                        window.handleVoidAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'dmt') {
+                        window.handleDMTAnimation('screen-1', true, currentColorScheme);
+                    }
+                }, 100);
+            }
+        });
+        
+        // Color scheme change handler
+        document.getElementById('colorSchemeSelector').addEventListener('change', function(e) {
+            currentColorScheme = e.target.value;
+            if (animationOn) {
+                // Destroy and recreate with new color scheme
+                const animationContainer = document.querySelector('.idle-animation');
+                
+                if (currentAnimationStyle === 'nebula' && window.nebulaShaders && window.nebulaShaders['screen-1']) {
+                    window.nebulaShaders['screen-1'].destroy();
+                    delete window.nebulaShaders['screen-1'];
+                } else if (currentAnimationStyle === 'aurora' && window.auroraShaders && window.auroraShaders['screen-1']) {
+                    window.auroraShaders['screen-1'].destroy();
+                    delete window.auroraShaders['screen-1'];
+                } else if (currentAnimationStyle === 'void' && window.voidShaders && window.voidShaders['screen-1']) {
+                    window.voidShaders['screen-1'].destroy();
+                    delete window.voidShaders['screen-1'];
+                } else if (currentAnimationStyle === 'dmt' && window.dmtShaders && window.dmtShaders['screen-1']) {
+                    window.dmtShaders['screen-1'].destroy();
+                    delete window.dmtShaders['screen-1'];
+                }
+                
+                // Clear canvases
+                const canvases = animationContainer.querySelectorAll('canvas');
+                canvases.forEach(canvas => canvas.remove());
+                
+                // Restart with new color scheme
+                setTimeout(() => {
+                    if (currentAnimationStyle === 'nebula') {
+                        window.handleNebulaAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'aurora') {
+                        window.handleAuroraAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'void') {
+                        window.handleVoidAnimation('screen-1', true, currentColorScheme);
+                    } else if (currentAnimationStyle === 'dmt') {
+                        window.handleDMTAnimation('screen-1', true, currentColorScheme);
+                    }
+                }, 100);
+            }
+        });
+        
+        // Animation starts off by default
+    </script>
+    
+    <!-- WebGL Shaders -->
+    <script src="js/nebula-shader.js?v=1"></script>
+    <script src="js/aurora-shader.js?v=10"></script>
+    <script src="js/void-shader.js"></script>
+    <script src="js/dmt-shader.js"></script>
+</body>
+</html>

@@ -1,0 +1,685 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Port State Machine Framework",
+        "description": "Migrate the existing state machine implementation from the old ESP32 XIAO firmware to ESP32-S3-Touch-AMOLED-1.75",
+        "details": "Copy state machine files from old firmware, update CMakeLists.txt/includes, create empty state implementations with proper serial debugging. Test state transitions work and connect screen tap to state changes. Add memory monitoring and crash recovery debugging infrastructure.",
+        "testStrategy": "Verify each state can be entered/exited, test state persistence across power cycles, confirm memory usage is stable during transitions",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "File structure setup and CMakeLists.txt configuration",
+            "description": "Create the directory structure for the state machine framework and configure CMakeLists.txt for ESP-IDF build system integration",
+            "dependencies": [],
+            "details": "Set up directories: components/state_machine/{include,src,test}. Create CMakeLists.txt with proper ESP-IDF component registration, include paths, and dependencies. Configure component requirements including esp_system, esp_timer, freertos. Set up initial header files for state machine interfaces.\n<info added on 2025-07-10T19:07:04.559Z>\nImplementation complete: State machine directory structure created with include/ and states/ folders. Base State.h class implemented with virtual methods and debugging hooks. StateMachine.h/.cpp developed with thread-safe transitions using FreeRTOS mutexes. All state classes created as stubs (IdleState, AdjustState, TimerState, PausedState, DoneState, ProjectSelectState, ProvisionState, StartupState, SleepState) with proper inheritance from base State class. Memory monitoring and crash recovery infrastructure added. State machine successfully integrated into main Arduino file with initialization in setup() and state updates in loop(). Basic compilation framework established and ready for state-specific implementation in next subtask.\n</info added on 2025-07-10T19:07:04.559Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Core state machine engine porting with ESP32-S3 adaptations",
+            "description": "Port the existing state machine engine to ESP32-S3, adapting memory allocation, task management, and timing to ESP-IDF/FreeRTOS",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement StateMachine class with ESP32-specific memory allocation using heap_caps_malloc for PSRAM support. Adapt state transition logic to use FreeRTOS task notifications. Replace std::chrono with esp_timer for timing. Implement thread-safe state transitions using FreeRTOS mutexes. Add ESP_LOG macros for debugging.\n<info added on 2025-07-10T19:11:00.943Z>\nCOMPLETED: ESP32-S3 state machine core engine fully implemented with comprehensive ESP32 adaptations. Added ESP_LOG debugging throughout StateMachine.cpp and State.h base class. Implemented PSRAM memory allocation with heap_caps_malloc and automatic fallback to regular heap. Added memory monitoring tracking both heap and PSRAM usage including minimum memory watermarks. Integrated FreeRTOS task watchdog for crash recovery with enable/disable controls. Replaced timing with esp_timer for high-precision measurements during transitions and performance monitoring. Implemented thread-safe transitions using semaphores with timeout handling and emergency recovery mechanisms. Added stack usage monitoring via uxTaskGetStackHighWaterMark. Created ESP32-specific utility methods getUsedHeap() and getUsedPSRAM() for runtime diagnostics. All compilation successful - core state machine engine ready for interface implementations.\n</info added on 2025-07-10T19:11:00.943Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "State interface implementations with debugging hooks",
+            "description": "Implement base State interface and concrete state classes with comprehensive debugging and monitoring capabilities",
+            "dependencies": [
+              2
+            ],
+            "details": "Create IState interface with enter(), execute(), exit() methods. Add debug hooks for state entry/exit logging with timestamps. Implement state transition validation. Add runtime state inspection APIs. Create example states (IdleState, ActiveState, ErrorState) with proper ESP32 task yielding. Include stack usage monitoring per state.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Memory monitoring and crash recovery infrastructure",
+            "description": "Build robust memory monitoring system and crash recovery mechanisms specific to ESP32-S3 constraints",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement heap usage tracking with PSRAM/DRAM differentiation. Add stack overflow detection using uxTaskGetStackHighWaterMark. Create state machine snapshot mechanism storing to NVS for crash recovery. Implement watchdog integration with esp_task_wdt. Add memory leak detection between state transitions. Create recovery state that restores from NVS on boot.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integration testing framework setup",
+            "description": "Establish comprehensive testing framework for state machine validation on ESP32-S3 hardware",
+            "dependencies": [
+              4
+            ],
+            "details": "Set up Unity test framework integration for on-device testing. Create test fixtures for state transition validation. Implement timing tests using esp_timer_get_time(). Add memory stress tests to verify PSRAM handling. Create automated test runner that reports via UART. Include edge case tests for rapid state transitions and recovery scenarios.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Integrate Physical Rotary Encoder",
+        "description": "Connect and configure rotary encoder on GPIO 17/18 for value adjustment functionality",
+        "details": "Wire encoder to GPIO 17/18 on breakout header, update pin definitions from old GPIO 43/8, port InputController with new pins, implement interrupt handling for rotation detection. Test encoder rotation detection and value adjustment in AdjustState.",
+        "testStrategy": "Test encoder A/B signal integrity, verify interrupt handling works, confirm value adjustment responds correctly to rotation direction and speed",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Hardware wiring and pin configuration for GPIO 17/18",
+            "description": "Set up physical encoder connections and configure GPIO pins 17 and 18 for encoder input with appropriate pull-up resistors and pin modes",
+            "dependencies": [],
+            "details": "Configure GPIO 17 and 18 as inputs with internal pull-ups enabled. Verify electrical connections between encoder pins (CLK, DT, SW) and the GPIO pins. Test continuity and signal levels with multimeter to ensure proper wiring before software implementation.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Interrupt handler implementation with debouncing",
+            "description": "Create interrupt service routines for encoder rotation detection with software debouncing to filter out mechanical noise",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement ISR functions for both GPIO pins to detect state changes. Add debouncing logic with configurable timing (typically 5-10ms). Use state machine approach to track encoder direction based on quadrature signal patterns. Include overflow protection and error handling.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "InputController adaptation for new pin mappings",
+            "description": "Modify existing InputController class to use new GPIO pin assignments and integrate with the interrupt-based encoder reading system",
+            "dependencies": [
+              2
+            ],
+            "details": "Update pin definitions in InputController from old pins to GPIO 17/18. Refactor encoder reading methods to use interrupt-driven data instead of polling. Maintain backward compatibility with existing API. Update any hardware abstraction layer references.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Integration testing with value adjustment logic",
+            "description": "Comprehensive testing of encoder functionality including rotation detection, value incrementing/decrementing, and interaction with existing UI components",
+            "dependencies": [
+              3
+            ],
+            "details": "Test encoder rotation in both directions with various speeds. Verify debouncing effectiveness under rapid rotation. Test integration with existing value adjustment features (timers, settings). Validate edge cases like direction changes and mechanical bounce. Document test results and any tuning parameters.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement NeoPixel LED Ring Control",
+        "description": "Connect and control 24-LED NeoPixel ring on GPIO 16 with 3.3V power supply",
+        "details": "Wire LED ring to GPIO 16 with 3.3V power (not 5V), test single LED operation at 3.3V first, port LEDController to new pin, implement all animation patterns (timer progress, color previews, status indicators). Configure for NEO_GRB + NEO_KHZ800 with 24 LEDs.",
+        "testStrategy": "Test individual LED control, verify all 24 LEDs work, confirm adequate brightness at 3.3V, test all animation patterns without display interference",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Hardware setup and 3.3V power validation",
+            "description": "Configure LED ring hardware connections and validate 3.3V power supply adequacy for driving NeoPixels",
+            "dependencies": [],
+            "details": "Connect LED ring to appropriate GPIO pin, measure current draw at full brightness, verify 3.3V rail can supply sufficient current without voltage drop, implement level shifting if needed for reliable data transmission\n<info added on 2025-07-17T18:56:26.556Z>\nIssue identified: Watchdog triggers during white LED test causing system reboot. This indicates either insufficient power supply capacity on 3.3V rail or data transmission timing issues with WS2812 ring. Need to investigate power consumption measurements and consider adding external 5V power supply or level shifter buffer for data signal integrity.\n</info added on 2025-07-17T18:56:26.556Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "LEDController porting with new pin configuration",
+            "description": "Port existing LEDController class to new hardware with updated pin assignments and 3.3V compatibility",
+            "dependencies": [
+              1
+            ],
+            "details": "Update GPIO pin definitions in code, modify FastLED initialization for 3.3V operation, adjust brightness limits if needed for power constraints, ensure proper timing for NeoPixel protocol at 3.3V",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Animation pattern implementations",
+            "description": "Implement progress indicators, color patterns, and status animations for timer functionality",
+            "dependencies": [
+              2
+            ],
+            "details": "Create circular progress animation for timer countdown, implement color-coded status indicators (running/paused/complete), add smooth transitions between states, optimize animation timing to not interfere with main timer loop",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Display interference testing and optimization",
+            "description": "Test for electromagnetic interference with display and optimize LED update timing",
+            "dependencies": [
+              3
+            ],
+            "details": "Monitor display quality during LED updates, adjust LED refresh rate if interference detected, implement interrupt-safe LED updates, optimize power distribution to prevent display dimming during LED operations",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Implement Core Timer States",
+        "description": "Create and integrate IdleState, AdjustState, TimerState, and PausedState with proper UI connections",
+        "details": "Implement each state with enter/exit logging, connect to existing LVGL UI screens, handle screen tap and encoder input appropriately per state. IdleState shows 25:00 default, AdjustState allows duration setting via encoder, TimerState runs countdown with LED progress, PausedState allows resume/end.",
+        "testStrategy": "Test state transitions via tap/encoder, verify timer logic works correctly, confirm LED animations sync with timer state, test pause/resume functionality",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement IdleState with default display",
+            "description": "Create IdleState class inheriting from TimerState base, showing 00:00 display and handling initial screen setup",
+            "dependencies": [],
+            "details": "Define IdleState class with enter(), update(), and exit() methods. Implement LVGL screen initialization showing 00:00 time display, current date/time widget, and ready indicator. Handle touch events to transition to AdjustState.\n<info added on 2025-07-10T22:14:13.838Z>\nSuccessfully implemented IdleState with encoder input handling. The state correctly detects encoder rotation events and transitions to AdjustState when input is detected. Implementation includes proper LVGL screen initialization with 00:00 time display, current date/time widget, and ready indicator. Touch event handling is also functional for state transitions. IdleState is complete and ready for AdjustState implementation in subtask 4.2.\n</info added on 2025-07-10T22:14:13.838Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement AdjustState with encoder input",
+            "description": "Create AdjustState for timer duration adjustment using rotary encoder with visual feedback",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement encoder rotation handling for minute/second adjustment with acceleration. Show live preview of selected duration on display. Handle encoder button press to start timer (transition to TimerState). Support touch gestures for fine adjustment.\n<info added on 2025-07-10T22:14:41.665Z>\nImplementation completed with full encoder integration for duration adjustment. Encoder provides 1-minute increments per rotation step with proper debouncing. Automatic timeout after 10 seconds of inactivity returns to IdleState while preserving the adjusted duration setting. Duration validation enforces 1-99 minute range constraints. State machine properly handles transitions from AdjustState back to IdleState with all user modifications retained.\n</info added on 2025-07-10T22:14:41.665Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement TimerState with countdown logic",
+            "description": "Create TimerState managing active countdown with precise timing and LED synchronization",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement millisecond-precision countdown using hardware timers. Update display every second showing remaining time. Synchronize LED ring animation with countdown progress. Handle pause button press and timer completion events.\n<info added on 2025-07-10T22:17:08.063Z>\nImplementation completed with all required features:\n- Millisecond-precision countdown using hardware timers with accurate timing control\n- Real-time display updates showing remaining time in MM:SS format\n- LED ring progress animation synchronized with countdown progression\n- Color-coded LED phases: green (100%-66%), yellow (66%-33%), red (33%-0%)\n- Encoder button integration for pause functionality with proper debouncing\n- State transition handling to PausedState on button press and DoneState on completion\n- Complete resource cleanup and timer management on state exit\n- Proper synchronization between display updates, LED animations, and countdown logic\n</info added on 2025-07-10T22:17:08.063Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement PausedState with resume/end options",
+            "description": "Create PausedState allowing timer pause with resume or end functionality",
+            "dependencies": [
+              3
+            ],
+            "details": "Freeze countdown display at paused time. Show pause indicator and resume/end buttons on screen. Handle encoder press to resume (return to TimerState) and long press to end (return to IdleState). Maintain LED state during pause.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement state transition management",
+            "description": "Create StateManager class handling transitions between states with proper event routing",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "details": "Implement state machine pattern with transition rules and guards. Route hardware events (encoder, buttons, touch) to current state. Ensure proper cleanup during state exits. Add transition animations and feedback.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Integrate LVGL UI screens for all states",
+            "description": "Create cohesive LVGL screen layouts for each state with smooth transitions",
+            "dependencies": [
+              5
+            ],
+            "details": "Design and implement LVGL screens for each state using consistent styling. Add transition animations between screens. Implement touch zones for state-specific interactions. Ensure UI updates are synchronized with state changes.\n<info added on 2025-07-17T18:46:18.386Z>\nAnalysis confirms LVGL UI integration is complete and functional. Current implementation in main loop (lines 674-746) handles all screen transitions via state name comparison. All required screens (idle, adjust, project, timer, paused, done) are properly created and displayed. State-to-screen synchronization works correctly without additional display initialization code needed in individual states. The integration meets all requirements for consistent styling and proper state change synchronization.\n</info added on 2025-07-17T18:46:18.386Z>",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement Long Press Detection",
+        "description": "Add LVGL long press event handling for ending timers early in TimerState and PausedState",
+        "details": "Configure LVGL long press events with appropriate timeout (1-2 seconds), implement long_press_cb and long_press_repeat_cb handlers, add visual feedback during long press, ensure only works in TimerState and PausedState contexts.",
+        "testStrategy": "Test long press detection accuracy, verify no false triggers on normal taps, confirm timer ends correctly on long press, test visual feedback works",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure LVGL long press event handler with timing",
+            "description": "Set up LVGL event handler for long press detection on power button with configurable timing parameters",
+            "dependencies": [],
+            "details": "Implement LV_EVENT_LONG_PRESSED handler for the power button object. Configure long press duration threshold (e.g., 2 seconds) using lv_obj_set_style_anim_time() or similar LVGL timing mechanism. Ensure event handler properly registers and fires after the specified duration.\n<info added on 2025-07-17T18:47:39.076Z>\n**IMPLEMENTATION UPDATE**: Long press detection already implemented in TouchManager class with 1.5-second threshold (longPressThresholdMs = 1500). System properly detects long press events during touch processing and triggers handleLongPressImmediate() which correctly activates only on TimerState and PausedState screens as required. No additional LVGL event handler configuration needed - existing implementation meets all task requirements.\n</info added on 2025-07-17T18:47:39.076Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement visual feedback during long press",
+            "description": "Add visual indicators to show long press progress and confirmation",
+            "dependencies": [
+              1
+            ],
+            "details": "Create visual feedback system showing press progress - could include color change, opacity animation, or progress ring around button. Implement start/progress/complete states for the animation. Ensure feedback is smooth and responsive to user interaction.\n<info added on 2025-07-17T18:47:57.352Z>\nImplementation is complete - long press detection now uses showConfirmDialog() system for visual feedback. The confirmation dialog provides semi-transparent modal overlay with YES/NO options, encoder navigation support, and tap confirmation. This eliminates the need for custom progress animations as the dialog system provides clear visual indication of long press activation and allows users to confirm or cancel actions through the established UI patterns.\n</info added on 2025-07-17T18:47:57.352Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Handle state-specific timer termination actions",
+            "description": "Implement timer termination logic based on current application state",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Check current timer state (running, paused, stopped) when long press is detected. If timer is active, stop it and reset display to initial state. Handle any cleanup operations like saving final time, updating UI elements, and transitioning to appropriate screen state.\n<info added on 2025-07-17T18:48:09.466Z>\nTimer termination actions are already implemented in TouchManager. handleTimerScreenTouch() and handlePausedScreenTouch() both handle long press by showing confirmation dialog. handleConfirmDialogTouch() processes the user's choice - if YES is selected, it transitions to IdleState ending the timer. This provides proper state-specific timer termination for both TimerState and PausedState contexts.\n</info added on 2025-07-17T18:48:09.466Z>",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Implement Project Selection System",
+        "description": "Create ProjectSelectState with encoder-based project scrolling and tap-to-select functionality",
+        "details": "Implement project list data structure, create scrollable UI with encoder navigation, add project color previews on both display and LED ring, implement tap-to-select that starts timer, integrate with existing project management from old firmware.",
+        "testStrategy": "Test project scrolling with encoder, verify color previews work on display and LEDs, confirm project selection starts timer correctly, test with multiple projects",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement project data structure and storage",
+            "description": "Create data structures for storing project information including name, color scheme, and timer settings. Implement persistent storage using Arduino EEPROM or SD card.",
+            "dependencies": [],
+            "details": "Define Project struct with fields for name (char array), primary color (RGB values), secondary color (RGB values), default timer duration, and project ID. Implement functions to save/load projects from non-volatile storage, manage project list with add/edit/delete operations, and handle storage limits.\n<info added on 2025-07-17T18:49:18.319Z>\nImplementation Status: Complete. The ProjectManager class has been successfully implemented with Project struct containing name and color fields. NVS storage functionality is fully operational with saveToNVS() and loadFromNVS() methods. The system uses a singleton pattern for consistent project management across the application. Project selection persistence is handled automatically. Mock projects have been defined with appropriate color schemes for testing and initial functionality.\n</info added on 2025-07-17T18:49:18.319Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create scrollable project list UI with encoder navigation",
+            "description": "Develop a scrollable list interface on the display that shows available projects and responds to rotary encoder input for navigation.",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement list rendering with visible item count based on display height, scroll position tracking, highlight/selection indicator for current item, smooth scrolling animation when moving between items. Handle encoder rotation for up/down navigation, implement acceleration for fast scrolling, and add visual feedback for list boundaries.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add color preview rendering on display",
+            "description": "Implement visual color previews for each project in the list, showing the project's color scheme directly on the display.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create color swatch rendering next to each project name, implement gradient or dual-color display for projects with multiple colors, ensure proper color space conversion for accurate display representation, optimize rendering performance for smooth scrolling, and add visual indicators for currently active project.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Synchronize LED ring with color preview",
+            "description": "Connect the LED ring to display the color scheme of the currently highlighted project in the list, providing immediate visual feedback.",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement real-time LED updates as encoder scrolls through projects, create smooth color transitions when moving between projects, handle RGB color mapping from project data to LED output, implement preview animations or patterns to showcase project colors, and ensure LED brightness is appropriate for preview mode.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement selection handling and timer initialization",
+            "description": "Handle project selection via encoder button press and initialize the timer with the selected project's settings and color scheme.",
+            "dependencies": [
+              4
+            ],
+            "details": "Detect encoder button press for project selection, load selected project's timer duration and settings, transition from project list to timer interface, apply project's color scheme to timer display and LED ring, save last selected project for quick access on next startup, and implement cancel/back functionality to return to project list.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Implement WiFi Provisioning System",
+        "description": "Create ProvisionState for WiFi credential entry and network configuration",
+        "details": "Implement AP mode startup, create simple provisioning interface accessible via touch, save credentials to NVS, add logic to skip provisioning if WiFi already configured. Include fallback to provisioning if stored credentials fail.",
+        "testStrategy": "Test AP mode starts correctly, verify credential entry and storage, confirm automatic skip when already configured, test credential validation",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "AP Mode Initialization and Management",
+            "description": "Implement WiFi Access Point mode for initial device configuration, including SSID generation, HTTP server setup, and connection management",
+            "dependencies": [],
+            "details": "Create AP mode handler that generates unique SSID (e.g., 'Timer_XXXX'), starts HTTP server on port 80, serves configuration webpage, handles client connections, and manages AP timeout/shutdown after successful configuration or timeout period",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Touch-based Credential Entry Interface",
+            "description": "Design and implement touch screen interface for WiFi credential input, including virtual keyboard, SSID selection, and password entry",
+            "dependencies": [],
+            "details": "Build LVGL-based UI with virtual keyboard for password entry, WiFi network scanner with SSID list display, touch gesture handling for character selection, visual feedback for input validation, and support for WPA2/WPA3 security types",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "NVS Storage for Credentials with Encryption",
+            "description": "Implement secure credential storage in ESP32's Non-Volatile Storage with encryption for WiFi passwords and configuration data",
+            "dependencies": [],
+            "details": "Use ESP32 NVS library to store SSID and encrypted password, implement AES encryption for password protection, create read/write functions for credential management, handle NVS initialization and error cases, and provide credential validation before storage",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Auto-skip Logic and Fallback Handling",
+            "description": "Implement automatic connection attempt with stored credentials and fallback to AP mode on connection failure",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Create boot sequence that checks for stored credentials in NVS, attempt connection with configurable timeout (e.g., 10 seconds), implement retry logic with exponential backoff, fallback to AP mode on repeated failures, and provide manual trigger for reconfiguration mode via long button press",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Implement Web Server and API",
+        "description": "Create web server for timer management and project CRUD operations",
+        "details": "Port web server from old firmware, implement REST API endpoints for project management, create simple web interface for remote control, add real-time timer status updates, ensure proper JSON response formatting.",
+        "testStrategy": "Test web server startup, verify all API endpoints respond correctly, test project CRUD operations via web interface, confirm real-time updates work",
+        "priority": "medium",
+        "dependencies": [
+          7
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "HTTP server setup and routing framework",
+            "description": "Implement core HTTP server with routing capabilities for handling incoming requests",
+            "dependencies": [],
+            "details": "Set up HTTP server library, configure port and network settings, implement request routing system with path matching and HTTP method handling, add middleware support for common functionality like CORS and request parsing",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "REST API endpoints for project CRUD operations",
+            "description": "Create RESTful API endpoints to manage project data with Create, Read, Update, Delete operations",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement GET /api/projects for listing, GET /api/projects/:id for single project, POST /api/projects for creation, PUT /api/projects/:id for updates, DELETE /api/projects/:id for deletion, include proper HTTP status codes and error handling",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Static web interface files and serving",
+            "description": "Set up static file serving for HTML, CSS, JavaScript and asset files for the web interface",
+            "dependencies": [
+              1
+            ],
+            "details": "Configure static file middleware, create directory structure for web assets, implement file serving with proper MIME types, add caching headers for performance, ensure index.html fallback for single-page application routing",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Real-time WebSocket updates for timer status",
+            "description": "Implement WebSocket server for pushing real-time timer status updates to connected clients",
+            "dependencies": [
+              1
+            ],
+            "details": "Set up WebSocket server alongside HTTP server, implement connection handling and client tracking, create event system for timer state changes, broadcast updates to all connected clients, handle reconnection logic and heartbeat for connection health",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "JSON serialization and response formatting",
+            "description": "Implement consistent JSON serialization for API responses and WebSocket messages",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Create serialization layer for project and timer data models, implement consistent response format with data/error fields, add JSON parsing middleware for request bodies, ensure proper content-type headers, handle serialization errors gracefully",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement Advanced Power Management",
+        "description": "Integrate proper sleep/wake functionality with touch wake and power button controls",
+        "details": "Enhance existing light sleep with 3-minute timeout, ensure deep sleep via power button works correctly, verify touch wake from light sleep (GPIO11), add proper state saving before sleep and restoration on wake, implement battery level monitoring via AXP2101.",
+        "testStrategy": "Test inactivity timeout triggers light sleep, verify touch wake works reliably, confirm power button deep sleep/wake cycle, measure current consumption in each sleep state",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement light sleep mode with 3-minute timeout",
+            "description": "Configure ESP32 light sleep mode that activates after 3 minutes of inactivity while maintaining RTC memory and peripheral states",
+            "dependencies": [],
+            "details": "Set up esp_sleep_enable_timer_wakeup() for periodic wake checks, configure power domains to keep essential peripherals active, implement inactivity tracking with millis() comparison, ensure WiFi/BT are properly disabled before sleep entry",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement deep sleep via power button with state preservation",
+            "description": "Configure deep sleep mode triggered by power button press with full system state saved to RTC memory",
+            "dependencies": [],
+            "details": "Set up GPIO0 (power button) interrupt for sleep trigger, implement state structure for RTC_DATA_ATTR storage including timer values and UI state, configure esp_deep_sleep_start() with proper wake sources, handle graceful shutdown of LVGL and display",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure touch wake interrupt for GPIO11",
+            "description": "Set up touch sensor on GPIO11 as wake source from both light and deep sleep modes",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Configure touch pad threshold calibration on startup, enable esp_sleep_enable_touchpad_wakeup(), implement touch interrupt handler for immediate wake response, ensure touch sensitivity works reliably in low power states",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement state save/restore mechanisms",
+            "description": "Create comprehensive state management system for preserving timer state, UI state, and settings across sleep cycles",
+            "dependencies": [
+              2
+            ],
+            "details": "Define RTC memory structure for timer minutes/seconds/running state, implement save_state() and restore_state() functions, handle display reinitalization after wake, ensure LVGL UI state consistency, validate data integrity with checksums",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate AXP2101 battery monitoring",
+            "description": "Implement battery voltage monitoring and low battery sleep triggers using AXP2101 power management IC",
+            "dependencies": [],
+            "details": "Configure I2C communication with AXP2101, implement getBatteryVoltage() and getBatteryPercentage() functions, set up low battery thresholds for forced deep sleep, add battery status to UI display, handle charging detection and status",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Optimize power consumption and testing",
+            "description": "Fine-tune power settings and validate all sleep/wake scenarios with power consumption measurements",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Measure current draw in each sleep mode with multimeter, optimize peripheral shutdown sequences, test all wake sources thoroughly, validate state persistence across multiple sleep cycles, document expected battery life calculations, create power profile documentation",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Implement Comprehensive Testing and Validation",
+        "description": "Create test harnesses and perform full system integration testing with error recovery",
+        "details": "Implement test mode compilation flag, create automated test suite for all hardware components, add memory leak detection, implement crash recovery logging, perform 4+ hour continuous operation test, validate all state transitions and edge cases.",
+        "testStrategy": "Run continuous operation test for minimum 4 hours, verify memory usage remains stable, test all error recovery paths, confirm build success rate >95%, validate response times <100ms",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Test mode compilation flag and framework setup",
+            "description": "Implement compilation flags to enable test mode and establish the testing framework infrastructure",
+            "dependencies": [],
+            "details": "Add TEST_MODE preprocessor flag to enable/disable test features. Set up test runner framework with serial output for test results. Create test harness structure with setup/teardown functions. Implement assertion macros for test validation.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Hardware component test suite creation",
+            "description": "Develop comprehensive test suites for all hardware components including display, touch, buttons, and RTC",
+            "dependencies": [
+              1
+            ],
+            "details": "Create individual test functions for LCD initialization, touch calibration verification, button press detection, RTC time accuracy, backlight PWM levels, and speaker functionality. Implement automated test sequences with pass/fail reporting.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Memory leak detection implementation",
+            "description": "Build memory monitoring and leak detection system for continuous operation validation",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement heap monitoring functions to track malloc/free calls. Add memory usage reporting at regular intervals. Create memory stress tests for LVGL object creation/destruction. Monitor stack usage patterns and detect potential overflows.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Crash recovery and logging system",
+            "description": "Develop crash detection, recovery mechanisms, and persistent error logging",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement watchdog timer with proper feeding strategy. Create crash dump functionality to save state before reset. Add persistent error log storage in RTC backup registers or flash. Build recovery mechanism to restore last known good state.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "4-hour continuous operation test harness",
+            "description": "Create automated test system for extended duration stability testing",
+            "dependencies": [
+              1,
+              2,
+              3
+            ],
+            "details": "Build automated test runner that cycles through all device states continuously. Implement periodic health checks and performance measurements. Add temperature monitoring during extended operation. Create logging system for test duration, cycles completed, and any anomalies detected.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "State transition edge case testing",
+            "description": "Develop comprehensive tests for all state transitions and boundary conditions",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Create test cases for rapid state changes, simultaneous button/touch inputs, timer wraparound conditions, sleep/wake transitions during active timers. Test invalid state transitions and recovery. Verify all state machines maintain consistency under stress.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Performance benchmarking (<100ms response)",
+            "description": "Implement performance measurement system to ensure all interactions meet response time requirements",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Add microsecond-precision timing functions for measuring response latency. Benchmark touch response time, button press to action delay, screen refresh rates, state transition durations. Create automated performance regression tests with configurable thresholds.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-10T18:41:14.931Z",
+      "updated": "2025-07-17T19:02:53.507Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
