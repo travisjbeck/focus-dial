@@ -1,4 +1,4 @@
-// Focus Dial Project Management app.js
+// TheTimer Project Management app.js
 
 // Add WebSocket connection variables
 let ws = null;
@@ -285,7 +285,7 @@ async function fetchAndRenderProjects() {
     renderProjectList(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
-    renderError('Could not load projects. Is the Focus Dial connected?');
+    renderError('Could not load projects. Is TheTimer connected?');
   }
 }
 
