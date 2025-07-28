@@ -5,6 +5,7 @@
 #include "HWCDC.h"
 #include <lvgl.h>
 #include "XPowersLib.h"
+#include <WiFi.h>
 
 // USB Serial for ESP32-S3
 extern HWCDC USBSerial;
@@ -22,10 +23,12 @@ ScreenManager::ScreenManager() :
     timer_screen(nullptr),
     paused_screen(nullptr),
     done_screen(nullptr),
+    provision_screen(nullptr),
     current_screen(nullptr),
     idle_time_label(nullptr),
     idle_date_label(nullptr),
     battery_label(nullptr),
+    wifi_label(nullptr),
     adjust_duration_label(nullptr),
     adjust_progress_arc(nullptr),
     timer_time_label(nullptr),
@@ -61,6 +64,7 @@ void ScreenManager::init() {
     createTimerScreen();
     createPausedScreen();
     createDoneScreen();
+    createProvisionScreen();
     
     // Show idle screen by default
     showIdleScreen();
@@ -72,7 +76,7 @@ void ScreenManager::createIdleScreen() {
     // No LVGL event handlers - TouchManager handles all touch events
     
     // WiFi icon - positioned for circular display  
-    lv_obj_t* wifi_label = lv_label_create(idle_screen);
+    wifi_label = lv_label_create(idle_screen);
     lv_label_set_text(wifi_label, LV_SYMBOL_WIFI);
     lv_obj_set_style_text_color(wifi_label, COLOR_BACKGROUND, 0);
     lv_obj_set_style_text_font(wifi_label, &lv_font_montserrat_24, 0);
@@ -335,6 +339,39 @@ void ScreenManager::createDoneScreen() {
     lv_obj_set_style_text_color(done_complete_label, COLOR_FOREGROUND, 0); // Will be updated with project color
     lv_obj_set_style_text_font(done_complete_label, &lv_font_barlow_bold_48, 0); // Same large font as project label
     lv_obj_align(done_complete_label, LV_ALIGN_CENTER, 0, lv_pct(25)); // 25% below center
+}
+
+void ScreenManager::createProvisionScreen() {
+    provision_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(provision_screen, lv_color_black(), 0);
+    
+    // Create WiFi icon
+    lv_obj_t* wifi_icon = lv_label_create(provision_screen);
+    lv_label_set_text(wifi_icon, LV_SYMBOL_WIFI);
+    lv_obj_set_style_text_font(wifi_icon, &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_color(wifi_icon, COLOR_FOREGROUND, 0);
+    lv_obj_align(wifi_icon, LV_ALIGN_CENTER, 0, -100);
+    
+    // Create instructions
+    lv_obj_t* instructions = lv_label_create(provision_screen);
+    lv_label_set_text(instructions, "Connect to WiFi:");
+    lv_obj_set_style_text_font(instructions, &lv_font_barlow_24, 0);
+    lv_obj_set_style_text_color(instructions, COLOR_FOREGROUND, 0);
+    lv_obj_align(instructions, LV_ALIGN_CENTER, 0, -10);
+    
+    // Create AP name label (will be updated dynamically)
+    lv_obj_t* ap_label = lv_label_create(provision_screen);
+    lv_label_set_text(ap_label, "TheTimer");
+    lv_obj_set_style_text_font(ap_label, &lv_font_barlow_bold_24, 0);
+    lv_obj_set_style_text_color(ap_label, COLOR_FOREGROUND, 0);
+    lv_obj_align(ap_label, LV_ALIGN_CENTER, 0, 20);
+    
+    // Create URL label
+    lv_obj_t* url_label = lv_label_create(provision_screen);
+    lv_label_set_text(url_label, "192.168.4.1");
+    lv_obj_set_style_text_font(url_label, &lv_font_barlow_24, 0);
+    lv_obj_set_style_text_color(url_label, COLOR_BACKGROUND, 0);
+    lv_obj_align(url_label, LV_ALIGN_CENTER, 0, 60);
 }
 
 void ScreenManager::createPageIndicator(lv_obj_t* parent, int active_index, int total_pages) {
@@ -743,6 +780,33 @@ bool ScreenManager::getConfirmSelection() {
     return confirm_yes_selected;
 }
 
+
+void ScreenManager::showProvisionScreen(const String& apName) {
+    if (!provision_screen) return;
+    
+    // Update AP name label (third child - after wifi icon and instructions)
+    lv_obj_t* ap_label = lv_obj_get_child(provision_screen, 2);
+    if (ap_label && lv_obj_check_type(ap_label, &lv_label_class)) {
+        lv_label_set_text(ap_label, apName.c_str());
+    }
+    
+    // Show the provision screen
+    lv_scr_load_anim(provision_screen, LV_SCR_LOAD_ANIM_FADE_IN, 300, 0, false);
+    current_screen = provision_screen;
+}
+
+void ScreenManager::showProvisionError(const String& message) {
+    // Update existing provision screen with error message
+    if (!provision_screen) return;
+    
+    // Find and update the instructions label (second child)
+    lv_obj_t* instructions = lv_obj_get_child(provision_screen, 1);
+    if (instructions && lv_obj_check_type(instructions, &lv_label_class)) {
+        lv_label_set_text(instructions, message.c_str());
+        lv_obj_set_style_text_color(instructions, lv_color_hex(0xFF4444), 0); // Red color for error
+    }
+}
+
 void ScreenManager::updateBatteryIcon() {
     if (!battery_label) {
         return; // Battery label not initialized
@@ -795,4 +859,48 @@ void ScreenManager::updateBatteryIcon() {
     } else {
         lv_obj_set_style_text_color(battery_label, COLOR_BACKGROUND, 0); // Normal gray
     }
+}
+
+void ScreenManager::updateWifiIcon() {
+    if (!wifi_label) {
+        return; // WiFi label not initialized
+    }
+    
+    // Get WiFi status
+    wl_status_t status = WiFi.status();
+    int rssi = WiFi.RSSI(); // Signal strength
+    
+    // Determine WiFi icon and color based on status
+    const char* wifiIcon;
+    lv_color_t iconColor;
+    
+    if (status == WL_CONNECTED) {
+        // Connected - show signal strength
+        if (rssi >= -50) {
+            wifiIcon = LV_SYMBOL_WIFI; // Full signal
+            iconColor = lv_color_hex(0x00FF00); // Green for excellent signal
+        } else if (rssi >= -70) {
+            wifiIcon = LV_SYMBOL_WIFI; // Good signal
+            iconColor = COLOR_FOREGROUND; // White for good signal
+        } else {
+            wifiIcon = LV_SYMBOL_WIFI; // Weak signal
+            iconColor = lv_color_hex(0xFFAA00); // Orange for weak signal
+        }
+    } else if (status == WL_DISCONNECTED || status == WL_NO_SSID_AVAIL || status == WL_CONNECT_FAILED) {
+        // Disconnected or connection failed
+        wifiIcon = LV_SYMBOL_WIFI;
+        iconColor = COLOR_BACKGROUND; // Gray when disconnected
+    } else if (status == WL_CONNECTION_LOST) {
+        // Lost connection
+        wifiIcon = LV_SYMBOL_WIFI;
+        iconColor = lv_color_hex(0xFF0000); // Red for lost connection
+    } else {
+        // Other states (connecting, etc.)
+        wifiIcon = LV_SYMBOL_WIFI;
+        iconColor = COLOR_BACKGROUND; // Dim white when connecting
+    }
+    
+    // Update WiFi icon
+    lv_label_set_text(wifi_label, wifiIcon);
+    lv_obj_set_style_text_color(wifi_label, iconColor, 0);
 }

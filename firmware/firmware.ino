@@ -15,6 +15,9 @@
 #include <driver/rtc_io.h>
 #include <driver/gpio.h>
 #include <esp_task_wdt.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ArduinoJson.h>
 
 // State Machine
 #include "src/state_machine/include/StateMachine.h"
@@ -154,6 +157,15 @@ void setPMUFlag(void);
 void goToSleep(bool deep_sleep = false);
 void resetActivityTimer();
 void handleWakeUp();
+
+// Web Server
+WebServer apiServer(80);
+bool webServerRunning = false;
+
+void startWebServer();
+void handleApiProjects();
+void handleApiStatus();
+void handleNotFound();
 
 
 // Rounder callback for display optimization (critical for performance)
@@ -583,13 +595,35 @@ void setup() {
     USBSerial.print("LED controller active: ");
     USBSerial.println(stateMachine.isLEDControllerActive() ? "YES" : "NO");
 
-    // Initialize battery icon
+    // Initialize battery and WiFi icons
     screenManager.updateBatteryIcon();
     USBSerial.println("Battery icon initialized");
+    screenManager.updateWifiIcon();
+    USBSerial.println("WiFi icon initialized");
+
+    // Register WiFi event handler
+    WiFi.onEvent(onWiFiEvent);
+    
+    // Try to connect to saved WiFi if available
+    Preferences wifiPrefs;
+    wifiPrefs.begin("wifi", true);
+    bool wifiConfigured = wifiPrefs.getBool("configured", false);
+    if (wifiConfigured) {
+        String ssid = wifiPrefs.getString("ssid", "");
+        String password = wifiPrefs.getString("password", "");
+        if (ssid.length() > 0) {
+            USBSerial.print("Connecting to saved WiFi: ");
+            USBSerial.println(ssid);
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(ssid.c_str(), password.c_str());
+        }
+    }
+    wifiPrefs.end();
 
     USBSerial.println("Setup complete");
     USBSerial.println("--- Integration Testing Available ---");
     USBSerial.println("Commands: 'test' (full tests), 'debug' (encoder), 'led' (LED tests), 'white' (simple LED test)");
+    USBSerial.println("         'clearwifi' (clear WiFi credentials)");
 }
 
 void loop() {
@@ -633,6 +667,17 @@ void loop() {
             } else {
                 USBSerial.println("LED controller not available");
             }
+        }
+        else if (command.equalsIgnoreCase("CLEARWIFI") || command.equalsIgnoreCase("clearwifi")) {
+            USBSerial.println("=== CLEARING WIFI CREDENTIALS ===");
+            Preferences preferences;
+            preferences.begin("wifi", false);
+            preferences.clear();
+            preferences.end();
+            USBSerial.println("WiFi credentials cleared!");
+            USBSerial.println("Restarting device...");
+            delay(1000);
+            ESP.restart();
         }
         else if (command.equalsIgnoreCase("WHITE") || command.equalsIgnoreCase("white")) {
             USBSerial.println("=== SIMPLE WHITE TEST ===");
@@ -825,6 +870,13 @@ void loop() {
         last_battery_update = now;
     }
     
+    // Update WiFi icon every 10 seconds (more frequent as WiFi status changes more often)
+    static unsigned long last_wifi_update = 0;
+    if (now - last_wifi_update > 10000) {
+        screenManager.updateWifiIcon();
+        last_wifi_update = now;
+    }
+    
     // Auto-transition disabled - use tap to navigate
     // Uncomment below to test automatic transitions
     /*
@@ -843,5 +895,96 @@ void loop() {
     // Update breathing effect for paused screen
     screenManager.updatePausedBreathing();
     
+    // Handle web server clients
+    if (webServerRunning) {
+        apiServer.handleClient();
+    }
+    
     delay(5);  // 5ms as per working example
+}
+
+// Web Server Implementation
+void startWebServer() {
+    if (webServerRunning) return;
+    
+    USBSerial.println("Starting Web Server...");
+    
+    // Configure routes
+    apiServer.on("/api/projects", HTTP_GET, handleApiProjects);
+    apiServer.on("/api/status", HTTP_GET, handleApiStatus);
+    apiServer.onNotFound(handleNotFound);
+    
+    // Start server
+    apiServer.begin();
+    webServerRunning = true;
+    
+    USBSerial.print("Web Server started at http://");
+    USBSerial.println(WiFi.localIP());
+}
+
+void handleApiProjects() {
+    StaticJsonDocument<512> doc;
+    JsonArray array = doc.createNestedArray("projects");
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    for (int i = 0; i < pm.getProjectCount(); i++) {
+        const Project* project = pm.getProject(i);
+        if (project) {
+            JsonObject obj = array.createNestedObject();
+            obj["id"] = i;
+            obj["name"] = project->name;
+            obj["color"] = project->color;
+            obj["selected"] = (i == pm.getSelectedProjectIndex());
+        }
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+void handleApiStatus() {
+    StaticJsonDocument<256> doc;
+    
+    State* currentState = stateMachine.getCurrentState();
+    doc["state"] = currentState ? currentState->getStateName() : "Unknown";
+    doc["project"] = ProjectManager::getInstance().getSelectedProjectName();
+    doc["duration"] = stateMachine.getPendingDuration();
+    
+    // Add timer info if in timer state
+    if (strcmp(currentState->getStateName(), "TimerState") == 0) {
+        TimerState* timerState = static_cast<TimerState*>(currentState);
+        doc["remaining"] = timerState->getRemainingSeconds();
+        doc["progress"] = timerState->getProgressPercentage();
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+void handleNotFound() {
+    apiServer.send(404, "text/plain", "Not Found");
+}
+
+// WiFi Event Handler
+void onWiFiEvent(WiFiEvent_t event) {
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+            USBSerial.println("WiFi connected!");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            USBSerial.print("WiFi got IP: ");
+            USBSerial.println(WiFi.localIP());
+            startWebServer();
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            USBSerial.println("WiFi disconnected");
+            if (webServerRunning) {
+                apiServer.stop();
+                webServerRunning = false;
+                USBSerial.println("Web Server stopped");
+            }
+            break;
+    }
 }

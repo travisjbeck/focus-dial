@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lvgl.h>
+#include <Arduino.h>
 
 // Color definitions
 #define COLOR_FOREGROUND lv_color_hex(0xDDDDDD)
@@ -25,6 +26,8 @@ public:
     void showTimerScreen(int remaining_seconds, float progress);
     void showPausedScreen(int remaining_seconds, float progress = 0.5f);
     void showDoneScreen();
+    void showProvisionScreen(const String& apName);
+    void showProvisionError(const String& message);
     
     // Confirmation dialog
     void showConfirmDialog(const char* message);
@@ -42,6 +45,7 @@ public:
     void updatePausedBreathing(); // Update breathing effect on paused screen
     void updateDoneBreathing(); // Update breathing effect on done screen
     void updateBatteryIcon(); // Update battery icon based on current status
+    void updateWifiIcon(); // Update WiFi icon based on connection status
     
     lv_obj_t* getCurrentScreen() { return current_screen; }
     lv_obj_t* getIdleScreen() { return idle_screen; }
@@ -68,6 +72,7 @@ private:
     lv_obj_t* timer_screen;
     lv_obj_t* paused_screen;
     lv_obj_t* done_screen;
+    lv_obj_t* provision_screen;
     
     // Current active screen
     lv_obj_t* current_screen;
@@ -76,6 +81,7 @@ private:
     lv_obj_t* idle_time_label;
     lv_obj_t* idle_date_label;
     lv_obj_t* battery_label; // Battery icon for dynamic updates
+    lv_obj_t* wifi_label; // WiFi icon for dynamic updates
     lv_obj_t* adjust_duration_label;
     lv_obj_t* adjust_progress_arc;
     lv_obj_t* timer_time_label;
@@ -102,6 +108,7 @@ private:
     void createTimerScreen();
     void createPausedScreen();
     void createDoneScreen();
+    void createProvisionScreen();
     
     void createPageIndicator(lv_obj_t* parent, int active_index, int total_pages);
 };

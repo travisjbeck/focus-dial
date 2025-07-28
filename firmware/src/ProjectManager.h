@@ -26,6 +26,14 @@ public:
     void saveToNVS();
     void loadFromNVS();
     
+    // Web API access
+    int getProjectCount() const { return PROJECT_COUNT; }
+    const Project* getProject(int index) const { 
+        if (index >= 0 && index < PROJECT_COUNT) return &projects[index]; 
+        return nullptr;
+    }
+    const Project* getAllProjects() const { return projects; }
+    
 private:
     ProjectManager() : selectedProjectIndex(0) {}
     int selectedProjectIndex;

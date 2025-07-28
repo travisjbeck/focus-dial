@@ -2,6 +2,7 @@
 #include "../include/StateMachine.h"
 #include "IdleState.h"
 #include "ProvisionState.h"
+#include <Preferences.h>
 
 StartupState::StartupState()
 {
@@ -31,10 +32,19 @@ void StartupState::onUpdate()
   if (millis() - getEntryTime() >= SPLASH_DURATION) {
     ESP_LOGI(getLogTag(), "Splash complete, starting timer application");
     
-    // For timer application, skip WiFi provisioning and go directly to IdleState
-    // TODO: Later add WiFi configuration check if network features are needed
-    ESP_LOGI(getLogTag(), "Transitioning to IdleState for timer operation");
-    stateMachine.changeState(stateMachine.idleState);
+    // Check if WiFi is configured
+    Preferences preferences;
+    preferences.begin("wifi", true);
+    bool wifiConfigured = preferences.getBool("configured", false);
+    preferences.end();
+    
+    if (!wifiConfigured) {
+        ESP_LOGI(getLogTag(), "WiFi not configured, transitioning to ProvisionState");
+        stateMachine.changeState(stateMachine.provisionState);
+    } else {
+        ESP_LOGI(getLogTag(), "WiFi already configured, transitioning to IdleState");
+        stateMachine.changeState(stateMachine.idleState);
+    }
   }
   
   yield();
