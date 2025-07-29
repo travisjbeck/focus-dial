@@ -19,7 +19,7 @@ void StartupState::onEnter()
   // Set LED to brand color spinner animation for startup
   LEDController* ledController = stateMachine.getLEDController();
   if (ledController) {
-    ledController->startSpinner(0xc2e189, -1); // Full brightness green spinner (brand color)
+    ledController->startSpinner(0xa3e635, -1); // Vibrant green spinner
   }
   
   // TODO: Show splash screen
