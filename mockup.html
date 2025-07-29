@@ -1,0 +1,1209 @@
+<!-- Focus Dial Project Management -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TheTimer | Projects</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Professional Vercel-inspired styles for TheTimer */
+    :root {
+      --color-bg: #000000;
+      --color-bg-secondary: #111111;
+      --color-bg-tertiary: #1a1a1a;
+      --color-border: #222222;
+      --color-text-primary: #ffffff;
+      --color-text-secondary: #888888;
+      --color-accent: #a3e635;
+      --color-accent-hover: #84cc16;
+      --color-error: #ff4444;
+      --color-success: #00cc88;
+      --color-warning: #f5a623;
+      --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      --border-radius-sm: 4px;
+      --border-radius: 8px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      --max-width: 960px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--color-bg);
+      color: var(--color-text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      width: 100%;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      margin-bottom: 3rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.875rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      background: linear-gradient(to right, var(--color-accent), #84cc16);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--color-text-secondary);
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--color-text-primary);
+      margin-bottom: 0;
+      letter-spacing: -0.025em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card {
+      background-color: var(--color-bg-secondary);
+      border-radius: var(--border-radius);
+      border: 1px solid var(--color-border);
+      padding: 0;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Special styling for projects section - no nested background */
+    #projects-section {
+      background-color: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      overflow: visible;
+    }
+
+    #projects-section .card-header {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius) var(--border-radius) 0 0;
+      margin-bottom: 0;
+    }
+
+    #projects-section #project-list table {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-top: none;
+      border-radius: 0 0 var(--border-radius) var(--border-radius);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--color-border);
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .card > form {
+      padding: 1.5rem;
+    }
+
+    #project-list {
+      width: 100%;
+      display: block;
+    }
+
+    #project-list > table {
+      display: table;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      background-color: transparent;
+      border-radius: 0;
+      overflow: visible;
+    }
+
+    #project-list > div {
+      padding: 1.75rem;
+      width: 100%;
+    }
+
+    /* Project List Table */
+    #project-list table {
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9375rem;
+      table-layout: fixed;
+    }
+
+    #project-list th {
+      background-color: #1a1a1a;
+      color: var(--color-text-secondary);
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+
+    #project-list td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: middle;
+    }
+
+    #project-list th:nth-child(1),
+    #project-list td:nth-child(1) {
+      width: 65%;
+      text-align: left;
+    }
+
+    #project-list th:nth-child(2),
+    #project-list td:nth-child(2) {
+      width: 35%;
+      text-align: right;
+      white-space: nowrap;
+      padding-right: 1.5rem;
+    }
+
+    /* Ensure buttons display horizontally */
+    #project-list td:nth-child(2) {
+      display: table-cell;
+    }
+
+    #project-list .btn {
+      display: inline-flex;
+      margin: 0 0.25rem;
+    }
+
+    #project-list tr:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .color-preview {
+      display: inline-block;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: var(--border-radius-sm);
+      margin-right: 0.75rem;
+      vertical-align: middle;
+    }
+
+    .loading {
+      color: var(--color-text-secondary);
+      text-align: center;
+      padding: 3rem 0;
+      font-size: 0.9375rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    /* Spinner Animation */
+    .spinner {
+      width: 2rem;
+      height: 2rem;
+      animation: rotate 2s linear infinite;
+    }
+
+    .spinner .path {
+      stroke: var(--color-accent);
+      stroke-linecap: round;
+      animation: dash 1.5s ease-in-out infinite;
+    }
+
+    @keyframes rotate {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes dash {
+      0% {
+        stroke-dasharray: 1, 150;
+        stroke-dashoffset: 0;
+      }
+      50% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -35;
+      }
+      100% {
+        stroke-dasharray: 90, 150;
+        stroke-dashoffset: -124;
+      }
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      background-color: #111111;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius-sm);
+      color: var(--color-text-primary);
+      font-size: 0.9375rem;
+      transition: border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+      font-family: var(--font-sans);
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent);
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: none;
+      border-radius: var(--border-radius-sm);
+      background: none;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: var(--border-radius-sm);
+      padding: 0;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 2rem;
+    }
+
+    /* Buttons */
+    .btn {
+      position: relative;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--border-radius-sm);
+      transition: all var(--transition-fast);
+      cursor: pointer;
+      border: none;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .primary-btn {
+      background-color: var(--color-accent);
+      color: #000000;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.625rem 1.25rem;
+    }
+
+    .primary-btn:hover {
+      background-color: var(--color-accent-hover);
+    }
+
+    .edit-btn {
+      background-color: transparent;
+      color: var(--color-text-secondary);
+      border: 1px solid transparent;
+      padding: 0.5rem 0.75rem;
+      margin-right: 0.25rem;
+    }
+
+    .edit-btn:hover {
+      color: var(--color-text-primary);
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .delete-btn {
+      background-color: transparent;
+      color: var(--color-text-secondary);
+      border: 1px solid transparent;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .delete-btn:hover {
+      color: var(--color-error);
+      background-color: rgba(255, 69, 58, 0.1);
+      border-color: rgba(255, 69, 58, 0.2);
+    }
+
+    /* Icons */
+    .icon {
+      width: 1rem;
+      height: 1rem;
+      stroke-width: 2;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    h2,
+    label,
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    label {
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    label .icon {
+      opacity: 0.7;
+    }
+
+    /* Messages */
+    .success-message,
+    .error-message {
+      padding: 0.75rem 1rem;
+      border-radius: var(--border-radius-sm);
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .success-message::before,
+    .error-message::before {
+      content: "";
+      display: inline-block;
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+    }
+
+    .success-message {
+      background-color: rgba(0, 204, 136, 0.1);
+      color: var(--color-success);
+      border: 1px solid rgba(0, 204, 136, 0.2);
+    }
+
+    .success-message::before {
+      background-color: var(--color-success);
+    }
+
+    .error-message {
+      background-color: rgba(255, 69, 58, 0.1);
+      color: var(--color-error);
+      border: 1px solid rgba(255, 69, 58, 0.2);
+    }
+
+    .error-message::before {
+      background-color: var(--color-error);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+    }
+
+    #message-area {
+      min-height: 1.5rem;
+      transition: all var(--transition-fast);
+      margin-bottom: 1rem;
+    }
+
+    .footer-text {
+      opacity: 0.5;
+      font-size: 0.8125rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--color-text-secondary);
+    }
+
+    .empty-state p {
+      margin-bottom: 1rem;
+      font-size: 0.9375rem;
+    }
+
+    /* Inline form for create project */
+    .form-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
+    }
+
+    .form-inline input[type="text"] {
+      flex: 1;
+      margin: 0;
+    }
+
+    .form-inline input[type="color"] {
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .form-inline .btn {
+      margin: 0;
+    }
+
+    /* Form help text */
+    .form-help {
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      opacity: 0.8;
+    }
+
+    /* Color Selection Styles */
+    .form-content {
+      padding: 1.5rem;
+    }
+
+    .color-selection-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .selected-color {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: var(--border-radius-sm);
+      cursor: pointer;
+      border: 2px solid var(--color-border);
+      transition: border-color var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .selected-color:hover {
+      border-color: var(--color-accent);
+    }
+
+    .color-picker-dropdown {
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin-top: 0.75rem;
+      box-shadow: var(--shadow);
+      width: 320px;
+    }
+
+    .color-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      justify-items: center;
+      padding: 0.5rem;
+    }
+
+    .color-preset {
+      width: 2rem;
+      height: 2rem;
+      border-radius: var(--border-radius-sm);
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all var(--transition-fast);
+    }
+
+    .color-preset:hover {
+      border-color: var(--color-text-primary);
+      transform: scale(1.1);
+    }
+
+    .color-preset.selected {
+      border-color: var(--color-accent);
+      transform: scale(1.1);
+    }
+
+    .custom-color-section {
+      border-top: 1px solid var(--color-border);
+      padding-top: 1rem;
+    }
+
+    .custom-color-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .custom-color-picker {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .color-picker-main {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .color-preview-large {
+      width: 3rem;
+      height: 3rem;
+      border-radius: var(--border-radius);
+      border: 2px solid var(--color-border);
+      flex-shrink: 0;
+    }
+
+    .color-gradient-picker {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .hue-saturation-picker {
+      width: 100%;
+      height: 100px;
+      background: linear-gradient(to top, #000, transparent), 
+                  linear-gradient(to right, #fff, transparent),
+                  linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+      border-radius: var(--border-radius-sm);
+      position: relative;
+      cursor: crosshair;
+      border: 1px solid var(--color-border);
+    }
+
+    .hue-sat-cursor {
+      width: 12px;
+      height: 12px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      position: absolute;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .hue-slider {
+      width: 100%;
+      height: 20px;
+      background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+      border-radius: var(--border-radius-sm);
+      position: relative;
+      cursor: pointer;
+      border: 1px solid var(--color-border);
+    }
+
+    .hue-cursor {
+      width: 4px;
+      height: 24px;
+      background: #fff;
+      border: 1px solid #000;
+      position: absolute;
+      top: -2px;
+      pointer-events: none;
+      border-radius: 2px;
+      transform: translateX(-50%);
+    }
+
+    .rgb-inputs {
+      display: flex;
+      justify-content: flex-start;
+      gap: 1rem;
+      margin-left: 4rem;
+    }
+
+    .rgb-input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .rgb-input-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      margin: 0;
+    }
+
+    .rgb-input-group input {
+      width: 60px;
+      padding: 0.5rem;
+      text-align: center;
+      border-radius: var(--border-radius-sm);
+      border: 1px solid var(--color-border);
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+    }
+
+    .rgb-input-group input:focus {
+      outline: none;
+      border-color: var(--color-accent);
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      animation: fadeIn 0.3s ease-out;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>TheTimer</h1>
+      <p class="subtitle">Manage your project timers</p>
+    </header>
+
+    <main>
+      <section class="card" id="projects-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="list-todo" class="icon"></i>
+            Projects
+          </h2>
+        </div>
+        <div id="project-list">
+          <!-- Mock data for demonstration -->
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-index="0">
+                <td>
+                  <span class="color-preview" style="background-color: #f97316;"></span>
+                  Exercise
+                </td>
+                <td>
+                  <button class="btn edit-btn" onclick="handleEditClick(0)">
+                    <i data-lucide="edit-2" class="icon"></i>
+                    Edit
+                  </button>
+                  <button class="btn delete-btn" onclick="handleDeleteClick(0)">
+                    <i data-lucide="trash-2" class="icon"></i>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <tr data-index="1">
+                <td>
+                  <span class="color-preview" style="background-color: #8b5cf6;"></span>
+                  Work Project
+                </td>
+                <td>
+                  <button class="btn edit-btn" onclick="handleEditClick(1)">
+                    <i data-lucide="edit-2" class="icon"></i>
+                    Edit
+                  </button>
+                  <button class="btn delete-btn" onclick="handleDeleteClick(1)">
+                    <i data-lucide="trash-2" class="icon"></i>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              <tr data-index="2">
+                <td>
+                  <span class="color-preview" style="background-color: #eab308;"></span>
+                  Personal
+                </td>
+                <td>
+                  <button class="btn edit-btn" onclick="handleEditClick(2)">
+                    <i data-lucide="edit-2" class="icon"></i>
+                    Edit
+                  </button>
+                  <button class="btn delete-btn" onclick="handleDeleteClick(2)">
+                    <i data-lucide="trash-2" class="icon"></i>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="add-project-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="plus-circle" class="icon"></i>
+            Create New Project
+          </h2>
+        </div>
+        <form id="add-project-form">
+          <div class="form-content">
+            <!-- Color Selection -->
+            <div class="form-group">
+              <div class="color-selection-wrapper">
+                <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
+                <input type="text" id="name" name="name" placeholder="Enter project name" required>
+                <button type="submit" class="btn primary-btn">
+                  <i data-lucide="plus" class="icon"></i>
+                  <span>Create Project</span>
+                </button>
+              </div>
+            </div>
+              
+            <!-- Color Picker Dropdown -->
+            <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
+                <!-- Tailwind 500 Colors -->
+                <div class="color-presets">
+                  <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+                  <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+                  <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+                  <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+                  <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+                  <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+                  <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+                  <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+                  <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+                </div>
+                
+                <!-- Custom Color Section -->
+                <div class="custom-color-section">
+                  <div class="custom-color-header">
+                    <i data-lucide="edit-3" class="icon"></i>
+                    <span>Custom Color</span>
+                  </div>
+                  <div class="custom-color-picker">
+                    <div class="color-picker-main">
+                      <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
+                      <div class="color-gradient-picker">
+                        <div class="hue-saturation-picker" id="hueSatPicker">
+                          <div class="hue-sat-cursor" id="hueSatCursor"></div>
+                        </div>
+                        <div class="hue-slider" id="hueSlider">
+                          <div class="hue-cursor" id="hueCursor"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rgb-inputs">
+                      <div class="rgb-input-group">
+                        <label>R</label>
+                        <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
+                      </div>
+                      <div class="rgb-input-group">
+                        <label>G</label>
+                        <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
+                      </div>
+                      <div class="rgb-input-group">
+                        <label>B</label>
+                        <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="webhook-section">
+        <div class="card-header">
+          <h2>
+            <i data-lucide="webhook" class="icon"></i>
+            Webhook Configuration
+          </h2>
+        </div>
+        <form id="webhook-form">
+          <div class="form-group">
+            <label for="webhook-url">
+              <i data-lucide="link" class="icon"></i>
+              Webhook URL
+            </label>
+            <input type="url" id="webhook-url" name="webhook-url" placeholder="Enter webhook URL (optional)" required>
+            <p class="form-help">The webhook will be called when a timer completes. You can leave this empty if you
+              don't need webhook notifications.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="api-key">
+              <i data-lucide="key" class="icon"></i>
+              API Key
+            </label>
+            <input type="password" id="api-key" name="api-key" placeholder="Enter API Key (required for webhook)"
+              autocomplete="off">
+            <p class="form-help">The API key provided by your time tracking application for authentication.</p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary-btn">
+              <i data-lucide="save" class="icon"></i>
+              <span>Save Settings</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <div id="message-area"></div>
+      <div class="footer-text">TheTimer Project Manager</div>
+    </footer>
+  </div>
+
+  <script>
+    let selectedColorValue = '#3b82f6';
+    let currentHue = 220;
+    let currentSaturation = 100;
+    let currentLightness = 62;
+
+    // Color picker functionality
+    function toggleColorPicker() {
+      const dropdown = document.getElementById('colorPickerDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      
+      // Initialize color picker if it's being shown
+      if (dropdown.style.display === 'block') {
+        initializeColorPicker();
+      }
+    }
+
+    function initializeColorPicker() {
+      const hueSatPicker = document.getElementById('hueSatPicker');
+      const hueSlider = document.getElementById('hueSlider');
+      const hueSatCursor = document.getElementById('hueSatCursor');
+      const hueCursor = document.getElementById('hueCursor');
+      
+      // Initialize cursor positions
+      updateHueSatPicker();
+      updateHueSlider();
+      
+      // Add event listeners
+      hueSatPicker.addEventListener('mousedown', onHueSatMouseDown);
+      hueSlider.addEventListener('mousedown', onHueMouseDown);
+    }
+
+    function onHueSatMouseDown(e) {
+      e.preventDefault();
+      const rect = e.target.getBoundingClientRect();
+      
+      function onMouseMove(e) {
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        
+        currentSaturation = (x / rect.width) * 100;
+        currentLightness = 100 - (y / rect.height) * 100;
+        
+        updateColorFromHSL();
+        updateHueSatCursor(x, y);
+      }
+      
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      
+      onMouseMove(e);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function onHueMouseDown(e) {
+      e.preventDefault();
+      const rect = e.target.getBoundingClientRect();
+      
+      function onMouseMove(e) {
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        currentHue = (x / rect.width) * 360;
+        
+        updateColorFromHSL();
+        updateHueSlider();
+        updateHueSatPicker();
+      }
+      
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      
+      onMouseMove(e);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function updateColorFromHSL() {
+      const rgb = hslToRgb(currentHue / 360, currentSaturation / 100, currentLightness / 100);
+      const hexColor = rgbToHex(rgb.r, rgb.g, rgb.b);
+      
+      selectedColorValue = hexColor;
+      document.getElementById('selectedColor').style.backgroundColor = hexColor;
+      document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
+      
+      // Update RGB inputs
+      document.getElementById('rInput').value = rgb.r;
+      document.getElementById('gInput').value = rgb.g;
+      document.getElementById('bInput').value = rgb.b;
+      
+      // Clear preset selections
+      document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+    }
+
+    function updateHueSatCursor(x, y) {
+      const cursor = document.getElementById('hueSatCursor');
+      if (x !== undefined && y !== undefined) {
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+      } else {
+        const picker = document.getElementById('hueSatPicker');
+        const rect = picker.getBoundingClientRect();
+        const x = (currentSaturation / 100) * picker.offsetWidth;
+        const y = ((100 - currentLightness) / 100) * picker.offsetHeight;
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+      }
+    }
+
+    function updateHueSlider() {
+      const cursor = document.getElementById('hueCursor');
+      const slider = document.getElementById('hueSlider');
+      const x = (currentHue / 360) * slider.offsetWidth;
+      cursor.style.left = x + 'px';
+    }
+
+    function updateHueSatPicker() {
+      const picker = document.getElementById('hueSatPicker');
+      const hueColor = `hsl(${currentHue}, 100%, 50%)`;
+      picker.style.background = `
+        linear-gradient(to top, #000, transparent), 
+        linear-gradient(to right, #fff, transparent),
+        ${hueColor}
+      `;
+      updateHueSatCursor();
+    }
+
+    function selectColor(color) {
+      selectedColorValue = color;
+      document.getElementById('selectedColor').style.backgroundColor = color;
+      document.getElementById('colorPreviewLarge').style.backgroundColor = color;
+      
+      // Update RGB inputs
+      const rgb = hexToRgb(color);
+      if (rgb) {
+        document.getElementById('rInput').value = rgb.r;
+        document.getElementById('gInput').value = rgb.g;
+        document.getElementById('bInput').value = rgb.b;
+      }
+      
+      // Clear preset selections and mark this one as selected
+      document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+      document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+      
+      // Close dropdown
+      document.getElementById('colorPickerDropdown').style.display = 'none';
+    }
+
+    function updateFromRGB() {
+      const r = parseInt(document.getElementById('rInput').value) || 0;
+      const g = parseInt(document.getElementById('gInput').value) || 0;
+      const b = parseInt(document.getElementById('bInput').value) || 0;
+      
+      const hexColor = rgbToHex(r, g, b);
+      selectedColorValue = hexColor;
+      
+      // Convert RGB to HSL for the color picker
+      const hsl = rgbToHsl(r, g, b);
+      currentHue = hsl.h * 360;
+      currentSaturation = hsl.s * 100;
+      currentLightness = hsl.l * 100;
+      
+      document.getElementById('selectedColor').style.backgroundColor = hexColor;
+      document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
+      
+      // Update color picker visuals
+      updateHueSatPicker();
+      updateHueSlider();
+      
+      // Clear preset selections
+      document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+    }
+
+    // Color conversion utilities
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("");
+    }
+
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+
+      return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+      };
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+
+      return { h, s, l };
+    }
+
+    // Close color picker when clicking outside
+    document.addEventListener('click', function(event) {
+      const colorPicker = document.getElementById('colorPickerDropdown');
+      const selectedColor = document.getElementById('selectedColor');
+      
+      if (!colorPicker.contains(event.target) && event.target !== selectedColor) {
+        colorPicker.style.display = 'none';
+      }
+    });
+
+    // Basic functionality for demo purposes
+    function handleEditClick(index) {
+      console.log('Edit clicked for index:', index);
+      // Edit functionality would go here
+    }
+
+    function handleDeleteClick(index) {
+      console.log('Delete clicked for index:', index);
+      // Delete functionality would go here
+    }
+
+    // Initialize default selected color
+    document.addEventListener('DOMContentLoaded', function() {
+      selectColor('#3b82f6');
+      lucide.createIcons();
+    });
+
+    // Initialize all Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+
+</html>

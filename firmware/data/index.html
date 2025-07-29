@@ -46,13 +46,69 @@
           </h2>
         </div>
         <form id="add-project-form">
-          <div class="form-inline">
-            <input type="color" id="color" name="color" value="#0070f3" required>
-            <input type="text" id="name" name="name" placeholder="Enter project name" required>
-            <button type="submit" class="btn primary-btn">
-              <i data-lucide="plus" class="icon"></i>
-              <span>Create Project</span>
-            </button>
+          <div class="form-content">
+            <!-- Color Selection -->
+            <div class="form-group">
+              <div class="color-selection-wrapper">
+                <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
+                <input type="text" id="name" name="name" placeholder="Enter project name" required>
+                <button type="submit" class="btn primary-btn">
+                  <i data-lucide="plus" class="icon"></i>
+                  <span>Create Project</span>
+                </button>
+              </div>
+            </div>
+              
+            <!-- Color Picker Dropdown -->
+            <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
+                <!-- Tailwind 500 Colors -->
+                <div class="color-presets">
+                  <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+                  <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+                  <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+                  <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+                  <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+                  <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+                  <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+                  <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+                  <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+                </div>
+                
+                <!-- Custom Color Section -->
+                <div class="custom-color-section">
+                  <div class="custom-color-header">
+                    <i data-lucide="edit-3" class="icon"></i>
+                    <span>Custom Color</span>
+                  </div>
+                  <div class="custom-color-picker">
+                    <div class="color-picker-main">
+                      <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
+                      <div class="color-gradient-picker">
+                        <div class="hue-saturation-picker" id="hueSatPicker">
+                          <div class="hue-sat-cursor" id="hueSatCursor"></div>
+                        </div>
+                        <div class="hue-slider" id="hueSlider">
+                          <div class="hue-cursor" id="hueCursor"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rgb-inputs">
+                      <div class="rgb-input-group">
+                        <label>R</label>
+                        <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
+                      </div>
+                      <div class="rgb-input-group">
+                        <label>G</label>
+                        <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
+                      </div>
+                      <div class="rgb-input-group">
+                        <label>B</label>
+                        <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
           </div>
         </form>
       </section>

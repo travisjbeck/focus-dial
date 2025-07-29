@@ -24,11 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
     webhookForm.addEventListener('submit', handleWebhookSubmit);
   }
 
-  // Initialize color picker with default color
-  window.selectedColorValue = '#3b82f6';
-  window.currentHue = 220;
-  window.currentSaturation = 100;
-  window.currentLightness = 62;
+  // Setup color input
+  const colorInput = document.getElementById('color');
+  if (colorInput) {
+    // Send color update to device via WebSocket
+    colorInput.addEventListener('input', () => {
+      sendColorUpdate(colorInput.value);
+    });
+
+    // When the color picker is closed, reset the LED color
+    colorInput.addEventListener('change', () => {
+      // Send reset command after color is selected (the change event)
+      sendResetColorUpdate();
+    });
+  }
 });
 
 // WebSocket setup function
@@ -337,9 +346,10 @@ async function handleAddProjectSubmit(event) {
   event.preventDefault();
   const form = event.target;
   const nameInput = document.getElementById('name');
+  const colorInput = document.getElementById('color');
 
   const name = nameInput.value.trim();
-  const color = window.selectedColorValue || '#3b82f6';
+  const color = colorInput.value;
 
   if (!name) {
     showMessage('Project name cannot be empty.', 'error');
@@ -361,9 +371,7 @@ async function handleAddProjectSubmit(event) {
     if (response.ok) { // Status 201 Created (or potentially 200 OK)
       showMessage('Project added successfully.', 'success');
       form.reset(); // Clear the form
-      window.selectedColorValue = '#3b82f6'; // Reset color to default
-      document.getElementById('selectedColor').style.backgroundColor = '#3b82f6';
-      document.getElementById('colorPickerDropdown').style.display = 'none';
+      colorInput.value = '#0070f3'; // Reset color picker to default
 
       fetchAndRenderProjects(); // Refresh the list
     } else {
@@ -617,279 +625,3 @@ function rgbToHex(rgb) {
   const b = parseInt(result[3], 10).toString(16).padStart(2, '0');
   return `#${r}${g}${b}`;
 }
-
-// Color picker functionality
-function toggleColorPicker() {
-  const dropdown = document.getElementById('colorPickerDropdown');
-  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-  
-  // Initialize color picker if it's being shown
-  if (dropdown.style.display === 'block') {
-    initializeColorPicker();
-  }
-}
-
-function initializeColorPicker() {
-  const hueSatPicker = document.getElementById('hueSatPicker');
-  const hueSlider = document.getElementById('hueSlider');
-  const hueSatCursor = document.getElementById('hueSatCursor');
-  const hueCursor = document.getElementById('hueCursor');
-  
-  // Initialize cursor positions
-  updateHueSatPicker();
-  updateHueSlider();
-  
-  // Add event listeners
-  hueSatPicker.addEventListener('mousedown', onHueSatMouseDown);
-  hueSlider.addEventListener('mousedown', onHueMouseDown);
-}
-
-function onHueSatMouseDown(e) {
-  e.preventDefault();
-  const rect = e.target.getBoundingClientRect();
-  
-  function onMouseMove(e) {
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-    
-    window.currentSaturation = (x / rect.width) * 100;
-    window.currentLightness = 100 - (y / rect.height) * 100;
-    
-    updateColorFromHSL();
-    updateHueSatCursor(x, y);
-  }
-  
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }
-  
-  onMouseMove(e);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function onHueMouseDown(e) {
-  e.preventDefault();
-  const rect = e.target.getBoundingClientRect();
-  
-  function onMouseMove(e) {
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    window.currentHue = (x / rect.width) * 360;
-    
-    updateColorFromHSL();
-    updateHueSlider();
-    updateHueSatPicker();
-  }
-  
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }
-  
-  onMouseMove(e);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function updateColorFromHSL() {
-  const rgb = hslToRgb(window.currentHue / 360, window.currentSaturation / 100, window.currentLightness / 100);
-  const hexColor = rgbToHex2(rgb.r, rgb.g, rgb.b);
-  
-  window.selectedColorValue = hexColor;
-  document.getElementById('selectedColor').style.backgroundColor = hexColor;
-  document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
-  
-  // Update RGB inputs
-  document.getElementById('rInput').value = rgb.r;
-  document.getElementById('gInput').value = rgb.g;
-  document.getElementById('bInput').value = rgb.b;
-  
-  // Send color update to device
-  sendColorUpdate(hexColor);
-  
-  // Clear preset selections
-  document.querySelectorAll('.color-preset').forEach(preset => {
-    preset.classList.remove('selected');
-  });
-}
-
-function updateHueSatCursor(x, y) {
-  const cursor = document.getElementById('hueSatCursor');
-  if (x !== undefined && y !== undefined) {
-    cursor.style.left = x + 'px';
-    cursor.style.top = y + 'px';
-  } else {
-    const picker = document.getElementById('hueSatPicker');
-    const rect = picker.getBoundingClientRect();
-    const x = (window.currentSaturation / 100) * picker.offsetWidth;
-    const y = ((100 - window.currentLightness) / 100) * picker.offsetHeight;
-    cursor.style.left = x + 'px';
-    cursor.style.top = y + 'px';
-  }
-}
-
-function updateHueSlider() {
-  const cursor = document.getElementById('hueCursor');
-  const slider = document.getElementById('hueSlider');
-  const x = (window.currentHue / 360) * slider.offsetWidth;
-  cursor.style.left = x + 'px';
-}
-
-function updateHueSatPicker() {
-  const picker = document.getElementById('hueSatPicker');
-  const hueColor = `hsl(${window.currentHue}, 100%, 50%)`;
-  picker.style.background = `
-    linear-gradient(to top, #000, transparent), 
-    linear-gradient(to right, #fff, transparent),
-    ${hueColor}
-  `;
-  updateHueSatCursor();
-}
-
-function selectColor(color) {
-  window.selectedColorValue = color;
-  document.getElementById('selectedColor').style.backgroundColor = color;
-  document.getElementById('colorPreviewLarge').style.backgroundColor = color;
-  
-  // Update RGB inputs
-  const rgb = hexToRgb2(color);
-  if (rgb) {
-    document.getElementById('rInput').value = rgb.r;
-    document.getElementById('gInput').value = rgb.g;
-    document.getElementById('bInput').value = rgb.b;
-    
-    // Update HSL values
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    window.currentHue = hsl.h * 360;
-    window.currentSaturation = hsl.s * 100;
-    window.currentLightness = hsl.l * 100;
-    updateHueSatPicker();
-    updateHueSlider();
-  }
-  
-  // Send color update to device
-  sendColorUpdate(color);
-  
-  // Clear preset selections and mark this one as selected
-  document.querySelectorAll('.color-preset').forEach(preset => {
-    preset.classList.remove('selected');
-  });
-  if (document.querySelector(`[data-color="${color}"]`)) {
-    document.querySelector(`[data-color="${color}"]`).classList.add('selected');
-  }
-  
-  // Close dropdown
-  document.getElementById('colorPickerDropdown').style.display = 'none';
-}
-
-function updateFromRGB() {
-  const r = parseInt(document.getElementById('rInput').value) || 0;
-  const g = parseInt(document.getElementById('gInput').value) || 0;
-  const b = parseInt(document.getElementById('bInput').value) || 0;
-  
-  const hexColor = rgbToHex2(r, g, b);
-  window.selectedColorValue = hexColor;
-  
-  // Convert RGB to HSL for the color picker
-  const hsl = rgbToHsl(r, g, b);
-  window.currentHue = hsl.h * 360;
-  window.currentSaturation = hsl.s * 100;
-  window.currentLightness = hsl.l * 100;
-  
-  document.getElementById('selectedColor').style.backgroundColor = hexColor;
-  document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
-  
-  // Update color picker visuals
-  updateHueSatPicker();
-  updateHueSlider();
-  
-  // Send color update to device
-  sendColorUpdate(hexColor);
-  
-  // Clear preset selections
-  document.querySelectorAll('.color-preset').forEach(preset => {
-    preset.classList.remove('selected');
-  });
-}
-
-// Color conversion utilities
-function hexToRgb2(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
-function rgbToHex2(r, g, b) {
-  return "#" + [r, g, b].map(x => {
-    const hex = x.toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  }).join("");
-}
-
-function hslToRgb(h, s, l) {
-  let r, g, b;
-
-  if (s === 0) {
-    r = g = b = l; // achromatic
-  } else {
-    const hue2rgb = (p, q, t) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-      return p;
-    };
-
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
-  }
-
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255)
-  };
-}
-
-function rgbToHsl(r, g, b) {
-  r /= 255;
-  g /= 255;
-  b /= 255;
-  
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-
-  if (max === min) {
-    h = s = 0; // achromatic
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-
-  return { h, s, l };
-}
-
-// Close color picker when clicking outside
-document.addEventListener('click', function(event) {
-  const colorPicker = document.getElementById('colorPickerDropdown');
-  const selectedColor = document.getElementById('selectedColor');
-  
-  if (colorPicker && selectedColor && !colorPicker.contains(event.target) && event.target !== selectedColor) {
-    colorPicker.style.display = 'none';
-  }
-});
