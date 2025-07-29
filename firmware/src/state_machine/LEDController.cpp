@@ -457,12 +457,12 @@ void LEDController::handleSpinner()
   
   clearAll();
   
-  // Calculate spinner position
-  int position = (elapsed / 100) % numLeds; // Move every 100ms
+  // Calculate spinner position - REVERSED DIRECTION
+  int position = numLeds - ((elapsed / 100) % numLeds); // Move every 100ms, reversed
   
   // Light up 3 LEDs with trailing effect
   for (int i = 0; i < 3; i++) {
-    int ledIndex = (position - i + numLeds) % numLeds;
+    int ledIndex = (position + i) % numLeds; // Changed from - to + for reversed trail
     uint16_t adjustedIndex = adjustPixelIndex(ledIndex);
     float brightness = 1.0f - (i * 0.33f); // Fade trail (1.0, 0.67, 0.33)
     
@@ -534,12 +534,12 @@ void LEDController::handleRadarSweep()
   
   clearAll();
   
-  // Update sweep position
-  sweepPosition = fmodf(elapsed * RADAR_SWEEP_SPEED_LEDS_PER_SEC / 1000.0f, numLeds);
+  // Update sweep position - REVERSED DIRECTION
+  sweepPosition = numLeds - fmodf(elapsed * RADAR_SWEEP_SPEED_LEDS_PER_SEC / 1000.0f, numLeds);
   
   // Draw sweep with tail
   for (int i = 0; i < RADAR_SWEEP_TAIL_LENGTH; i++) {
-    int ledIndex = ((int)sweepPosition - i + numLeds) % numLeds;
+    int ledIndex = ((int)sweepPosition + i) % numLeds;  // Changed from - to + for reversed tail
     uint16_t adjustedIndex = adjustPixelIndex(ledIndex);
     
     // Calculate brightness for tail effect

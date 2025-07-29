@@ -16,10 +16,10 @@ void StartupState::onEnter()
 {
   ESP_LOGI(getLogTag(), "Showing splash screen");
   
-  // Set LED to teal spinner animation for startup
+  // Set LED to brand color spinner animation for startup
   LEDController* ledController = stateMachine.getLEDController();
   if (ledController) {
-    ledController->startSpinner(0x00FFFF, -1); // Full brightness teal spinner
+    ledController->startSpinner(0xc2e189, -1); // Full brightness green spinner (brand color)
   }
   
   // TODO: Show splash screen

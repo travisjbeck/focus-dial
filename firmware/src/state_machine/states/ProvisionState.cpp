@@ -169,74 +169,136 @@ void ProvisionState::stopAPMode()
 
 void ProvisionState::handleRoot()
 {
+  // Scan for available WiFi networks
+  int n = WiFi.scanNetworks();
+  
   String html = R"(
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TheTimer - Provisioning</title>
   <style>
+    :root {
+      --theme-color: #c2e189;    
+      --font-color: #fff;
+      --card-background: #171717;
+      --black: #080808;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
-      background: #f0f0f0;
+      padding: 0;
+      background-color: var(--black);
+      color: var(--font-color);
     }
     .container {
-      max-width: 400px;
+      max-width: 600px;
       margin: 0 auto;
-      background: white;
+      padding: 20px;
+    }
+    .card {
+      background: var(--card-background);
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
     }
     h1 {
-      color: #333;
       text-align: center;
-      margin-bottom: 30px;
+      margin: 20px 0;
+      font-size: 2em;
     }
-    input {
+    .project-info {
+      margin: 20px 0;
+      line-height: 1.6;
+      color: #ccc;
+    }
+    select, input[type="password"] {
       width: 100%;
-      padding: 12px;
+      padding: 12px 16px;
       margin: 8px 0;
       box-sizing: border-box;
-      border: 2px solid #ddd;
-      border-radius: 5px;
+      border: 1px solid #333;
+      border-radius: 8px;
       font-size: 16px;
+      background-color: #0a0a0a;
+      color: var(--font-color);
+      appearance: none;
+      transition: border-color 0.2s;
     }
-    input:focus {
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 20px;
+      padding-right: 40px;
+    }
+    select:focus, input:focus {
       outline: none;
-      border-color: #4CAF50;
+      border-color: var(--theme-color);
     }
     button {
       width: 100%;
-      background-color: #4CAF50;
-      color: white;
+      background-color: var(--theme-color);
+      color: #000;
       padding: 14px;
       margin: 20px 0;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       font-size: 18px;
+      font-weight: 600;
       cursor: pointer;
+      transition: opacity 0.2s;
     }
     button:hover {
-      background-color: #45a049;
+      opacity: 0.9;
     }
-    .device-info {
+    .footer {
       text-align: center;
+      margin-top: 30px;
       color: #666;
-      margin-bottom: 20px;
+      font-size: 0.9em;
+    }
+    label {
+      display: block;
+      margin: 15px 0 5px;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Timer Device Setup</h1>
-    <div class="device-info">)" + deviceAPName + R"(</div>
-    <form action="/config" method="POST">
-      <input type="text" name="ssid" placeholder="WiFi Network Name" required>
-      <input type="password" name="password" placeholder="WiFi Password" required>
-      <button type="submit">Connect</button>
-    </form>
+    <h1>TheTimer Setup</h1>
+    
+    <div class="card">
+      <div class="project-info">
+        Select a WiFi network to save and allow TheTimer to trigger automations.
+      </div>
+      
+      <form action="/config" method="POST">
+        <label>Select WiFi Network</label>
+        <select name="ssid" required>
+          <option value="">Select Network</option>)";
+  
+  // Add available networks to dropdown
+  for (int i = 0; i < n; i++) {
+    html += "<option value=\"" + WiFi.SSID(i) + "\">" + WiFi.SSID(i) + " (" + String(WiFi.RSSI(i)) + " dBm)</option>";
+  }
+  
+  html += R"(
+        </select>
+        
+        <label>WiFi Password</label>
+        <input type="password" name="password" placeholder="Enter your WiFi password" required>
+        
+        <button type="submit">Connect</button>
+      </form>
+    </div>
+    
+    <div class="footer">
+      TheTimer - Made by Magic Sauce
+    </div>
   </div>
 </body>
 </html>
@@ -257,32 +319,60 @@ void ProvisionState::handleConfig()
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TheTimer - Configuration Received</title>
   <style>
+    :root {
+      --theme-color: #c2e189;    
+      --font-color: #fff;
+      --card-background: #171717;
+      --black: #080808;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
-      background: #f0f0f0;
+      padding: 0;
+      background-color: var(--black);
+      color: var(--font-color);
       text-align: center;
     }
-    .message {
-      max-width: 400px;
-      margin: 50px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    h2 { color: #4CAF50; }
-    p { color: #666; }
+    .message {
+      background: var(--card-background);
+      padding: 40px;
+      border-radius: 10px;
+      margin-top: 50px;
+    }
+    h2 { 
+      color: var(--theme-color);
+      margin-bottom: 20px;
+    }
+    p { 
+      color: #ccc;
+      line-height: 1.6;
+      margin: 10px 0;
+    }
+    .success-icon {
+      font-size: 48px;
+      color: var(--theme-color);
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
-  <div class="message">
-    <h2>Configuration Received!</h2>
-    <p>Attempting to connect to WiFi network...</p>
-    <p>The device will restart once connected.</p>
+  <div class="container">
+    <div class="message">
+      <div class="success-icon">✓</div>
+      <h2>Configuration Received!</h2>
+      <p>Provision Complete. TheTimer will now start and status led will turn to blue.</p>
+      <p>Attempting to connect to WiFi network...</p>
+      <p>The device will restart once connected.</p>
+    </div>
   </div>
 </body>
 </html>
@@ -297,8 +387,8 @@ void ProvisionState::handleConfig()
 
 void ProvisionState::handleNotFound()
 {
-  // Redirect all requests to the root page for captive portal
-  webServer->sendHeader("Location", "/", true);
+  // For captive portal, redirect all requests to the root page
+  webServer->sendHeader("Location", "http://192.168.4.1/", true);
   webServer->send(302, "text/plain", "");
 }
 
@@ -370,3 +460,4 @@ String ProvisionState::generateAPName()
   // Use static name "TheTimer"
   return String("TheTimer");
 }
+
