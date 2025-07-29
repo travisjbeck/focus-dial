@@ -975,7 +975,12 @@ void handleApiProjects() {
             JsonObject obj = array.createNestedObject();
             obj["id"] = i;
             obj["name"] = project->name;
-            obj["color"] = project->color;
+            
+            // Convert color from uint32_t to hex string
+            char colorHex[8];
+            snprintf(colorHex, sizeof(colorHex), "#%06X", project->color);
+            obj["color"] = colorHex;
+            
             obj["selected"] = (i == pm.getSelectedProjectIndex());
         }
     }

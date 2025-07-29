@@ -281,7 +281,8 @@ async function fetchAndRenderProjects() {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const projects = await response.json();
+    const data = await response.json();
+    const projects = data.projects || [];
     renderProjectList(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -308,8 +309,7 @@ function renderProjectList(projects) {
         <table>
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Color</th>
+                    <th>Project</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -322,9 +322,6 @@ function renderProjectList(projects) {
                 <td>
                   <span class="color-preview" style="background-color: ${escapeHtml(project.color)};"></span>
                   ${escapeHtml(project.name)}
-                </td>
-                <td>
-                  <code class="color-hex">${escapeHtml(project.color)}</code>
                 </td>
                 <td>
                     <button class="btn edit-btn" onclick="handleEditClick(${index})">
@@ -409,24 +406,21 @@ function handleEditClick(index) {
   row.classList.add('editing'); // Mark row as being edited
 
   const nameCell = row.cells[0];
-  const colorCell = row.cells[1];
-  const actionsCell = row.cells[2];
+  const actionsCell = row.cells[1];
 
-  // Extract name from the first cell (removing the color preview)
+  // Extract name and color from the first cell
+  const colorPreview = nameCell.querySelector('.color-preview');
   const currentName = nameCell.textContent.trim();
-
-  // Get color from the second cell (hex code)
-  const currentColorHex = colorCell.querySelector('.color-hex').textContent.trim();
+  const currentColorHex = colorPreview ? rgbToHex(colorPreview.style.backgroundColor) || colorPreview.style.backgroundColor : '#000000';
 
   // Store original values for cancellation
   row.dataset.originalName = currentName;
   row.dataset.originalColor = currentColorHex;
 
-  nameCell.innerHTML = `<input type="text" class="edit-name" value="${escapeHtml(currentName)}" required>`;
-  colorCell.innerHTML = `
-    <div class="color-input-wrapper">
+  nameCell.innerHTML = `
+    <div class="edit-project-wrapper">
       <input type="color" class="edit-color" value="${escapeHtml(currentColorHex)}" required>
-      <span class="color-hex edit-color-hex">${escapeHtml(currentColorHex)}</span>
+      <input type="text" class="edit-name" value="${escapeHtml(currentName)}" required>
     </div>
   `;
   actionsCell.innerHTML = `
@@ -444,12 +438,9 @@ function handleEditClick(index) {
   lucide.createIcons();
 
   // Add event listener for color preview
-  const editColorInput = colorCell.querySelector('.edit-color');
-  const editColorHex = colorCell.querySelector('.edit-color-hex');
-  if (editColorInput && editColorHex) {
+  const editColorInput = nameCell.querySelector('.edit-color');
+  if (editColorInput) {
     editColorInput.addEventListener('input', () => {
-      editColorHex.textContent = editColorInput.value;
-
       // Send color update to device via WebSocket
       sendColorUpdate(editColorInput.value);
     });
@@ -481,9 +472,6 @@ function handleCancelClick(index) {
     ${escapeHtml(originalName)}
   `;
   row.cells[1].innerHTML = `
-    <code class="color-hex">${escapeHtml(originalColor)}</code>
-  `;
-  row.cells[2].innerHTML = `
     <button class="btn edit-btn" onclick="handleEditClick(${index})">
       <i data-lucide="edit-2" class="icon"></i>
       Edit
