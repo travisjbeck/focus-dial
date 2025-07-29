@@ -46,26 +46,9 @@
           </h2>
         </div>
         <form id="add-project-form">
-          <div class="form-group">
-            <label for="name">
-              <i data-lucide="text" class="icon"></i>
-              Project Name
-            </label>
+          <div class="form-inline">
+            <input type="color" id="color" name="color" value="#0070f3" required>
             <input type="text" id="name" name="name" placeholder="Enter project name" required>
-          </div>
-
-          <div class="form-group">
-            <label for="color">
-              <i data-lucide="palette" class="icon"></i>
-              Project Color
-            </label>
-            <div class="color-input-wrapper">
-              <input type="color" id="color" name="color" value="#0070f3" required>
-              <span class="color-hex" id="color-hex-value">#0070f3</span>
-            </div>
-          </div>
-
-          <div class="form-actions">
             <button type="submit" class="btn primary-btn">
               <i data-lucide="plus" class="icon"></i>
               <span>Create Project</span>

@@ -94,6 +94,30 @@ h2 {
   overflow: hidden;
 }
 
+/* Special styling for projects section - no nested background */
+#projects-section {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+#projects-section .card-header {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  margin-bottom: 0;
+}
+
+#projects-section #project-list table {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  overflow: hidden;
+}
+
 .card-header {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--color-border);
@@ -113,11 +137,10 @@ h2 {
   display: table;
   width: 100%;
   padding: 0;
-  margin: 1.5rem;
-  width: calc(100% - 3rem);
-  background-color: #1a1a1a;
-  border-radius: var(--border-radius-sm);
-  overflow: hidden;
+  margin: 0;
+  background-color: transparent;
+  border-radius: 0;
+  overflow: visible;
 }
 
 #project-list > div {
@@ -171,8 +194,8 @@ h2 {
 
 .color-preview {
   display: inline-block;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: var(--border-radius-sm);
   margin-right: 0.75rem;
   vertical-align: middle;
@@ -263,7 +286,7 @@ input[type="color"] {
   width: 2.5rem;
   height: 2.5rem;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--border-radius-sm);
   background: none;
   cursor: pointer;
   overflow: hidden;
@@ -275,7 +298,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 input[type="color"]::-webkit-color-swatch {
   border: none;
-  border-radius: 50%;
+  border-radius: var(--border-radius-sm);
   padding: 0;
 }
 
@@ -324,26 +347,30 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .edit-btn {
-  background-color: #1f1f1f;
-  color: var(--color-text-primary);
-  border: 1px solid #333;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
   padding: 0.5rem 0.75rem;
   margin-right: 0.25rem;
 }
 
 .edit-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .delete-btn {
-  background-color: rgba(255, 69, 58, 0.1);
-  color: var(--color-error);
-  border: 1px solid rgba(255, 69, 58, 0.2);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
   padding: 0.5rem 0.75rem;
 }
 
 .delete-btn:hover {
-  background-color: rgba(255, 69, 58, 0.15);
+  color: var(--color-error);
+  background-color: rgba(255, 69, 58, 0.1);
+  border-color: rgba(255, 69, 58, 0.2);
 }
 
 .save-btn {
@@ -550,8 +577,9 @@ footer {
 
 /* Buttons in table should be more compact */
 #project-list .btn {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.625rem;
   min-width: auto;
+  font-size: 0.8125rem;
 }
 
 /* Ensure buttons on same line */
@@ -582,6 +610,28 @@ footer {
   opacity: 0.8;
 }
 
+/* Inline form for create project */
+.form-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+}
+
+.form-inline input[type="text"] {
+  flex: 1;
+  margin: 0;
+}
+
+.form-inline input[type="color"] {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.form-inline .btn {
+  margin: 0;
+}
+
 /* Edit project wrapper - inline color and name inputs */
 .edit-project-wrapper {
   display: flex;
@@ -591,8 +641,8 @@ footer {
 
 .edit-project-wrapper .edit-color {
   flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2rem;
+  height: 2rem;
   padding: 0;
   border-radius: var(--border-radius-sm);
 }

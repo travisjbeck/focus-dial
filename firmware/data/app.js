@@ -24,18 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     webhookForm.addEventListener('submit', handleWebhookSubmit);
   }
 
-  // Setup color input and hex value display
+  // Setup color input
   const colorInput = document.getElementById('color');
-  const colorHexValue = document.getElementById('color-hex-value');
-  if (colorInput && colorHexValue) {
-    // Initial value
-    colorHexValue.textContent = colorInput.value;
-
-    // Update hex value when color changes
+  if (colorInput) {
+    // Send color update to device via WebSocket
     colorInput.addEventListener('input', () => {
-      colorHexValue.textContent = colorInput.value;
-
-      // Send color update to device via WebSocket
       sendColorUpdate(colorInput.value);
     });
 
@@ -379,12 +372,6 @@ async function handleAddProjectSubmit(event) {
       showMessage('Project added successfully.', 'success');
       form.reset(); // Clear the form
       colorInput.value = '#0070f3'; // Reset color picker to default
-
-      // Also reset the color hex value
-      const colorHexValue = document.getElementById('color-hex-value');
-      if (colorHexValue) {
-        colorHexValue.textContent = '#0070f3';
-      }
 
       fetchAndRenderProjects(); // Refresh the list
     } else {
