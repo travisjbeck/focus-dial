@@ -414,6 +414,31 @@ These commands make AI calls and may take up to a minute:
 
 ---
 
+## Arduino Compilation and Upload
+
+### CRITICAL: ESP32-S3-Touch-AMOLED-1.75 Board Configuration
+
+**Device Specifications:**
+- **Flash Size: 16MB** (NOT the default 4MB!)
+- **PSRAM: 8MB OPI PSRAM**
+- **Required partition scheme: huge_app** (provides 3MB for app, firmware needs 1.57MB)
+
+**ALWAYS USE THESE EXACT COMMANDS:**
+
+```bash
+# Compile (from firmware directory)
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean
+
+# Upload
+arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app
+```
+
+**Why this is critical:**
+- Default settings assume 4MB flash with 1.2MB app partition
+- This firmware is 1.57MB and WILL NOT FIT in default partition
+- Missing `FlashSize=16M` causes "Sketch too big" error every time
+- The `huge_app` partition provides 3MB for the application
+
 ## Arduino Monitoring Workflow
 
 ### IMPORTANT: Reliable Serial Monitoring for ESP32-S3
@@ -433,10 +458,11 @@ esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && sleep 0.5 &&
 
 ### Method 2: Full Build, Upload, Reset and Monitor
 ```bash
+# CRITICAL: This device has 16MB flash - MUST specify FlashSize=16M and huge_app partition!
 # Complete workflow with proper startup capture
 cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
-arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc --build-property "build.psram_type=opi" && \
-arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc && \
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean && \
+arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app && \
 sleep 2 && \
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && \
 sleep 0.5 && \
@@ -469,7 +495,7 @@ Type 'test' again to run tests, or continue normal operation...
 ### Method 4: Wake from Sleep and Upload
 ```bash
 # Wake ESP32-S3 from auto-sleep mode and upload firmware
-esptool.py --port /dev/cu.usbmodem32301 --before default_reset --after hard_reset chip_id && sleep 1 && cd "/Users/Travis/Developer/ProjectTimerDevice/firmware" && arduino-cli upload --fqbn esp32:esp32:esp32s3 --port /dev/cu.usbmodem32301 .
+esptool.py --port /dev/cu.usbmodem32301 --before default_reset --after hard_reset chip_id && sleep 1 && cd "/Users/Travis/Developer/ProjectTimerDevice/firmware" && arduino-cli upload --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --port /dev/cu.usbmodem32301
 ```
 
 ### Key Points:
