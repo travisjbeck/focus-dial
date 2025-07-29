@@ -937,10 +937,10 @@ bool StateMachine::initializeLEDController()
     return false;
   }
   
-  // Test power sufficiency
-  if (!g_ledController->test3V3PowerSufficiency()) {
-    ESP_LOGW(TAG, "3.3V power sufficiency test failed - LEDs may be dim");
-  }
+  // Skip power sufficiency test to avoid white LED flash during init
+  // if (!g_ledController->test3V3PowerSufficiency()) {
+  //   ESP_LOGW(TAG, "3.3V power sufficiency test failed - LEDs may be dim");
+  // }
   
   ESP_LOGI(TAG, "LED controller initialized successfully");
   return true;
