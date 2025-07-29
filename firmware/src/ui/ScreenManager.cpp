@@ -159,24 +159,7 @@ void ScreenManager::createAdjustScreen() {
     
 }
 
-// Mock project data (will be replaced with NVS storage later)
-static const char* mockProjects[] = {
-    "No Project",
-    "Work", 
-    "Personal",
-    "Exercise",
-    "Study",
-    "Hobby"
-};
-
-static const uint32_t mockProjectColors[] = {
-    0x888888,  // Gray for No Project
-    0x0080FF,  // Blue for Work
-    0x00FF80,  // Green for Personal
-    0xFF8000,  // Orange for Exercise  
-    0x8000FF,  // Purple for Study
-    0xFFFF00   // Yellow for Hobby
-};
+// Projects are now loaded from ProjectManager dynamically
 
 void ScreenManager::createProjectScreen() {
     project_screen = lv_obj_create(NULL);
@@ -663,8 +646,11 @@ void ScreenManager::updateDoneBreathing() {
 }
 
 void ScreenManager::updateProjectDisplay(int newIndex) {
+    ProjectManager& pm = ProjectManager::getInstance();
+    int projectCount = pm.getProjectCount();
+    
     // Validate index
-    if (newIndex < 0 || newIndex >= 6) return;
+    if (newIndex < 0 || newIndex >= projectCount) return;
     
     currentProjectIndex = newIndex;
     
@@ -672,38 +658,56 @@ void ScreenManager::updateProjectDisplay(int newIndex) {
     int indices[5];
     for (int i = 0; i < 5; i++) {
         int offset = i - 2; // -2, -1, 0, 1, 2
-        int idx = (currentProjectIndex + offset + 6) % 6; // Wrap around
+        int idx = (currentProjectIndex + offset + projectCount) % projectCount; // Wrap around
         indices[i] = idx;
     }
     
     // Update labels
     for (int i = 0; i < 5; i++) {
         if (project_labels[i]) {
-            lv_label_set_text(project_labels[i], mockProjects[indices[i]]);
-            
-            // Update color and opacity based on position
-            if (i == 2) { // Center label (selected)
-                lv_obj_set_style_text_color(project_labels[i], lv_color_hex(mockProjectColors[indices[i]]), 0);
-                lv_obj_set_style_text_opa(project_labels[i], 255, 0); // Full opacity
-            } else {
-                lv_obj_set_style_text_color(project_labels[i], lv_color_hex(0x888888), 0); // Gray
-                lv_obj_set_style_text_opa(project_labels[i], 102, 0); // 40% opacity
+            const Project* project = pm.getProject(indices[i]);
+            if (project) {
+                lv_label_set_text(project_labels[i], project->name.c_str());
+                
+                // Update color and opacity based on position
+                if (i == 2) { // Center label (selected)
+                    uint32_t color = pm.hexToRGB(project->color);
+                    lv_obj_set_style_text_color(project_labels[i], lv_color_hex(color), 0);
+                    lv_obj_set_style_text_opa(project_labels[i], 255, 0); // Full opacity
+                } else {
+                    lv_obj_set_style_text_color(project_labels[i], lv_color_hex(0x888888), 0); // Gray
+                    lv_obj_set_style_text_opa(project_labels[i], 102, 0); // 40% opacity
+                }
             }
         }
     }
     
     // Update arc color to match selected project
     if (project_progress_arc) {
-        lv_obj_set_style_arc_color(project_progress_arc, lv_color_hex(mockProjectColors[currentProjectIndex]), LV_PART_INDICATOR);
+        const Project* selectedProject = pm.getProject(currentProjectIndex);
+        if (selectedProject) {
+            uint32_t color = pm.hexToRGB(selectedProject->color);
+            lv_obj_set_style_arc_color(project_progress_arc, lv_color_hex(color), LV_PART_INDICATOR);
+        }
     }
 }
 
 const char* ScreenManager::getCurrentProjectName() {
-    return mockProjects[currentProjectIndex];
+    ProjectManager& pm = ProjectManager::getInstance();
+    const Project* project = pm.getProject(currentProjectIndex);
+    if (project) {
+        return project->name.c_str();
+    }
+    return "No Project";
 }
 
 uint32_t ScreenManager::getCurrentProjectColor() {
-    return mockProjectColors[currentProjectIndex];
+    ProjectManager& pm = ProjectManager::getInstance();
+    const Project* project = pm.getProject(currentProjectIndex);
+    if (project) {
+        return pm.hexToRGB(project->color);
+    }
+    return 0x888888; // Default gray
 }
 
 void ScreenManager::showConfirmDialog(const char* message) {

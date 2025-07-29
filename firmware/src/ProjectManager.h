@@ -50,6 +50,12 @@ public:
     String getAPIKey() const { return apiKey; }
     void setAPIKey(const String& key);
     
+    // Convert hex string to RGB color
+    uint32_t hexToRGB(const String& hex) const;
+    
+    // Force reload of projects (useful after web updates)
+    void reloadProjects() { loadProjectsFromNVS(); }
+    
 private:
     ProjectManager() : selectedProjectIndex(0) {}
     
@@ -58,9 +64,6 @@ private:
     void loadProjectsFromNVS();
     void saveSettingsToNVS();
     void loadSettingsFromNVS();
-    
-    // Convert hex string to RGB color
-    uint32_t hexToRGB(const String& hex) const;
     
     int selectedProjectIndex;
     std::vector<Project> projects;

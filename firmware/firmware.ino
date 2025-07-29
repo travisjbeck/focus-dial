@@ -1059,6 +1059,10 @@ void handleApiProjectsPost() {
     
     ProjectManager& pm = ProjectManager::getInstance();
     if (pm.addProject(name, color)) {
+        // Refresh the display if we're on the project screen
+        if (screenManager.getCurrentScreen() == screenManager.getProjectScreen()) {
+            screenManager.refreshProjectDisplay();
+        }
         apiServer.send(201, "application/json", "{\"success\":true}");
     } else {
         apiServer.send(400, "application/json", "{\"error\":\"Failed to add project (max reached)\"}");
@@ -1092,6 +1096,15 @@ void handleApiUpdateProject() {
     
     ProjectManager& pm = ProjectManager::getInstance();
     if (pm.updateProject(index, name, color)) {
+        // Refresh the display if we're on the project screen
+        if (screenManager.getCurrentScreen() == screenManager.getProjectScreen()) {
+            screenManager.refreshProjectDisplay();
+        }
+        // Also update LED color if this is the currently selected project
+        if (index == pm.getSelectedProjectIndex()) {
+            uint32_t newColor = pm.getSelectedProjectColor();
+            stateMachine.getLEDController()->setSolid(newColor);
+        }
         apiServer.send(200, "application/json", "{\"success\":true}");
     } else {
         apiServer.send(404, "application/json", "{\"error\":\"Invalid project index\"}");
@@ -1109,6 +1122,17 @@ void handleApiDeleteProject() {
     
     ProjectManager& pm = ProjectManager::getInstance();
     if (pm.deleteProject(index)) {
+        // Refresh the display if we're on the project screen
+        if (screenManager.getCurrentScreen() == screenManager.getProjectScreen()) {
+            // If we're in project select state, we need to update the bounds
+            State* currentState = stateMachine.getCurrentState();
+            if (currentState && strcmp(currentState->getStateName(), "ProjectSelectState") == 0) {
+                // The project count has changed, need to re-enter the state to reload
+                stateMachine.changeState(currentState);
+            } else {
+                screenManager.refreshProjectDisplay();
+            }
+        }
         apiServer.send(200, "application/json", "{\"success\":true}");
     } else {
         apiServer.send(404, "application/json", "{\"error\":\"Invalid project index\"}");

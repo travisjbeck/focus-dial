@@ -59,6 +59,9 @@ public:
     const char* getCurrentProjectName();
     uint32_t getCurrentProjectColor();
     
+    // Refresh project display with current data
+    void refreshProjectDisplay() { updateProjectDisplay(currentProjectIndex); }
+    
 private:
     // Project selection
     int currentProjectIndex;

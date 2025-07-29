@@ -19,9 +19,9 @@ ProjectSelectState::~ProjectSelectState()
 void ProjectSelectState::onEnter()
 {
   // Get the selected project from StateMachine (now uses same indexing as ProjectManager)
-  // Both use 0-5 indexing: 0="No Project", 1="Work", 2="Personal", etc.
   selectedIndex = stateMachine.getSelectedProjectIndex();
-  projectCount = 6; // 6 mock projects
+  ProjectManager& pm = ProjectManager::getInstance();
+  projectCount = pm.getProjectCount();
   
   ESP_LOGI(getLogTag(), "Loading project selection with index: %d", selectedIndex);
   ESP_LOGI(getLogTag(), "Showing project list with %d projects", projectCount);
