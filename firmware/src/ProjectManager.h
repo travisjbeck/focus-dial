@@ -2,11 +2,16 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include <ArduinoJson.h>
+#include <vector>
+
+// Maximum number of projects
+const int MAX_PROJECTS = 10;
 
 // Project structure
 struct Project {
-    const char* name;
-    uint32_t color;
+    String name;
+    String color;  // Hex color string (e.g., "#FF0000")
 };
 
 class ProjectManager {
@@ -26,20 +31,40 @@ public:
     void saveToNVS();
     void loadFromNVS();
     
+    // Project management
+    bool addProject(const String& name, const String& color);
+    bool updateProject(int index, const String& name, const String& color);
+    bool deleteProject(int index);
+    
     // Web API access
-    int getProjectCount() const { return PROJECT_COUNT; }
+    int getProjectCount() const { return projects.size(); }
     const Project* getProject(int index) const { 
-        if (index >= 0 && index < PROJECT_COUNT) return &projects[index]; 
+        if (index >= 0 && index < projects.size()) return &projects[index]; 
         return nullptr;
     }
-    const Project* getAllProjects() const { return projects; }
+    const std::vector<Project>& getAllProjects() const { return projects; }
+    
+    // Webhook and API key management
+    String getWebhookURL() const { return webhookURL; }
+    void setWebhookURL(const String& url);
+    String getAPIKey() const { return apiKey; }
+    void setAPIKey(const String& key);
     
 private:
     ProjectManager() : selectedProjectIndex(0) {}
-    int selectedProjectIndex;
-    Preferences preferences;
     
-    // Mock projects - will be replaced with dynamic list later
-    static const Project projects[];
-    static const int PROJECT_COUNT;
+    // Save/load projects and settings
+    void saveProjectsToNVS();
+    void loadProjectsFromNVS();
+    void saveSettingsToNVS();
+    void loadSettingsFromNVS();
+    
+    // Convert hex string to RGB color
+    uint32_t hexToRGB(const String& hex) const;
+    
+    int selectedProjectIndex;
+    std::vector<Project> projects;
+    String webhookURL;
+    String apiKey;
+    Preferences preferences;
 };

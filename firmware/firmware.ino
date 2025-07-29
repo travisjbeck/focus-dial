@@ -17,6 +17,7 @@
 #include <esp_task_wdt.h>
 #include <WiFi.h>
 #include <WebServer.h>
+// #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <ESPmDNS.h>
@@ -162,12 +163,21 @@ void handleWakeUp();
 
 // Web Server
 WebServer apiServer(80);
+// WebSocketsServer webSocket(81);
 bool webServerRunning = false;
 
 void startWebServer();
 void handleApiProjects();
 void handleApiStatus();
+void handleApiProjectsPost();
+void handleApiUpdateProject();
+void handleApiDeleteProject();
+void handleApiWebhookGet();
+void handleApiWebhookPost();
+void handleApiKeyGet();
+void handleApiKeyPost();
 void handleNotFound();
+// void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
 
 
 // Rounder callback for display optimization (critical for performance)
@@ -900,6 +910,7 @@ void loop() {
     // Handle web server clients
     if (webServerRunning) {
         apiServer.handleClient();
+        // webSocket.loop();
     }
     
     delay(5);  // 5ms as per working example
@@ -952,20 +963,33 @@ void startWebServer() {
         }
     });
     apiServer.on("/api/projects", HTTP_GET, handleApiProjects);
+    apiServer.on("/api/projects", HTTP_POST, handleApiProjectsPost);
+    apiServer.on("/api/updateProject", HTTP_POST, handleApiUpdateProject);
+    apiServer.on("/api/deleteProject", HTTP_POST, handleApiDeleteProject);
+    apiServer.on("/api/webhook", HTTP_GET, handleApiWebhookGet);
+    apiServer.on("/api/webhook", HTTP_POST, handleApiWebhookPost);
+    apiServer.on("/api/apikey", HTTP_GET, handleApiKeyGet);
+    apiServer.on("/api/apikey", HTTP_POST, handleApiKeyPost);
     apiServer.on("/api/status", HTTP_GET, handleApiStatus);
     apiServer.onNotFound(handleNotFound);
     
     // Start server
     apiServer.begin();
+    
+    // Start WebSocket server
+    // webSocket.begin();
+    // webSocket.onEvent(webSocketEvent);
+    
     webServerRunning = true;
     
     USBSerial.print("Web Server started at http://");
     USBSerial.print(WiFi.localIP());
     USBSerial.println(" and http://thetimer.local");
+    USBSerial.println("WebSocket server started on port 81");
 }
 
 void handleApiProjects() {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     JsonArray array = doc.createNestedArray("projects");
     
     ProjectManager& pm = ProjectManager::getInstance();
@@ -975,12 +999,7 @@ void handleApiProjects() {
             JsonObject obj = array.createNestedObject();
             obj["id"] = i;
             obj["name"] = project->name;
-            
-            // Convert color from uint32_t to hex string
-            char colorHex[8];
-            snprintf(colorHex, sizeof(colorHex), "#%06X", project->color);
-            obj["color"] = colorHex;
-            
+            obj["color"] = project->color; // Already a hex string now
             obj["selected"] = (i == pm.getSelectedProjectIndex());
         }
     }
@@ -1014,6 +1033,216 @@ void handleNotFound() {
     apiServer.send(404, "text/plain", "Not Found");
 }
 
+// Handle POST /api/projects - Add new project
+void handleApiProjectsPost() {
+    if (!apiServer.hasArg("plain")) {
+        apiServer.send(400, "application/json", "{\"error\":\"No data received\"}");
+        return;
+    }
+    
+    String body = apiServer.arg("plain");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    
+    if (error) {
+        apiServer.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    
+    const char* name = doc["name"];
+    const char* color = doc["color"];
+    
+    if (!name || !color) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing name or color\"}");
+        return;
+    }
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    if (pm.addProject(name, color)) {
+        apiServer.send(201, "application/json", "{\"success\":true}");
+    } else {
+        apiServer.send(400, "application/json", "{\"error\":\"Failed to add project (max reached)\"}");
+    }
+}
+
+// Handle POST /api/updateProject - Update existing project
+void handleApiUpdateProject() {
+    if (!apiServer.hasArg("plain")) {
+        apiServer.send(400, "application/json", "{\"error\":\"No data received\"}");
+        return;
+    }
+    
+    String body = apiServer.arg("plain");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    
+    if (error) {
+        apiServer.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    
+    int index = doc["index"] | -1;
+    const char* name = doc["name"];
+    const char* color = doc["color"];
+    
+    if (index < 0 || !name || !color) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing index, name or color\"}");
+        return;
+    }
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    if (pm.updateProject(index, name, color)) {
+        apiServer.send(200, "application/json", "{\"success\":true}");
+    } else {
+        apiServer.send(404, "application/json", "{\"error\":\"Invalid project index\"}");
+    }
+}
+
+// Handle POST /api/deleteProject - Delete project
+void handleApiDeleteProject() {
+    if (!apiServer.hasArg("index")) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing index parameter\"}");
+        return;
+    }
+    
+    int index = apiServer.arg("index").toInt();
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    if (pm.deleteProject(index)) {
+        apiServer.send(200, "application/json", "{\"success\":true}");
+    } else {
+        apiServer.send(404, "application/json", "{\"error\":\"Invalid project index\"}");
+    }
+}
+
+// Handle GET /api/webhook - Get webhook URL
+void handleApiWebhookGet() {
+    ProjectManager& pm = ProjectManager::getInstance();
+    StaticJsonDocument<256> doc;
+    doc["url"] = pm.getWebhookURL();
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+// Handle POST /api/webhook - Set webhook URL
+void handleApiWebhookPost() {
+    if (!apiServer.hasArg("plain")) {
+        apiServer.send(400, "application/json", "{\"error\":\"No data received\"}");
+        return;
+    }
+    
+    String body = apiServer.arg("plain");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    
+    if (error) {
+        apiServer.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    
+    const char* url = doc["url"];
+    if (url == nullptr) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing url field\"}");
+        return;
+    }
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    pm.setWebhookURL(url);
+    apiServer.send(200, "application/json", "{\"message\":\"Webhook URL updated successfully\"}");
+}
+
+// Handle GET /api/apikey - Check if API key exists
+void handleApiKeyGet() {
+    ProjectManager& pm = ProjectManager::getInstance();
+    StaticJsonDocument<128> doc;
+    doc["key_present"] = !pm.getAPIKey().isEmpty();
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+// Handle POST /api/apikey - Set API key
+void handleApiKeyPost() {
+    if (!apiServer.hasArg("api_key")) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing api_key parameter\"}");
+        return;
+    }
+    
+    String apiKey = apiServer.arg("api_key");
+    
+    ProjectManager& pm = ProjectManager::getInstance();
+    pm.setAPIKey(apiKey);
+    apiServer.send(200, "application/json", "{\"message\":\"API Key updated successfully\"}");
+}
+
+/*
+// WebSocket event handler
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USBSerial.printf("WebSocket client %u disconnected\n", num);
+            break;
+            
+        case WStype_CONNECTED:
+            {
+                IPAddress ip = webSocket.remoteIP(num);
+                USBSerial.printf("WebSocket client %u connected from %s\n", num, ip.toString().c_str());
+                webSocket.sendTXT(num, "Connected to TheTimer");
+            }
+            break;
+            
+        case WStype_TEXT:
+            {
+                String message = String((char*)payload);
+                USBSerial.printf("WebSocket received: %s\n", message.c_str());
+                
+                // Parse command
+                int colonIndex = message.indexOf(':');
+                if (colonIndex > 0) {
+                    String command = message.substring(0, colonIndex);
+                    String value = message.substring(colonIndex + 1);
+                    
+                    if (command == "preview-color") {
+                        // Update LED to preview color
+                        value.trim();
+                        if (value.startsWith("#") && value.length() == 7) {
+                            long rgb = strtol(value.c_str() + 1, nullptr, 16);
+                            uint8_t r = (rgb >> 16) & 0xFF;
+                            uint8_t g = (rgb >> 8) & 0xFF;
+                            uint8_t b = rgb & 0xFF;
+                            
+                            // Update LED color temporarily
+                            stateMachine.getLEDController()->setColor(r, g, b);
+                            webSocket.sendTXT(num, "Color preview updated");
+                        }
+                    } else if (command == "reset-color") {
+                        // Reset LED to current project color
+                        ProjectManager& pm = ProjectManager::getInstance();
+                        uint32_t color = pm.getSelectedProjectColor();
+                        uint8_t r = (color >> 16) & 0xFF;
+                        uint8_t g = (color >> 8) & 0xFF;
+                        uint8_t b = color & 0xFF;
+                        
+                        stateMachine.getLEDController()->setColor(r, g, b);
+                        webSocket.sendTXT(num, "Color reset to project color");
+                    }
+                }
+            }
+            break;
+            
+        case WStype_BIN:
+            USBSerial.printf("WebSocket binary data received (length: %u)\n", length);
+            break;
+            
+        default:
+            break;
+    }
+}
+*/
+
 // WiFi Event Handler
 void onWiFiEvent(WiFiEvent_t event) {
     switch (event) {
@@ -1029,8 +1258,9 @@ void onWiFiEvent(WiFiEvent_t event) {
             USBSerial.println("WiFi disconnected");
             if (webServerRunning) {
                 apiServer.stop();
+                // webSocket.close();
                 webServerRunning = false;
-                USBSerial.println("Web Server stopped");
+                USBSerial.println("Web Server and WebSocket stopped");
             }
             break;
     }

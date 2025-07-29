@@ -38,9 +38,9 @@ function setupWebSocket() {
     ws.close();
   }
 
-  // Create WebSocket URL based on current location
+  // Create WebSocket URL based on current location (WebSocket server on port 81)
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  const wsUrl = `${protocol}//${window.location.hostname}:81/`;
 
   console.log('Connecting WebSocket to:', wsUrl);
 
@@ -266,7 +266,8 @@ async function fetchAndRenderProjects() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    const projects = data.projects || [];
+    // Handle both array response (old firmware) and object with projects property (new firmware)
+    const projects = Array.isArray(data) ? data : (data.projects || []);
     renderProjectList(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
