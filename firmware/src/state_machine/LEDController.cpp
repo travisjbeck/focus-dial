@@ -773,7 +773,7 @@ uint32_t LEDController::convertColorForLED(uint32_t displayColor)
   // WS2812 has cooler color temperature (~5810K vs sRGB D65 6500K)
   // and green LEDs are typically brighter than red/blue
   r_linear = r_linear * 1.0f;   // Keep red unchanged
-  g_linear = g_linear * 1.0f;   // Keep green unchanged for vibrant colors
+  g_linear = g_linear * 0.85f;  // Reduce green (WS2812 green is brighter)
   b_linear = b_linear * 0.80f;  // Reduce blue (compensate for cooler color temp)
   
   // Convert back to 8-bit values for WS2812 (stays in linear space)
