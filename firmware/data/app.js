@@ -396,12 +396,77 @@ function handleEditClick(index) {
   row.dataset.originalName = currentName;
   row.dataset.originalColor = currentColorHex;
 
+  // Store edit state in window for color picker access
+  window.editingRow = row;
+  window.editingIndex = index;
+  window.editingOriginalColor = currentColorHex;
+  
   nameCell.innerHTML = `
     <div class="edit-project-wrapper">
-      <input type="color" class="edit-color" value="${escapeHtml(currentColorHex)}" required>
-      <input type="text" class="edit-name" value="${escapeHtml(currentName)}" required>
+      <div class="selected-color" id="editSelectedColor" onclick="toggleEditColorPicker()" style="background-color: ${escapeHtml(currentColorHex)};"></div>
+      <input type="text" class="edit-name" id="editName" value="${escapeHtml(currentName)}" required>
+    </div>
+    <div class="color-picker-dropdown" id="editColorPickerDropdown" style="display: none;">
+        <!-- Tailwind 500 Colors -->
+        <div class="color-presets">
+          <div class="color-preset" data-color="#ef4444" onclick="selectEditColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+          <div class="color-preset" data-color="#f59e0b" onclick="selectEditColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+          <div class="color-preset" data-color="#84cc16" onclick="selectEditColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+          <div class="color-preset" data-color="#10b981" onclick="selectEditColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+          <div class="color-preset" data-color="#06b6d4" onclick="selectEditColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+          <div class="color-preset" data-color="#3b82f6" onclick="selectEditColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+          <div class="color-preset" data-color="#8b5cf6" onclick="selectEditColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+          <div class="color-preset" data-color="#d946ef" onclick="selectEditColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+          <div class="color-preset" data-color="#f43f5e" onclick="selectEditColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+        </div>
+        
+        <!-- Custom Color Section -->
+        <div class="custom-color-section">
+          <div class="custom-color-header">
+            <i data-lucide="edit-3" class="icon"></i>
+            <span>Custom Color</span>
+          </div>
+          <div class="custom-color-picker">
+            <div class="color-picker-main">
+              <div class="color-preview-large" id="editColorPreviewLarge" style="background-color: ${escapeHtml(currentColorHex)};"></div>
+              <div class="color-gradient-picker">
+                <div class="hue-saturation-picker" id="editHueSatPicker">
+                  <div class="hue-sat-cursor" id="editHueSatCursor"></div>
+                </div>
+                <div class="hue-slider" id="editHueSlider">
+                  <div class="hue-cursor" id="editHueCursor"></div>
+                </div>
+              </div>
+            </div>
+            <div class="rgb-inputs">
+              <div class="rgb-input-group">
+                <label>R</label>
+                <input type="number" id="editRInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+              </div>
+              <div class="rgb-input-group">
+                <label>G</label>
+                <input type="number" id="editGInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+              </div>
+              <div class="rgb-input-group">
+                <label>B</label>
+                <input type="number" id="editBInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
   `;
+  
+  // Set initial edit color value
+  window.editSelectedColorValue = currentColorHex;
+  
+  // Initialize RGB values for edit
+  const rgb = hexToRgb2(currentColorHex);
+  if (rgb) {
+    document.getElementById('editRInput').value = rgb.r;
+    document.getElementById('editGInput').value = rgb.g;
+    document.getElementById('editBInput').value = rgb.b;
+  }
   actionsCell.innerHTML = `
         <button class="btn save-btn" onclick="handleSaveClick(${index})">
           <i data-lucide="check" class="icon"></i>
@@ -415,21 +480,6 @@ function handleEditClick(index) {
 
   // Initialize Lucide icons in the newly added content
   lucide.createIcons();
-
-  // Add event listener for color preview
-  const editColorInput = nameCell.querySelector('.edit-color');
-  if (editColorInput) {
-    editColorInput.addEventListener('input', () => {
-      // Send color update to device via WebSocket
-      sendColorUpdate(editColorInput.value);
-    });
-
-    // When the color picker is closed, reset the LED color
-    editColorInput.addEventListener('change', () => {
-      // Send reset command after color is selected (the change event)
-      sendResetColorUpdate();
-    });
-  }
 }
 
 // Add WebSocket cleanup to handleCancelClick and handleSaveClick
@@ -476,11 +526,9 @@ async function handleSaveClick(index) {
   // Reset the LED color when saving
   sendResetColorUpdate();
 
-  const nameInput = row.querySelector('.edit-name');
-  const colorInput = row.querySelector('.edit-color');
-
+  const nameInput = document.getElementById('editName');
   const newName = nameInput.value.trim();
-  const newColor = colorInput.value;
+  const newColor = window.editSelectedColorValue;
 
   if (!newName) {
     showMessage('Project name cannot be empty.', 'error');
@@ -888,8 +936,210 @@ function rgbToHsl(r, g, b) {
 document.addEventListener('click', function(event) {
   const colorPicker = document.getElementById('colorPickerDropdown');
   const selectedColor = document.getElementById('selectedColor');
+  const editColorPicker = document.getElementById('editColorPickerDropdown');
+  const editSelectedColor = document.getElementById('editSelectedColor');
   
   if (colorPicker && selectedColor && !colorPicker.contains(event.target) && event.target !== selectedColor) {
     colorPicker.style.display = 'none';
   }
+  
+  if (editColorPicker && editSelectedColor && !editColorPicker.contains(event.target) && event.target !== editSelectedColor) {
+    editColorPicker.style.display = 'none';
+  }
 });
+
+// Edit color picker functions
+function toggleEditColorPicker() {
+  const dropdown = document.getElementById('editColorPickerDropdown');
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  
+  if (dropdown.style.display === 'block') {
+    initializeEditColorPicker();
+  }
+}
+
+function initializeEditColorPicker() {
+  const hueSatPicker = document.getElementById('editHueSatPicker');
+  const hueSlider = document.getElementById('editHueSlider');
+  
+  // Initialize cursor positions for current color
+  const rgb = hexToRgb2(window.editSelectedColorValue);
+  if (rgb) {
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    window.editCurrentHue = hsl.h * 360;
+    window.editCurrentSaturation = hsl.s * 100;
+    window.editCurrentLightness = hsl.l * 100;
+    updateEditHueSatPicker();
+    updateEditHueSlider();
+  }
+  
+  // Add event listeners
+  hueSatPicker.addEventListener('mousedown', onEditHueSatMouseDown);
+  hueSlider.addEventListener('mousedown', onEditHueMouseDown);
+}
+
+function onEditHueSatMouseDown(e) {
+  e.preventDefault();
+  const rect = e.target.getBoundingClientRect();
+  
+  function onMouseMove(e) {
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    
+    window.editCurrentSaturation = (x / rect.width) * 100;
+    window.editCurrentLightness = 100 - (y / rect.height) * 100;
+    
+    updateEditColorFromHSL();
+    updateEditHueSatCursor(x, y);
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  onMouseMove(e);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function onEditHueMouseDown(e) {
+  e.preventDefault();
+  const rect = e.target.getBoundingClientRect();
+  
+  function onMouseMove(e) {
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    window.editCurrentHue = (x / rect.width) * 360;
+    
+    updateEditColorFromHSL();
+    updateEditHueSlider();
+    updateEditHueSatPicker();
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  onMouseMove(e);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function updateEditColorFromHSL() {
+  const rgb = hslToRgb(window.editCurrentHue / 360, window.editCurrentSaturation / 100, window.editCurrentLightness / 100);
+  const hexColor = rgbToHex2(rgb.r, rgb.g, rgb.b);
+  
+  window.editSelectedColorValue = hexColor;
+  document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
+  document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
+  
+  // Update RGB inputs
+  document.getElementById('editRInput').value = rgb.r;
+  document.getElementById('editGInput').value = rgb.g;
+  document.getElementById('editBInput').value = rgb.b;
+  
+  // Send color update to device
+  sendColorUpdate(hexColor);
+  
+  // Clear preset selections
+  document.querySelectorAll('.color-preset').forEach(preset => {
+    preset.classList.remove('selected');
+  });
+}
+
+function updateEditHueSatCursor(x, y) {
+  const cursor = document.getElementById('editHueSatCursor');
+  if (x !== undefined && y !== undefined) {
+    cursor.style.left = x + 'px';
+    cursor.style.top = y + 'px';
+  } else {
+    const picker = document.getElementById('editHueSatPicker');
+    const x = (window.editCurrentSaturation / 100) * picker.offsetWidth;
+    const y = ((100 - window.editCurrentLightness) / 100) * picker.offsetHeight;
+    cursor.style.left = x + 'px';
+    cursor.style.top = y + 'px';
+  }
+}
+
+function updateEditHueSlider() {
+  const cursor = document.getElementById('editHueCursor');
+  const slider = document.getElementById('editHueSlider');
+  const x = (window.editCurrentHue / 360) * slider.offsetWidth;
+  cursor.style.left = x + 'px';
+}
+
+function updateEditHueSatPicker() {
+  const picker = document.getElementById('editHueSatPicker');
+  const hueColor = `hsl(${window.editCurrentHue}, 100%, 50%)`;
+  picker.style.background = `
+    linear-gradient(to top, #000, transparent), 
+    linear-gradient(to right, #fff, transparent),
+    ${hueColor}
+  `;
+  updateEditHueSatCursor();
+}
+
+function selectEditColor(color) {
+  window.editSelectedColorValue = color;
+  document.getElementById('editSelectedColor').style.backgroundColor = color;
+  document.getElementById('editColorPreviewLarge').style.backgroundColor = color;
+  
+  // Update RGB inputs
+  const rgb = hexToRgb2(color);
+  if (rgb) {
+    document.getElementById('editRInput').value = rgb.r;
+    document.getElementById('editGInput').value = rgb.g;
+    document.getElementById('editBInput').value = rgb.b;
+    
+    // Update HSL values
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    window.editCurrentHue = hsl.h * 360;
+    window.editCurrentSaturation = hsl.s * 100;
+    window.editCurrentLightness = hsl.l * 100;
+    updateEditHueSatPicker();
+    updateEditHueSlider();
+  }
+  
+  // Send color update to device
+  sendColorUpdate(color);
+  
+  // Clear preset selections and mark this one as selected
+  document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
+    preset.classList.remove('selected');
+  });
+  document.querySelector(`#editColorPickerDropdown [data-color="${color}"]`).classList.add('selected');
+  
+  // Close dropdown
+  document.getElementById('editColorPickerDropdown').style.display = 'none';
+}
+
+function updateEditFromRGB() {
+  const r = parseInt(document.getElementById('editRInput').value) || 0;
+  const g = parseInt(document.getElementById('editGInput').value) || 0;
+  const b = parseInt(document.getElementById('editBInput').value) || 0;
+  
+  const hexColor = rgbToHex2(r, g, b);
+  window.editSelectedColorValue = hexColor;
+  
+  // Convert RGB to HSL for the color picker
+  const hsl = rgbToHsl(r, g, b);
+  window.editCurrentHue = hsl.h * 360;
+  window.editCurrentSaturation = hsl.s * 100;
+  window.editCurrentLightness = hsl.l * 100;
+  
+  document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
+  document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
+  
+  // Update color picker visuals
+  updateEditHueSatPicker();
+  updateEditHueSlider();
+  
+  // Send color update to device
+  sendColorUpdate(hexColor);
+  
+  // Clear preset selections
+  document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
+    preset.classList.remove('selected');
+  });
+}

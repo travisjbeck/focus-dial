@@ -94,6 +94,11 @@ h2 {
   overflow: hidden;
 }
 
+/* Allow overflow for editing state */
+.card:has(.editing) {
+  overflow: visible;
+}
+
 /* Special styling for projects section - no nested background */
 #projects-section {
   background-color: transparent;
@@ -115,7 +120,7 @@ h2 {
   border: 1px solid var(--color-border);
   border-top: none;
   border-radius: 0 0 var(--border-radius) var(--border-radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-header {
@@ -154,6 +159,8 @@ h2 {
   text-align: left;
   font-size: 0.9375rem;
   table-layout: fixed;
+  overflow: visible;
+  position: relative;
 }
 
 #project-list th {
@@ -493,11 +500,24 @@ footer {
 .editing td {
   background-color: var(--color-bg-tertiary);
   padding: 0.75rem 1rem;
+  position: relative;
+}
+
+.editing td:first-child {
+  overflow: visible;
 }
 
 .editing input[type="text"],
 .editing input[type="color"] {
   margin: 0;
+}
+
+.editing .color-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 1rem;
+  z-index: 9999;
+  margin-top: 0.5rem;
 }
 
 /* Responsive */
