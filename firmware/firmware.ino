@@ -930,7 +930,7 @@ void startWebServer() {
             apiServer.streamFile(file, "text/html");
             file.close();
         } else {
-            apiServer.send(200, "text/html", getDefaultHTML());
+            apiServer.send(404, "text/plain", "LittleFS not mounted or index.html not found");
         }
     });
     apiServer.on("/style.css", HTTP_GET, []() {
@@ -939,7 +939,7 @@ void startWebServer() {
             apiServer.streamFile(file, "text/css");
             file.close();
         } else {
-            apiServer.send(200, "text/css", getDefaultCSS());
+            apiServer.send(404, "text/plain", "style.css not found");
         }
     });
     apiServer.on("/app.js", HTTP_GET, []() {
@@ -948,7 +948,7 @@ void startWebServer() {
             apiServer.streamFile(file, "application/javascript");
             file.close();
         } else {
-            apiServer.send(200, "application/javascript", getDefaultJS());
+            apiServer.send(404, "text/plain", "app.js not found");
         }
     });
     apiServer.on("/api/projects", HTTP_GET, handleApiProjects);
@@ -1031,185 +1031,3 @@ void onWiFiEvent(WiFiEvent_t event) {
     }
 }
 
-// Default web interface when LittleFS is not available
-String getDefaultHTML() {
-    return R"(
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheTimer Configuration</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #1a1a1a;
-            color: #e0e0e0;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #fff;
-            text-align: center;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #888;
-            margin-bottom: 40px;
-        }
-        .card {
-            background: #2a2a2a;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .status {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .status-item {
-            background: #333;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .status-label {
-            color: #888;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-        .status-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-        .project-list {
-            list-style: none;
-            padding: 0;
-        }
-        .project-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            margin-bottom: 10px;
-            background: #333;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .project-item:hover {
-            transform: translateX(5px);
-        }
-        .project-item.selected {
-            background: #444;
-            border-left: 4px solid #4CAF50;
-        }
-        .project-color {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-        .project-name {
-            flex: 1;
-            font-size: 1.1em;
-        }
-        .timer-icon {
-            font-size: 3em;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>⏱️ TheTimer</h1>
-        <p class="subtitle">Device Configuration</p>
-        
-        <div class="card">
-            <h2>Current Status</h2>
-            <div class="status" id="status">
-                <div class="status-item">
-                    <div class="status-label">State</div>
-                    <div class="status-value" id="current-state">Loading...</div>
-                </div>
-                <div class="status-item">
-                    <div class="status-label">Project</div>
-                    <div class="status-value" id="current-project">Loading...</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>Projects</h2>
-            <ul class="project-list" id="project-list">
-                <li>Loading projects...</li>
-            </ul>
-        </div>
-    </div>
-    
-    <script>
-        async function loadStatus() {
-            try {
-                const response = await fetch('/api/status');
-                const data = await response.json();
-                document.getElementById('current-state').textContent = data.state;
-                document.getElementById('current-project').textContent = data.project;
-            } catch (error) {
-                console.error('Error loading status:', error);
-            }
-        }
-        
-        async function loadProjects() {
-            try {
-                const response = await fetch('/api/projects');
-                const data = await response.json();
-                const list = document.getElementById('project-list');
-                list.innerHTML = '';
-                
-                data.projects.forEach(project => {
-                    const li = document.createElement('li');
-                    li.className = 'project-item' + (project.selected ? ' selected' : '');
-                    li.innerHTML = `
-                        <div class="project-color" style="background-color: #${project.color.toString(16).padStart(6, '0')}"></div>
-                        <div class="project-name">${project.name}</div>
-                    `;
-                    list.appendChild(li);
-                });
-            } catch (error) {
-                console.error('Error loading projects:', error);
-            }
-        }
-        
-        // Load data on page load
-        loadStatus();
-        loadProjects();
-        
-        // Refresh every 5 seconds
-        setInterval(() => {
-            loadStatus();
-            loadProjects();
-        }, 5000);
-    </script>
-</body>
-</html>
-)";
-}
-
-String getDefaultCSS() {
-    return "";  // CSS is inline in HTML
-}
-
-String getDefaultJS() {
-    return "";  // JS is inline in HTML
-}
