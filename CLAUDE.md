@@ -439,6 +439,23 @@ arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=h
 - Missing `FlashSize=16M` causes "Sketch too big" error every time
 - The `huge_app` partition provides 3MB for the application
 
+### LittleFS Filesystem for Web Interface
+
+**The device includes a web interface accessible at http://thetimer.local when connected to WiFi**
+
+The `data/` directory contains:
+- `index.html` - Main web interface
+- `style.css` - Styling  
+- `app.js` - JavaScript functionality
+
+This must be uploaded separately to the SPIFFS partition (9.56MB at offset 0x6E2000).
+
+**Existing LittleFS files in firmware directory:**
+- `littlefs.bin` (1.6MB) - Older/minimal filesystem
+- `littlefs_new.bin` (2.0MB) - Another version
+- `littlefs_web.bin` (10MB) - Full size but may be outdated
+- `littlefs_current.bin` - Created fresh from current data/ directory (recommended)
+
 ## Arduino Monitoring Workflow
 
 ### IMPORTANT: Reliable Serial Monitoring for ESP32-S3
@@ -456,17 +473,28 @@ ls /dev/cu.* | grep -E "(usbmodem|wchusbserial)"
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && sleep 0.5 && timeout 20 cat /dev/cu.usbmodem32301
 ```
 
-### Method 2: Full Build, Upload, Reset and Monitor
+### Method 2: Full Build, Upload, Reset and Monitor (WITH WEB INTERFACE)
 ```bash
 # CRITICAL: This device has 16MB flash - MUST specify FlashSize=16M and huge_app partition!
-# Complete workflow with proper startup capture
+# Complete workflow with proper startup capture AND web interface
 cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
 arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean && \
 arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app && \
+./mklittlefs/mklittlefs -c data -b 4096 -p 256 -s 0x91E000 littlefs_current.bin && \
+esptool.py --chip esp32s3 --port /dev/cu.usbmodem32301 --baud 921600 write_flash 0x6E2000 littlefs_current.bin && \
 sleep 2 && \
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && \
 sleep 0.5 && \
 timeout 30 cat /dev/cu.usbmodem32301
+```
+
+### LittleFS Web Interface Upload
+```bash
+# The device includes a web interface at http://thetimer.local when connected to WiFi
+# To update just the web interface without recompiling:
+cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+./mklittlefs/mklittlefs -c data -b 4096 -p 256 -s 0x91E000 littlefs_current.bin && \
+esptool.py --chip esp32s3 --port /dev/cu.usbmodem32301 --baud 921600 write_flash 0x6E2000 littlefs_current.bin
 ```
 
 ### Method 3: State Machine Testing Procedure
