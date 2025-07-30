@@ -75,7 +75,8 @@ void Arduino_CO5300::displayOn(void)
   _bus->sendCommand(CO5300_C_DISPON);
   delay(CO5300_SLPIN_DELAY);
   _bus->sendCommand(CO5300_C_SLPOUT);
-  // _bus->writeC8D8(CO5300_W_DEEPSTMODE, 0x00);
+  // Exit deep standby mode when turning display on
+  _bus->writeC8D8(CO5300_W_DEEPSTMODE, 0x00);
   delay(CO5300_SLPOUT_DELAY);
 }
 
@@ -84,7 +85,8 @@ void Arduino_CO5300::displayOff(void)
   _bus->sendCommand(CO5300_C_DISPOFF);
   delay(CO5300_SLPIN_DELAY);
   _bus->sendCommand(CO5300_C_SLPIN);
-  // _bus->writeC8D8(CO5300_W_DEEPSTMODE, 0x01);
+  // Enable deep standby mode to prevent display flashing during sleep
+  _bus->writeC8D8(CO5300_W_DEEPSTMODE, 0x01);
   delay(CO5300_SLPIN_DELAY);
 }
 

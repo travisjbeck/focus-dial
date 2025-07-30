@@ -880,18 +880,8 @@ void loop() {
         }
     }
     
-    // Print heartbeat every 2 seconds
-    if (now - last_print > 2000) {
-        State* currentState = stateMachine.getCurrentState();
-        const char* stateName = currentState ? currentState->getStateName() : "NULL";
-        
-        USBSerial.print("Running... State: ");
-        USBSerial.print(stateName);
-        USBSerial.print(" | Touch: ");
-        USBSerial.print(digitalRead(TP_INT) ? "H" : "L");
-        USBSerial.println("");
-        last_print = now;
-    }
+    // Heartbeat removed - no longer needed
+    // The constant state printing was cluttering the serial output
     
     // Update battery icon every 30 seconds
     static unsigned long last_battery_update = 0;
