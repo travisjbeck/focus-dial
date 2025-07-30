@@ -25,6 +25,7 @@
 
 // State Machine
 #include "src/state_machine/include/StateMachine.h"
+#include "src/state_machine/states/SleepState.h"
 #include "src/state_machine/include/LEDController.h"
 #include "src/state_machine/states/TimerState.h"
 #include "src/state_machine/states/ProjectSelectState.h"
@@ -106,6 +107,9 @@ Arduino_GFX *gfx = new Arduino_CO5300(
     0,     // col_offset2
     0      // row_offset2
 );
+
+// Global pointer for ScreenManager to access display
+void* gfx_ptr = gfx;
 
 // LVGL variables
 static lv_disp_draw_buf_t draw_buf;
@@ -839,9 +843,18 @@ void loop() {
             
             // Handle power button short press
             if (power.isPekeyShortPressIrq()) {
-                USBSerial.println("Power button pressed - going to DEEP sleep");
+                USBSerial.println("Power button pressed - transitioning to DEEP sleep");
                 power.clearIrqStatus();
-                goToSleep(true); // true = deep sleep
+                
+                // Turn off display immediately before sleep
+                USBSerial.println("Turning off display before sleep");
+                gfx->Display_Brightness(0);
+                
+                SleepState* sleepState = stateMachine.sleepState;
+                if (sleepState) {
+                    sleepState->setDeepSleep(true); // Deep sleep
+                    stateMachine.changeState(sleepState);
+                }
             }
             
             // Handle battery status changes for instant battery icon updates
@@ -856,13 +869,20 @@ void loop() {
         }
     }
     
-    // Sleep functionality disabled
-    // SLEEP DISABLED - Too annoying during development
-    // if (!is_sleeping && time_awake > MIN_AWAKE_TIME && time_since_activity > INACTIVITY_TIMEOUT) {
-    //     USBSerial.print("Inactivity timeout - going to light sleep. time_since_activity=");
-    //     USBSerial.println(time_since_activity);
-    //     goToSleep(false); // Light sleep
-    // }
+    // Check for inactivity timeout
+    if (stateMachine.checkInactivityTimeout()) {
+        USBSerial.println("Inactivity timeout - transitioning to light sleep");
+        
+        // Turn off display immediately before sleep
+        USBSerial.println("Turning off display before sleep");
+        gfx->Display_Brightness(0);
+        
+        SleepState* sleepState = stateMachine.sleepState;
+        if (sleepState) {
+            sleepState->setDeepSleep(false); // Light sleep
+            stateMachine.changeState(sleepState);
+        }
+    }
     
     // Print heartbeat every 2 seconds
     if (now - last_print > 2000) {

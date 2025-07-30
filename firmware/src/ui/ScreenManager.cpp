@@ -6,6 +6,7 @@
 #include <lvgl.h>
 #include "XPowersLib.h"
 #include <WiFi.h>
+#include "Arduino_GFX_Library.h"
 
 // USB Serial for ESP32-S3
 extern HWCDC USBSerial;
@@ -907,4 +908,32 @@ void ScreenManager::updateWifiIcon() {
     // Update WiFi icon
     lv_label_set_text(wifi_label, wifiIcon);
     lv_obj_set_style_text_color(wifi_label, iconColor, 0);
+}
+
+// Display power control methods
+void ScreenManager::setDisplayPower(bool on) {
+    // Access the global gfx object from firmware.ino
+    extern void* gfx_ptr; // We'll define this in firmware.ino
+    if (gfx_ptr) {
+        Arduino_GFX* gfx = static_cast<Arduino_GFX*>(gfx_ptr);
+        if (on) {
+            USBSerial.println("[SCREEN] Turning display ON");
+            gfx->Display_Brightness(200); // Normal brightness
+            gfx->displayOn();  // Also call displayOn
+        } else {
+            USBSerial.println("[SCREEN] Turning display OFF");
+            gfx->Display_Brightness(0);   // Turn off backlight
+            gfx->displayOff(); // Also call displayOff
+        }
+    } else {
+        USBSerial.println("[SCREEN] ERROR: gfx_ptr is NULL!");
+    }
+}
+
+void ScreenManager::turnOffDisplay() {
+    setDisplayPower(false);
+}
+
+void ScreenManager::turnOnDisplay() {
+    setDisplayPower(true);
 }

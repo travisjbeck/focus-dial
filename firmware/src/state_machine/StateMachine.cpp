@@ -15,6 +15,7 @@
 #include <esp_task_wdt.h>
 #include <freertos/task.h>
 #include "../../pin_config.h"
+#include <XPowersLib.h>
 
 static const char* TAG = "StateMachine";
 
@@ -30,7 +31,8 @@ StateMachine::StateMachine() :
   pendingElapsedTime(0),
   pendingProjectId(""),
   selectedProjectIndex(-1), // -1 for "No Project"
-  watchdogEnabled(false)
+  watchdogEnabled(false),
+  lastActivityTime(0)
 {
   // State instances will be created in begin()
   idleState = nullptr;
@@ -137,6 +139,9 @@ void StateMachine::begin()
   } else {
     ESP_LOGI(TAG, "SUCCESS: LED controller initialized");
   }
+  
+  // Initialize activity tracking
+  lastActivityTime = millis();
   
   // Start with startup state
   currentState = startupState;
@@ -1028,4 +1033,90 @@ void StateMachine::setTouchManager(TouchManager* tm) {
 
 TouchManager* StateMachine::getTouchManager() const {
   return touchManager;
+}
+
+// Inactivity tracking methods
+void StateMachine::updateActivityTime() {
+  lastActivityTime = millis();
+}
+
+unsigned long StateMachine::getTimeSinceLastActivity() const {
+  return millis() - lastActivityTime;
+}
+
+bool StateMachine::checkInactivityTimeout() {
+  const unsigned long INACTIVITY_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+  const unsigned long MIN_AWAKE_TIME_MS = 5000; // 5 seconds minimum awake time
+  
+  // Don't sleep if we just started
+  if (millis() < MIN_AWAKE_TIME_MS) {
+    return false;
+  }
+  
+  // Don't sleep during certain states
+  if (currentState == timerState || currentState == sleepState || 
+      currentState == provisionState || currentState == startupState) {
+    updateActivityTime(); // Reset activity timer to prevent repeated attempts
+    return false;
+  }
+  
+  // Check if we've been inactive too long
+  if (getTimeSinceLastActivity() > INACTIVITY_TIMEOUT_MS) {
+    ESP_LOGI(TAG, "Inactivity timeout reached (%.1f minutes)", 
+             getTimeSinceLastActivity() / 60000.0f);
+    return true;
+  }
+  
+  return false;
+}
+
+void StateMachine::transitionTo(const char* stateName) {
+  if (strcmp(stateName, "IdleState") == 0) {
+    changeState(idleState);
+  } else if (strcmp(stateName, "AdjustState") == 0) {
+    changeState(adjustState);
+  } else if (strcmp(stateName, "TimerState") == 0) {
+    changeState(timerState);
+  } else if (strcmp(stateName, "PausedState") == 0) {
+    changeState(pausedState);
+  } else if (strcmp(stateName, "DoneState") == 0) {
+    changeState(doneState);
+  } else if (strcmp(stateName, "ProjectSelectState") == 0) {
+    changeState(projectSelectState);
+  } else if (strcmp(stateName, "ProvisionState") == 0) {
+    changeState(provisionState);
+  } else if (strcmp(stateName, "SleepState") == 0) {
+    changeState(sleepState);
+  } else {
+    ESP_LOGW(TAG, "Unknown state name: %s", stateName);
+  }
+}
+
+// Power management methods
+int StateMachine::getBatteryPercentage() const {
+  extern XPowersAXP2101 power;
+  
+  if (!power.isBatteryConnect()) {
+    return 100; // Assume full if PMU not available
+  }
+  
+  float voltage = power.getBattVoltage();
+  
+  // Convert voltage to percentage
+  // Li-ion typical curve: 4.2V = 100%, 3.7V = 50%, 3.3V = 0%
+  if (voltage >= 4.1f) return 100;
+  else if (voltage >= 3.9f) return 80;
+  else if (voltage >= 3.8f) return 60;
+  else if (voltage >= 3.7f) return 40;
+  else if (voltage >= 3.5f) return 20;
+  else return 10;
+}
+
+bool StateMachine::isCharging() const {
+  extern XPowersAXP2101 power;
+  return power.isBatteryConnect() && power.isVbusIn();
+}
+
+bool StateMachine::isBatteryLow() const {
+  return getBatteryPercentage() <= 20;
 }

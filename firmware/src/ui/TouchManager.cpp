@@ -32,7 +32,11 @@ void TouchManager::processTouch(bool touchDetected, int16_t x, int16_t y) {
     unsigned long currentTime = millis();
     
     if (touchDetected) {
-        // Touch detected
+        // Touch detected - update activity time
+        if (stateMachine) {
+            stateMachine->updateActivityTime();
+        }
+        
         if (touchState == IDLE) {
             // Start new touch sequence
             touchState = PRESSING;

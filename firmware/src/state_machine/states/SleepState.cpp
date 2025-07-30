@@ -1,7 +1,22 @@
 #include "SleepState.h"
 #include "../include/StateMachine.h"
+#include "../include/LEDController.h"
+#include "../../ui/ScreenManager.h"
+#include <nvs_flash.h>
+#include <nvs.h>
+#include <XPowersLib.h>
+#include <WiFi.h>
+#include <esp_wifi.h>
+#include <esp_bt.h>
+#include <esp_bt_main.h>
 
-SleepState::SleepState() : sleepInitiated(false)
+extern XPowersAXP2101 power;
+extern LEDController* g_ledController;
+extern ScreenManager* screenManager;
+
+#define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
+
+SleepState::SleepState() : sleepInitiated(false), isDeepSleep(false), hasWokenUp(false)
 {
 }
 
@@ -12,25 +27,82 @@ SleepState::~SleepState()
 void SleepState::onEnter()
 {
   sleepInitiated = false;
+  hasWokenUp = false;
   
-  ESP_LOGI(getLogTag(), "Preparing for sleep");
+  ESP_LOGI(getLogTag(), "Preparing for %s sleep", isDeepSleep ? "deep" : "light");
   
-  // TODO: Save current state to NVS
-  // TODO: Configure wake sources
-  // TODO: Turn off display
+  // Save current state before sleep
+  saveStateToNVS();
+  
+  // Turn off display and LEDs
+  ESP_LOGI(getLogTag(), "Turning off display and LEDs");
+  if (screenManager) {
+    ESP_LOGI(getLogTag(), "screenManager exists, calling turnOffDisplay");
+    screenManager->turnOffDisplay();
+  } else {
+    ESP_LOGE(getLogTag(), "screenManager is NULL!");
+  }
+  if (g_ledController) {
+    ESP_LOGI(getLogTag(), "Turning off LEDs");
+    g_ledController->turnOff();
+  }
+  
+  // Disable WiFi and Bluetooth to save power
+  if (!isDeepSleep) {
+    // For light sleep, just stop WiFi to save power
+    WiFi.mode(WIFI_OFF);
+  } else {
+    // For deep sleep, fully disable WiFi and Bluetooth
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    esp_wifi_stop();
+    esp_wifi_deinit();
+    
+    // Disable Bluetooth if it was enabled
+    // Check if Bluetooth is enabled before trying to disable
+    if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
+      esp_bluedroid_disable();
+    }
+    if (esp_bluedroid_get_status() != ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+      esp_bluedroid_deinit();
+    }
+    if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) {
+      esp_bt_controller_disable();
+    }
+    if (esp_bt_controller_get_status() != ESP_BT_CONTROLLER_STATUS_IDLE) {
+      esp_bt_controller_deinit();
+    }
+  }
+  
+  // Configure wake sources
+  configureWakeupSources();
+  
+  // Clear any pending interrupts
+  if (power.isBatteryConnect()) {
+    power.clearIrqStatus();
+  }
 }
 
 void SleepState::onUpdate()
 {
   if (!sleepInitiated) {
-    ESP_LOGI(getLogTag(), "Entering deep sleep");
-    
-    // TODO: Actually enter sleep mode
-    // For now, just log
     sleepInitiated = true;
+    ESP_LOGI(getLogTag(), "About to enter sleep mode (deep=%d)", isDeepSleep);
     
-    // In real implementation, this would call esp_deep_sleep_start()
-    // and execution would stop here
+    // Small delay to ensure everything is ready
+    yieldMs(100);
+    
+    // Enter sleep mode
+    enterSleepMode();
+    
+    // If we're here and it's light sleep, we've woken up
+    if (!isDeepSleep) {
+      hasWokenUp = true;
+    }
+  } else if (hasWokenUp) {
+    // We've woken from light sleep, transition to idle
+    ESP_LOGI(getLogTag(), "Transitioning to IdleState after wake");
+    stateMachine.transitionTo("IdleState");
   }
   
   yieldMs(100);
@@ -38,8 +110,120 @@ void SleepState::onUpdate()
 
 void SleepState::onExit()
 {
-  ESP_LOGI(getLogTag(), "Waking up");
+  ESP_LOGI(getLogTag(), "Waking up from sleep");
   
-  // TODO: Restore state from NVS
-  // TODO: Reinitialize display
+  // The display and peripherals are already reinitialized in setup()
+  // after deep sleep wake, so we only need to handle light sleep wake
+  
+  // Turn display back on for light sleep wake
+  if (!isDeepSleep && screenManager) {
+    screenManager->turnOnDisplay();
+  }
+  
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  
+  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+    ESP_LOGI(getLogTag(), "Woken by BOOT button");
+  } else if (wakeup_reason == ESP_SLEEP_WAKEUP_GPIO) {
+    // Determine which GPIO caused the wake
+    uint64_t wakeup_pin_mask = 0; // GPIO wake status not directly available
+    if (wakeup_pin_mask & (1ULL << GPIO_NUM_11)) {
+      ESP_LOGI(getLogTag(), "Woken by touch interrupt");
+    } else if (wakeup_pin_mask & ((1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18))) {
+      ESP_LOGI(getLogTag(), "Woken by encoder rotation");
+    } else if (wakeup_pin_mask & (1ULL << GPIO_NUM_0)) {
+      ESP_LOGI(getLogTag(), "Woken by BOOT button (GPIO)");
+    }
+    // Update activity time since user interacted with device
+    stateMachine.updateActivityTime();
+  } else if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
+    ESP_LOGI(getLogTag(), "Woken by timer");
+  } else {
+    ESP_LOGI(getLogTag(), "Woken by other source: %d", wakeup_reason);
+  }
+  
+  // Clear power management interrupts
+  if (power.isBatteryConnect()) {
+    power.clearIrqStatus();
+  }
+}
+
+void SleepState::saveStateToNVS()
+{
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("sleep_state", NVS_READWRITE, &nvs_handle);
+  
+  if (err == ESP_OK) {
+    // Save current state machine state
+    const char* currentState = stateMachine.getCurrentState()->getStateName();
+    nvs_set_str(nvs_handle, "last_state", currentState);
+    
+    // Save timer information if in timer state
+    if (strcmp(currentState, "TimerState") == 0) {
+      // TODO: Save current timer time and project
+      // This would require access to timer state data
+    }
+    
+    nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+    
+    ESP_LOGI(getLogTag(), "State saved to NVS: %s", currentState);
+  } else {
+    ESP_LOGW(getLogTag(), "Failed to save state to NVS");
+  }
+}
+
+void SleepState::configureWakeupSources()
+{
+  if (isDeepSleep) {
+    // Deep sleep: Only BOOT button can wake
+    esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
+    ESP_LOGI(getLogTag(), "Deep sleep configured: Only BOOT button can wake");
+  } else {
+    // Light sleep: Multiple wake sources
+    // 1. BOOT button
+    gpio_wakeup_enable(WAKE_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+    
+    // 2. Encoder pins (wake on rotation)
+    gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_ANYEDGE); // ENCODER_A
+    gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_ANYEDGE); // ENCODER_B
+    
+    // 3. Touch interrupt pin
+    gpio_wakeup_enable(GPIO_NUM_11, GPIO_INTR_LOW_LEVEL); // TP_INT
+    
+    // Enable GPIO wakeup
+    esp_sleep_enable_gpio_wakeup();
+    
+    ESP_LOGI(getLogTag(), "Light sleep configured: BOOT button, encoder, and touch can wake");
+  }
+}
+
+void SleepState::enterSleepMode()
+{
+  if (isDeepSleep) {
+    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode...");
+    ESP_LOGI(getLogTag(), "Press BOOT button to wake!");
+    
+    // Give time for serial output
+    delay(100);
+    
+    // Enter deep sleep - ESP32 will restart on wake
+    esp_deep_sleep_start();
+  } else {
+    ESP_LOGI(getLogTag(), "Entering light sleep mode...");
+    ESP_LOGI(getLogTag(), "Press BOOT button to wake!");
+    
+    // Give time for serial output
+    delay(100);
+    
+    // Enter light sleep (keeps RAM, faster wake-up)
+    esp_err_t err = esp_light_sleep_start();
+    
+    if (err == ESP_OK) {
+      ESP_LOGI(getLogTag(), "Woke up from light sleep");
+      // Don't transition here - let the state machine handle it in the next update
+    } else {
+      ESP_LOGE(getLogTag(), "Failed to enter light sleep: %s", esp_err_to_name(err));
+    }
+  }
 }

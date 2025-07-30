@@ -47,6 +47,11 @@ public:
     void updateBatteryIcon(); // Update battery icon based on current status
     void updateWifiIcon(); // Update WiFi icon based on connection status
     
+    // Display power control
+    void setDisplayPower(bool on);
+    void turnOffDisplay();
+    void turnOnDisplay();
+    
     lv_obj_t* getCurrentScreen() { return current_screen; }
     lv_obj_t* getIdleScreen() { return idle_screen; }
     lv_obj_t* getProjectScreen() { return project_screen; }
