@@ -38,6 +38,7 @@ public:
     
     // Update methods for dynamic content
     void updateIdleTime(int hours, int minutes);
+    void updateIdleDate(const char* dateStr);
     void updateAdjustDuration(int minutes);
     void updateTimerProgress(int remaining_seconds, float progress);
     void updateTimerProject(const char* projectName);

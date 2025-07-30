@@ -496,6 +496,12 @@ void ScreenManager::updateIdleTime(int hours, int minutes) {
     }
 }
 
+void ScreenManager::updateIdleDate(const char* dateStr) {
+    if (idle_date_label && dateStr) {
+        lv_label_set_text(idle_date_label, dateStr);
+    }
+}
+
 void ScreenManager::updateAdjustDuration(int seconds) {
     if (adjust_duration_label) {
         char time_str[16];

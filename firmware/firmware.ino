@@ -22,6 +22,8 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <ESPmDNS.h>
+#include <time.h>
+#include "SensorPCF85063.hpp"
 
 // State Machine
 #include "src/state_machine/include/StateMachine.h"
@@ -39,6 +41,14 @@
 // Simple Encoder
 #include "src/SimpleEncoder.h"
 
+// RTC Configuration
+SensorPCF85063 rtc;
+bool rtcInitialized = false;
+
+// NTP Configuration
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = -8 * 3600;  // PST (UTC-8) - adjust for your timezone
+const int daylightOffset_sec = 3600;   // 1 hour for DST
 
 // Declare custom fonts
 LV_FONT_DECLARE(lv_font_roboto_mono_120);
@@ -184,6 +194,8 @@ void handleApiKeyPost();
 void handleNotFound();
 void handleApiColorPreview();
 void handleApiColorReset();
+void syncTimeFromNTP();
+void updateDateTimeDisplay();
 
 
 // Rounder callback for display optimization (critical for performance)
@@ -425,8 +437,27 @@ void setup() {
         }
     }
 
-    // Initialize I2C for touch and PMU
+    // Initialize I2C for touch, PMU, and RTC
     Wire.begin(IIC_SDA, IIC_SCL);
+    
+    // Initialize RTC
+    USBSerial.println("Initializing RTC...");
+    rtcInitialized = rtc.begin(Wire, IIC_SDA, IIC_SCL);
+    if (rtcInitialized) {
+        USBSerial.println("RTC initialized successfully");
+        
+        // Check if RTC has valid time
+        RTC_DateTime dt = rtc.getDateTime();
+        if (dt.getYear() < 2024) {
+            USBSerial.println("RTC time invalid, will sync from NTP when WiFi connects");
+        } else {
+            USBSerial.printf("RTC time: %04d-%02d-%02d %02d:%02d:%02d\n",
+                           dt.getYear(), dt.getMonth(), dt.getDay(),
+                           dt.getHour(), dt.getMinute(), dt.getSecond());
+        }
+    } else {
+        USBSerial.println("RTC initialization failed!");
+    }
     
     // IO Expander disabled due to I2C driver conflict
     // Will use polling method for PMU interrupts instead
@@ -618,6 +649,10 @@ void setup() {
     USBSerial.println("Battery icon initialized");
     screenManager.updateWifiIcon();
     USBSerial.println("WiFi icon initialized");
+    
+    // Initialize date/time display
+    updateDateTimeDisplay();
+    USBSerial.println("Date/time display initialized");
 
     // Register WiFi event handler
     WiFi.onEvent(onWiFiEvent);
@@ -895,6 +930,13 @@ void loop() {
     if (now - last_wifi_update > 10000) {
         screenManager.updateWifiIcon();
         last_wifi_update = now;
+    }
+    
+    // Update date/time display every minute
+    static unsigned long last_datetime_update = 0;
+    if (now - last_datetime_update > 60000) {  // Update every 60 seconds
+        updateDateTimeDisplay();
+        last_datetime_update = now;
     }
     
     // Auto-transition disabled - use tap to navigate
@@ -1282,6 +1324,7 @@ void onWiFiEvent(WiFiEvent_t event) {
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
             USBSerial.print("WiFi got IP: ");
             USBSerial.println(WiFi.localIP());
+            syncTimeFromNTP();  // Sync time when WiFi connects
             startWebServer();
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
@@ -1345,5 +1388,73 @@ void handleApiColorReset() {
     } else {
         apiServer.send(500, "application/json", "{\"error\":\"LED controller not available\"}");
     }
+}
+
+// Sync time from NTP server and update RTC
+void syncTimeFromNTP() {
+    if (!WiFi.isConnected()) {
+        USBSerial.println("WiFi not connected, skipping NTP sync");
+        return;
+    }
+    
+    USBSerial.println("Syncing time from NTP server...");
+    
+    // Configure NTP
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    
+    // Wait for time to be set
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo, 10000)) {  // 10 second timeout
+        USBSerial.println("Failed to obtain time from NTP");
+        return;
+    }
+    
+    USBSerial.printf("NTP time obtained: %04d-%02d-%02d %02d:%02d:%02d\n",
+                     timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+                     timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    
+    // Update RTC if initialized
+    if (rtcInitialized) {
+        rtc.setDateTime(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday,
+                       timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+        USBSerial.println("RTC updated with NTP time");
+    }
+    
+    // Update the display immediately
+    updateDateTimeDisplay();
+}
+
+// Update the date and time display on the idle screen
+void updateDateTimeDisplay() {
+    if (!rtcInitialized) {
+        return;
+    }
+    
+    RTC_DateTime dt = rtc.getDateTime();
+    
+    // Format date string: "Friday, December 15"
+    const char* weekdays[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+    const char* months[] = {"", "January", "February", "March", "April", "May", "June",
+                           "July", "August", "September", "October", "November", "December"};
+    
+    // Calculate day of week (using Zeller's congruence)
+    int y = dt.getYear();
+    int m = dt.getMonth();
+    int d = dt.getDay();
+    if (m < 3) {
+        m += 12;
+        y -= 1;
+    }
+    int k = y % 100;
+    int j = y / 100;
+    int h = (d + ((13 * (m + 1)) / 5) + k + (k / 4) + (j / 4) - (2 * j)) % 7;
+    int dayOfWeek = ((h + 6) % 7);  // Convert to 0=Sunday, 1=Monday, etc.
+    
+    char dateStr[50];
+    snprintf(dateStr, sizeof(dateStr), "%s, %s %d", 
+             weekdays[dayOfWeek], months[dt.getMonth()], dt.getDay());
+    
+    // Update the display
+    screenManager.updateIdleDate(dateStr);
 }
 
