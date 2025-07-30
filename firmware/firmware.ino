@@ -846,9 +846,7 @@ void loop() {
                 USBSerial.println("Power button pressed - transitioning to DEEP sleep");
                 power.clearIrqStatus();
                 
-                // Turn off display immediately before sleep
-                USBSerial.println("Turning off display before sleep");
-                gfx->Display_Brightness(0);
+                // Let SleepState handle display power management
                 
                 SleepState* sleepState = stateMachine.sleepState;
                 if (sleepState) {
@@ -873,9 +871,7 @@ void loop() {
     if (stateMachine.checkInactivityTimeout()) {
         USBSerial.println("Inactivity timeout - transitioning to light sleep");
         
-        // Turn off display immediately before sleep
-        USBSerial.println("Turning off display before sleep");
-        gfx->Display_Brightness(0);
+        // Let SleepState handle display power management
         
         SleepState* sleepState = stateMachine.sleepState;
         if (sleepState) {

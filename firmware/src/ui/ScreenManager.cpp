@@ -918,8 +918,18 @@ void ScreenManager::setDisplayPower(bool on) {
         Arduino_GFX* gfx = static_cast<Arduino_GFX*>(gfx_ptr);
         if (on) {
             USBSerial.println("[SCREEN] Turning display ON");
+            USBSerial.println("[SCREEN] Setting brightness to 200");
             gfx->Display_Brightness(200); // Normal brightness
+            USBSerial.println("[SCREEN] Calling displayOn()");
             gfx->displayOn();  // Also call displayOn
+            
+            // Small delay to ensure display is ready
+            delay(50);
+            
+            // Force a screen refresh by triggering LVGL
+            lv_obj_invalidate(lv_scr_act());
+            
+            USBSerial.println("[SCREEN] Display should be ON now");
         } else {
             USBSerial.println("[SCREEN] Turning display OFF");
             gfx->Display_Brightness(0);   // Turn off backlight

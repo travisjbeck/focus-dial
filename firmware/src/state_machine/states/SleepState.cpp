@@ -12,7 +12,7 @@
 
 extern XPowersAXP2101 power;
 extern LEDController* g_ledController;
-extern ScreenManager* screenManager;
+extern ScreenManager screenManager;
 
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
 
@@ -36,12 +36,8 @@ void SleepState::onEnter()
   
   // Turn off display and LEDs
   ESP_LOGI(getLogTag(), "Turning off display and LEDs");
-  if (screenManager) {
-    ESP_LOGI(getLogTag(), "screenManager exists, calling turnOffDisplay");
-    screenManager->turnOffDisplay();
-  } else {
-    ESP_LOGE(getLogTag(), "screenManager is NULL!");
-  }
+  ESP_LOGI(getLogTag(), "Calling turnOffDisplay on screenManager");
+  screenManager.turnOffDisplay();
   if (g_ledController) {
     ESP_LOGI(getLogTag(), "Turning off LEDs");
     g_ledController->turnOff();
@@ -116,8 +112,13 @@ void SleepState::onExit()
   // after deep sleep wake, so we only need to handle light sleep wake
   
   // Turn display back on for light sleep wake
-  if (!isDeepSleep && screenManager) {
-    screenManager->turnOnDisplay();
+  if (!isDeepSleep) {
+    ESP_LOGI(getLogTag(), "Light sleep wake - checking screenManager");
+    ESP_LOGI(getLogTag(), "Calling turnOnDisplay()");
+    screenManager.turnOnDisplay();
+    ESP_LOGI(getLogTag(), "turnOnDisplay() called");
+  } else {
+    ESP_LOGI(getLogTag(), "Deep sleep wake - display will be reinitialized in setup()");
   }
   
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -184,9 +185,9 @@ void SleepState::configureWakeupSources()
     // 1. BOOT button
     gpio_wakeup_enable(WAKE_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
     
-    // 2. Encoder pins (wake on rotation)
-    gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_ANYEDGE); // ENCODER_A
-    gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_ANYEDGE); // ENCODER_B
+    // 2. Encoder pins (wake on rotation) - using level trigger for sleep compatibility
+    gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_LOW_LEVEL); // ENCODER_A
+    gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_LOW_LEVEL); // ENCODER_B
     
     // 3. Touch interrupt pin
     gpio_wakeup_enable(GPIO_NUM_11, GPIO_INTR_LOW_LEVEL); // TP_INT
