@@ -674,11 +674,93 @@
             "testStrategy": ""
           }
         ]
+      },
+      {
+        "id": 11,
+        "title": "Implement Alarm Notification Sound Functionality",
+        "description": "Add audio playback capabilities for timer completion alerts, including SD card sound storage, web-based configuration for sound selection and preview, and ESP32-S3 I2S audio output implementation.",
+        "details": "Research and implement I2S audio playback on ESP32-S3-Touch-AMOLED-1.75 using the built-in speaker. The device has an AXP2101 power management IC that controls speaker power via GPIO. Implementation steps:\n\n1. **Hardware Configuration**:\n   - Identify I2S pins for the built-in speaker (typically I2S_BCK, I2S_WS, I2S_DOUT)\n   - Configure AXP2101 to enable speaker power when needed\n   - Research ESP32-S3 I2S driver configuration for mono speaker output\n\n2. **SD Card Audio Storage**:\n   - Create /sounds directory on SD card for alarm audio files\n   - Support WAV format (16-bit, 44.1kHz recommended for ESP32)\n   - Implement SD card file listing for available sounds\n   - Add default alarm sound to firmware (fallback if SD unavailable)\n\n3. **Audio Playback System**:\n   - Use ESP32 I2S library for audio output\n   - Implement WAV file parser for header reading\n   - Create non-blocking audio playback using DMA buffers\n   - Add volume control (0-100%) stored in NVS\n   - Implement fade-in for gentle alarm start\n\n4. **Web Configuration Interface**:\n   - Add /api/sounds endpoint to list available alarm sounds\n   - Create /api/sounds/preview/:filename for sound testing\n   - Add settings page section for alarm configuration:\n     - Enable/disable alarm toggle\n     - Sound selection dropdown\n     - Volume slider (0-100%)\n     - Preview button for each sound\n   - Store alarm preferences in NVS\n\n5. **Integration with Timer System**:\n   - Modify TimerState to trigger alarm on completion\n   - Add alarm cancellation on any user interaction\n   - Implement alarm timeout (30 seconds max)\n   - Visual indication during alarm (LED flash pattern)\n\n6. **Power Management**:\n   - Enable speaker power only during playback\n   - Ensure proper cleanup on sleep transitions\n   - Handle alarm during low battery gracefully\n\nCode structure:\n```cpp\nclass AlarmController {\n  void begin();\n  void playAlarm(const char* filename);\n  void stopAlarm();\n  void setVolume(uint8_t vol);\n  bool isPlaying();\n  std::vector<String> listSounds();\n};\n```",
+        "testStrategy": "1. **Hardware Validation**: Verify speaker functionality by playing a test tone at 1kHz using I2S, confirm AXP2101 speaker enable/disable works correctly\n\n2. **SD Card Operations**: Test creating /sounds directory, copying test WAV files, verify file listing works, test playback with missing SD card (fallback to internal sound)\n\n3. **Audio Playback**: Test WAV file parsing with various formats, verify non-blocking playback doesn't affect timer display updates, test volume control from 0-100%, confirm fade-in works smoothly\n\n4. **Web Interface**: Test /api/sounds returns correct file list, verify preview playback works for each sound, confirm settings are saved to NVS and persist across reboots, test real-time volume adjustment during preview\n\n5. **Timer Integration**: Verify alarm triggers exactly when timer reaches 00:00, test alarm stops on screen tap or encoder press, confirm 30-second timeout works, verify LED flash pattern synchronized with audio\n\n6. **Edge Cases**: Test alarm during WiFi operations, verify no memory leaks during repeated playback, test behavior during power state transitions, confirm alarm works after wake from sleep",
+        "status": "pending",
+        "dependencies": [
+          4,
+          8,
+          9
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure ESP32-S3 I2S Driver and AXP2101 Speaker Control",
+            "description": "Set up I2S audio output driver for ESP32-S3 and configure AXP2101 power management IC to control speaker power via GPIO",
+            "dependencies": [],
+            "details": "Research ESP32-S3-Touch-AMOLED-1.75 pinout for I2S (BCK, WS, DOUT pins). Configure ESP32 I2S driver for mono speaker output with appropriate sample rate (16kHz/22.05kHz). Implement AXP2101 speaker power control using appropriate GPIO pin. Create AudioManager class to handle I2S initialization and speaker power management. Test with simple 1kHz tone generation to verify hardware configuration.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement SD Card Sound File Management",
+            "description": "Create SD card directory structure for alarm sounds and implement file listing/validation functionality",
+            "dependencies": [],
+            "details": "Create /sounds directory on SD card if not exists. Implement file listing function to enumerate WAV files in /sounds directory. Add file validation to check WAV headers and supported formats (16-bit PCM, mono/stereo). Create sound file metadata structure storing filename, size, sample rate. Implement default sound fallback mechanism using internal flash storage. Add SD card error handling for missing/corrupted cards.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create WAV Audio Playback Engine",
+            "description": "Develop WAV file parser and streaming audio playback system with buffering for smooth playback",
+            "dependencies": [
+              "11.1",
+              "11.2"
+            ],
+            "details": "Implement WAV header parser to extract format, sample rate, bit depth. Create audio buffer management system with double buffering for smooth playback. Implement streaming playback from SD card with configurable buffer size. Add sample rate conversion if needed (resample to I2S output rate). Create playback state machine (idle, playing, stopping). Implement volume control through I2S gain adjustment. Add playback completion callback for timer integration.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Web API for Sound Configuration",
+            "description": "Create REST API endpoints for sound selection, preview, and configuration through existing web server",
+            "dependencies": [
+              "11.2",
+              "11.3"
+            ],
+            "details": "Add GET /api/sounds endpoint to list available sound files with metadata. Implement POST /api/sounds/select to set active alarm sound. Create POST /api/sounds/preview/:filename for web-based sound preview. Add POST /api/sounds/upload for uploading new WAV files via web interface. Implement GET /api/sounds/config for volume and duration settings. Store selected sound preference in NVS flash. Add proper CORS headers for web interface access.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate Alarm Triggering with Timer System",
+            "description": "Connect audio playback to timer completion events and implement alarm behavior logic",
+            "dependencies": [
+              "11.3",
+              "11.4"
+            ],
+            "details": "Modify TimerState to trigger alarm on countdown completion. Implement AlarmState with audio playback and visual feedback (LED flash pattern). Add configurable alarm duration (5-30 seconds) with auto-stop. Create snooze functionality with encoder press during alarm. Implement alarm cancellation with screen tap. Add alarm repeat logic for ignored alarms. Ensure smooth state transition from TimerState to AlarmState to IdleState.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Power-Efficient Audio Management",
+            "description": "Optimize power consumption during audio operations and implement speaker power management",
+            "dependencies": [
+              "11.1",
+              "11.5"
+            ],
+            "details": "Disable I2S peripheral when not in use to save power. Implement speaker power-down via AXP2101 after playback completion. Add audio subsystem sleep/wake functionality. Optimize buffer sizes to minimize memory usage while maintaining smooth playback. Implement pre-buffering before speaker power-on to avoid pops. Add power consumption monitoring during audio playback. Ensure audio doesn't interfere with WiFi/display power management.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-07-30T19:24:51.030Z",
+      "updated": "2025-07-30T21:17:55.169Z",
       "description": "Tasks for master context"
     }
   }
