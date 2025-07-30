@@ -505,7 +505,7 @@
         "dependencies": [
           4
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -513,7 +513,7 @@
             "description": "Configure ESP32 light sleep mode that activates after 3 minutes of inactivity while maintaining RTC memory and peripheral states",
             "dependencies": [],
             "details": "Set up esp_sleep_enable_timer_wakeup() for periodic wake checks, configure power domains to keep essential peripherals active, implement inactivity tracking with millis() comparison, ensure WiFi/BT are properly disabled before sleep entry",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -522,7 +522,7 @@
             "description": "Configure deep sleep mode triggered by power button press with full system state saved to RTC memory",
             "dependencies": [],
             "details": "Set up GPIO0 (power button) interrupt for sleep trigger, implement state structure for RTC_DATA_ATTR storage including timer values and UI state, configure esp_deep_sleep_start() with proper wake sources, handle graceful shutdown of LVGL and display",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -534,7 +534,7 @@
               2
             ],
             "details": "Configure touch pad threshold calibration on startup, enable esp_sleep_enable_touchpad_wakeup(), implement touch interrupt handler for immediate wake response, ensure touch sensitivity works reliably in low power states",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -545,7 +545,7 @@
               2
             ],
             "details": "Define RTC memory structure for timer minutes/seconds/running state, implement save_state() and restore_state() functions, handle display reinitalization after wake, ensure LVGL UI state consistency, validate data integrity with checksums",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -554,7 +554,7 @@
             "description": "Implement battery voltage monitoring and low battery sleep triggers using AXP2101 power management IC",
             "dependencies": [],
             "details": "Configure I2C communication with AXP2101, implement getBatteryVoltage() and getBatteryPercentage() functions, set up low battery thresholds for forced deep sleep, add battery status to UI display, handle charging detection and status",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -569,7 +569,7 @@
               5
             ],
             "details": "Measure current draw in each sleep mode with multimeter, optimize peripheral shutdown sequences, test all wake sources thoroughly, validate state persistence across multiple sleep cycles, document expected battery life calculations, create power profile documentation",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -678,7 +678,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-07-30T15:52:18.151Z",
+      "updated": "2025-07-30T19:24:51.030Z",
       "description": "Tasks for master context"
     }
   }
