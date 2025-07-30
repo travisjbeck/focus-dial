@@ -132,7 +132,7 @@
         "dependencies": [
           1
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -384,7 +384,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -392,7 +392,7 @@
             "description": "Implement WiFi Access Point mode for initial device configuration, including SSID generation, HTTP server setup, and connection management",
             "dependencies": [],
             "details": "Create AP mode handler that generates unique SSID (e.g., 'Timer_XXXX'), starts HTTP server on port 80, serves configuration webpage, handles client connections, and manages AP timeout/shutdown after successful configuration or timeout period",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -401,7 +401,7 @@
             "description": "Design and implement touch screen interface for WiFi credential input, including virtual keyboard, SSID selection, and password entry",
             "dependencies": [],
             "details": "Build LVGL-based UI with virtual keyboard for password entry, WiFi network scanner with SSID list display, touch gesture handling for character selection, visual feedback for input validation, and support for WPA2/WPA3 security types",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -410,7 +410,7 @@
             "description": "Implement secure credential storage in ESP32's Non-Volatile Storage with encryption for WiFi passwords and configuration data",
             "dependencies": [],
             "details": "Use ESP32 NVS library to store SSID and encrypted password, implement AES encryption for password protection, create read/write functions for credential management, handle NVS initialization and error cases, and provide credential validation before storage",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -422,7 +422,7 @@
               3
             ],
             "details": "Create boot sequence that checks for stored credentials in NVS, attempt connection with configurable timeout (e.g., 10 seconds), implement retry logic with exponential backoff, fallback to AP mode on repeated failures, and provide manual trigger for reconfiguration mode via long button press",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -437,7 +437,7 @@
         "dependencies": [
           7
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -445,7 +445,7 @@
             "description": "Implement core HTTP server with routing capabilities for handling incoming requests",
             "dependencies": [],
             "details": "Set up HTTP server library, configure port and network settings, implement request routing system with path matching and HTTP method handling, add middleware support for common functionality like CORS and request parsing",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -456,7 +456,7 @@
               1
             ],
             "details": "Implement GET /api/projects for listing, GET /api/projects/:id for single project, POST /api/projects for creation, PUT /api/projects/:id for updates, DELETE /api/projects/:id for deletion, include proper HTTP status codes and error handling",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -467,7 +467,7 @@
               1
             ],
             "details": "Configure static file middleware, create directory structure for web assets, implement file serving with proper MIME types, add caching headers for performance, ensure index.html fallback for single-page application routing",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -478,7 +478,7 @@
               1
             ],
             "details": "Set up WebSocket server alongside HTTP server, implement connection handling and client tracking, create event system for timer state changes, broadcast updates to all connected clients, handle reconnection logic and heartbeat for connection health",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -490,7 +490,7 @@
               4
             ],
             "details": "Create serialization layer for project and timer data models, implement consistent response format with data/error fields, add JSON parsing middleware for request bodies, ensure proper content-type headers, handle serialization errors gracefully",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -678,7 +678,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-07-17T19:02:53.507Z",
+      "updated": "2025-07-30T15:50:48.880Z",
       "description": "Tasks for master context"
     }
   }
