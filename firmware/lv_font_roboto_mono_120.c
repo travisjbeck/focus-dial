@@ -3309,7 +3309,7 @@ static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 17365, .adv_w = 1152, .box_w = 60, .box_h = 87, .ofs_x = 4, .ofs_y = -1},
     {.bitmap_index = 19975, .adv_w = 1152, .box_w = 58, .box_h = 89, .ofs_x = 6, .ofs_y = -1},
     {.bitmap_index = 22556, .adv_w = 1152, .box_w = 58, .box_h = 88, .ofs_x = 5, .ofs_y = -1},
-    {.bitmap_index = 25108, .adv_w = 1152, .box_w = 24, .box_h = 70, .ofs_x = 25, .ofs_y = -1}
+    {.bitmap_index = 25108, .adv_w = 1152, .box_w = 24, .box_h = 70, .ofs_x = 25, .ofs_y = 9}
 };
 
 /*---------------------
