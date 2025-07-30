@@ -927,16 +927,24 @@ void LEDController::setPreviewMode(bool enabled)
 
 void LEDController::setPreviewColor(const String &hexColor)
 {
-  if (previewMode) {
-    uint32_t color = hexColorToUint32(hexColor);
-    setSolid(color);
+  // First, make sure we're in preview mode
+  if (!previewMode) {
+    saveCurrentState();
+    previewMode = true;
   }
+  
+  // Set the color on the LEDs
+  uint32_t color = hexColorToUint32(hexColor);
+  setSolid(color);
+  ESP_LOGI(TAG, "LED preview color set to: %s (0x%06X)", hexColor.c_str(), color);
 }
 
 void LEDController::resetPreviewColor()
 {
   if (previewMode) {
+    previewMode = false;
     restoreLastState();
+    ESP_LOGI(TAG, "LED preview mode exited, restored previous state");
   }
 }
 

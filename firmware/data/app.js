@@ -1,8 +1,6 @@
 // TheTimer Project Management app.js
 
-// Add WebSocket connection variables
-let ws = null;
-let isWsConnected = false;
+// Color preview timeout for debouncing
 let colorPreviewTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,9 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchAndRenderProjects();
   fetchWebhookUrl();
   fetchApiKey();
-
-  // Initialize WebSocket connection
-  setupWebSocket();
 
   const form = document.getElementById('add-project-form');
   if (form) {
@@ -31,69 +26,29 @@ document.addEventListener('DOMContentLoaded', () => {
   window.currentLightness = 62;
 });
 
-// WebSocket setup function
-function setupWebSocket() {
-  // Close any existing connection
-  if (ws) {
-    ws.close();
-  }
-
-  // Create WebSocket URL based on current location (WebSocket server on port 81)
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.hostname}:81/`;
-
-  console.log('Connecting WebSocket to:', wsUrl);
-
-  ws = new WebSocket(wsUrl);
-
-  ws.onopen = () => {
-    console.log('WebSocket connection established');
-    isWsConnected = true;
-  };
-
-  ws.onclose = () => {
-    console.log('WebSocket connection closed');
-    isWsConnected = false;
-
-    // Attempt to reconnect after a delay
-    setTimeout(() => {
-      if (!isWsConnected) {
-        console.log('Attempting to reconnect WebSocket...');
-        setupWebSocket();
-      }
-    }, 5000); // Retry after 5 seconds
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
-    // Don't close here, the onclose handler will be called
-  };
-
-  ws.onmessage = (event) => {
-    console.log('WebSocket message received:', event.data);
-    // Handle any messages from the server if needed
-  };
-}
-
-// Function to send color update via WebSocket, with debounce
-function sendColorUpdate(colorHex) {
-  if (!isWsConnected) {
-    console.log('WebSocket not connected, cannot send color update');
-    return;
-  }
-
+// Function to send color update via HTTP, with debounce
+async function sendColorUpdate(colorHex) {
   // Clear any pending timeout
   if (colorPreviewTimeout) {
     clearTimeout(colorPreviewTimeout);
   }
 
   // Debounce the color updates to prevent flooding the device
-  colorPreviewTimeout = setTimeout(() => {
-    // Format: "action:value"
-    const message = `preview-color:${colorHex}`;
+  colorPreviewTimeout = setTimeout(async () => {
     try {
-      ws.send(message);
-      console.log('Sent color preview:', colorHex);
+      const response = await fetch('/api/color/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `color=${encodeURIComponent(colorHex)}`
+      });
+      
+      if (response.ok) {
+        console.log('Sent color preview:', colorHex);
+      } else {
+        console.error('Error sending color preview:', response.status);
+      }
     } catch (error) {
       console.error('Error sending color preview:', error);
     }
@@ -101,22 +56,22 @@ function sendColorUpdate(colorHex) {
 }
 
 // Function to send reset command
-function sendResetColorUpdate() {
-  if (!isWsConnected) {
-    console.log('WebSocket not connected, cannot send reset');
-    return;
-  }
-
+async function sendResetColorUpdate() {
   // Clear any pending color updates
   if (colorPreviewTimeout) {
     clearTimeout(colorPreviewTimeout);
   }
 
-  // Send reset command
-  const message = 'reset-color:';
   try {
-    ws.send(message);
-    console.log('Sent color reset');
+    const response = await fetch('/api/color/reset', {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      console.log('Sent color reset');
+    } else {
+      console.error('Error sending color reset:', response.status);
+    }
   } catch (error) {
     console.error('Error sending color reset:', error);
   }

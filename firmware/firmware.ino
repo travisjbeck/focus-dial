@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <lvgl.h>
+#include <string.h>
 #include "Arduino_GFX_Library.h"
 #include "HWCDC.h"
 #include "XPowersLib.h"
@@ -177,7 +178,8 @@ void handleApiWebhookPost();
 void handleApiKeyGet();
 void handleApiKeyPost();
 void handleNotFound();
-// void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
+void handleApiColorPreview();
+void handleApiColorReset();
 
 
 // Rounder callback for display optimization (critical for performance)
@@ -971,14 +973,12 @@ void startWebServer() {
     apiServer.on("/api/apikey", HTTP_GET, handleApiKeyGet);
     apiServer.on("/api/apikey", HTTP_POST, handleApiKeyPost);
     apiServer.on("/api/status", HTTP_GET, handleApiStatus);
+    apiServer.on("/api/color/preview", HTTP_POST, handleApiColorPreview);
+    apiServer.on("/api/color/reset", HTTP_POST, handleApiColorReset);
     apiServer.onNotFound(handleNotFound);
     
     // Start server
     apiServer.begin();
-    
-    // Start WebSocket server
-    // webSocket.begin();
-    // webSocket.onEvent(webSocketEvent);
     
     webServerRunning = true;
     
@@ -1284,9 +1284,60 @@ void onWiFiEvent(WiFiEvent_t event) {
                 apiServer.stop();
                 // webSocket.close();
                 webServerRunning = false;
-                USBSerial.println("Web Server and WebSocket stopped");
+                USBSerial.println("Web Server stopped");
             }
             break;
+    }
+}
+
+// Handle color preview API endpoint
+void handleApiColorPreview() {
+    if (apiServer.hasArg("color")) {
+        String hexColor = apiServer.arg("color");
+        USBSerial.printf("Color preview requested: %s\n", hexColor.c_str());
+        
+        // Allow preview only if in IdleState
+        if (stateMachine.isInIdleState()) {
+            // Use the ledController to update the LEDs using the preview methods
+            LEDController* ledController = stateMachine.getLEDController();
+            if (ledController) {
+                ledController->setPreviewColor(hexColor); // This handles saving state and setting the solid color
+                USBSerial.printf("LED color preview set to: %s\n", hexColor.c_str());
+                apiServer.send(200, "application/json", "{\"status\":\"ok\"}");
+            } else {
+                apiServer.send(500, "application/json", "{\"error\":\"LED controller not available\"}");
+            }
+        }
+        else {
+            USBSerial.println("Color preview ignored - not in idle state");
+            apiServer.send(400, "application/json", "{\"error\":\"Not in idle state\"}");
+        }
+    } else {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing color parameter\"}");
+    }
+}
+
+// Handle color reset API endpoint
+void handleApiColorReset() {
+    USBSerial.println("Color reset requested");
+    
+    // Reset preview mode via LEDController (this handles restoring the previous state)
+    LEDController* ledController = stateMachine.getLEDController();
+    if (ledController) {
+        ledController->resetPreviewColor();
+        
+        // If we *were* in IdleState, ensure its default pattern is restored
+        if (stateMachine.isInIdleState()) {
+            // The resetPreviewColor should have already restored the idle pattern
+            USBSerial.println("LED color reset to default IdleState pattern");
+        }
+        else {
+            USBSerial.println("LED color preview reset (was not in Idle)");
+        }
+        
+        apiServer.send(200, "application/json", "{\"status\":\"ok\"}");
+    } else {
+        apiServer.send(500, "application/json", "{\"error\":\"LED controller not available\"}");
     }
 }
 
