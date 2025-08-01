@@ -41,6 +41,9 @@
 // Simple Encoder
 #include "src/SimpleEncoder.h"
 
+// Production Test
+#include "src/SimpleProductionTest.h"
+
 // RTC Configuration
 SensorPCF85063 rtc;
 bool rtcInitialized = false;
@@ -675,8 +678,7 @@ void setup() {
 
     USBSerial.println("Setup complete");
     USBSerial.println("--- Integration Testing Available ---");
-    USBSerial.println("Commands: 'test' (full tests), 'debug' (encoder), 'led' (LED tests), 'white' (simple LED test)");
-    USBSerial.println("         'clearwifi' (clear WiFi credentials), 'sleep' (go to deep sleep immediately)");
+    USBSerial.println("Commands: 'test' (hardware validation), 'sleep' (deep sleep), 'clearwifi' (reset WiFi)");
 }
 
 void loop() {
@@ -688,49 +690,15 @@ void loop() {
         USBSerial.print(command);
         USBSerial.println("'");
         if (command.equalsIgnoreCase("TEST") || command.equalsIgnoreCase("test")) {
-            USBSerial.println("=== TEST MODE ACTIVATED ===");
-            stateMachine.runTestMode();
-            USBSerial.println("=== TEST MODE COMPLETED ===");
-            USBSerial.println("Type 'test' again to run tests, or continue normal operation...");
-        }
-        else if (command.equalsIgnoreCase("DEBUG") || command.equalsIgnoreCase("debug")) {
-            USBSerial.println("=== ENCODER DEBUG MODE ===");
-            InputController* input = stateMachine.getInputController();
-            if (input) {
-                input->enableDebugOutput(true);
-                input->dumpEncoderState();
-                // Register a simple debug handler
-                input->onEncoderRotateHandler([](int delta) {
-                    USBSerial.print("ENCODER ROTATION: delta=");
-                    USBSerial.println(delta);
-                });
-                USBSerial.println("Debug enabled - rotate encoder to see output");
-                USBSerial.println("Send 'test' to run tests or continue normal operation");
-            } else {
-                USBSerial.println("InputController not available");
-            }
-        }
-        else if (command.equalsIgnoreCase("LED") || command.equalsIgnoreCase("led")) {
-            USBSerial.println("=== LED TEST MODE ===");
-            LEDController* ledController = stateMachine.getLEDController();
-            if (ledController) {
-                USBSerial.println("Running LED diagnostic sequence...");
-                ledController->runDiagnosticSequence();
-                USBSerial.println("LED diagnostic sequence completed");
-            } else {
-                USBSerial.println("LED controller not available");
-            }
-        }
-        else if (command.equalsIgnoreCase("CLEARWIFI") || command.equalsIgnoreCase("clearwifi")) {
-            USBSerial.println("=== CLEARING WIFI CREDENTIALS ===");
-            Preferences preferences;
-            preferences.begin("wifi", false);
-            preferences.clear();
-            preferences.end();
-            USBSerial.println("WiFi credentials cleared!");
-            USBSerial.println("Restarting device...");
-            delay(1000);
-            ESP.restart();
+            // Reset watchdog before test
+            esp_task_wdt_reset();
+            
+            // Run the test
+            SimpleProductionTest::runTest();
+            
+            // Extra safety after test
+            esp_task_wdt_reset();
+            delay(100);
         }
         else if (command.equalsIgnoreCase("SLEEP") || command.equalsIgnoreCase("sleep")) {
             USBSerial.println("=== MANUAL SLEEP COMMAND ===");
@@ -743,25 +711,16 @@ void loop() {
                 stateMachine.changeState(sleepState);
             }
         }
-        else if (command.equalsIgnoreCase("WHITE") || command.equalsIgnoreCase("white")) {
-            USBSerial.println("=== SIMPLE WHITE TEST ===");
-            LEDController* ledController = stateMachine.getLEDController();
-            if (ledController) {
-                USBSerial.println("Setting all LEDs to bright white for 3.3V test...");
-                ledController->setBrightness(255); // Maximum brightness
-                ledController->setSolid(0xFFFFFF); // Pure white
-                USBSerial.println("White test active - LEDs should stay bright white");
-                USBSerial.println("Testing for 10 seconds...");
-                // Use smaller delays with watchdog resets to prevent timeout
-                for (int i = 0; i < 10; i++) {
-                    delay(1000);
-                    esp_task_wdt_reset();
-                }
-                ledController->turnOff();
-                USBSerial.println("White test completed");
-            } else {
-                USBSerial.println("LED controller not available");
-            }
+        else if (command.equalsIgnoreCase("CLEARWIFI") || command.equalsIgnoreCase("clearwifi")) {
+            USBSerial.println("=== CLEARING WIFI CREDENTIALS ===");
+            Preferences preferences;
+            preferences.begin("wifi", false);
+            preferences.clear();
+            preferences.end();
+            USBSerial.println("WiFi credentials cleared!");
+            USBSerial.println("Restarting device...");
+            delay(1000);
+            ESP.restart();
         }
     }
     
