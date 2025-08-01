@@ -1,5 +1,57 @@
 # Task Master AI - Claude Code Integration Guide
 
+## CRITICAL: POWER MANAGEMENT REQUIREMENTS - MUST BE MET WITHOUT EXCEPTION
+
+### Power Button Sleep/Wake:
+1. When the power button is pressed, the device enters sleep mode and can only be awakened by pressing the power button again.
+
+### Inactivity Sleep/Wake:
+2. On the idle screen, after three minutes of inactivity, the device enters sleep mode. The device can be awakened by either:
+   - Touching the screen
+   - Rotating the encoder
+
+**These requirements must be met consistently and without exception.**
+
+---
+
+## CRITICAL: Arduino Compilation and Upload Commands
+
+### ALWAYS USE THESE EXACT COMMANDS - THIS DEVICE HAS 16MB FLASH (NOT 4MB!)
+
+```bash
+# COMPILE ONLY (Normal Firmware)
+cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean
+
+# COMPILE WITH TEST MODE
+cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --build-property "compiler.cpp.extra_flags=-DTEST_MODE" --clean
+
+# UPLOAD (after compilation)
+arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app
+
+# COMPILE + UPLOAD + MONITOR (All in one)
+cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean && \
+arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app && \
+esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && \
+sleep 0.5 && \
+timeout 30 cat /dev/cu.usbmodem32301
+```
+
+### WHY THESE EXACT PARAMETERS ARE CRITICAL:
+- **FlashSize=16M** - Device has 16MB flash, NOT the default 4MB
+- **PartitionScheme=huge_app** - Required for 2MB firmware (default partition too small)
+- **build.psram_type=opi** - Required for 8MB PSRAM to work
+- **--clean** - Ensures fresh build (use when switching between TEST_MODE and normal)
+
+### CRITICAL: FAILED ATTEMPTS REFERENCE
+**BEFORE ANY CHANGES**: Always check `/firmware/FAILED_ATTEMPTS_COMPREHENSIVE.md` 
+- Documents 4+ days of failed attempts and root causes
+- Contains solutions that DO NOT WORK and must never be repeated
+- Updated with latest failed dual-mode sleep attempts (ext0+ext1 conflict)
+- Reference this file before implementing ANY sleep, LED, or wake functionality
+
 ## Essential Commands
 
 ### Core Workflow Commands

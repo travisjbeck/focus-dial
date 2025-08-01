@@ -1053,16 +1053,15 @@ bool StateMachine::checkInactivityTimeout() {
     return false;
   }
   
-  // Don't sleep during certain states
-  if (currentState == timerState || currentState == sleepState || 
-      currentState == provisionState || currentState == startupState) {
-    updateActivityTime(); // Reset activity timer to prevent repeated attempts
+  // ONLY check for inactivity timeout when in IdleState
+  if (currentState != idleState) {
+    updateActivityTime(); // Reset activity timer to prevent immediate sleep when returning to idle
     return false;
   }
   
   // Check if we've been inactive too long
   if (getTimeSinceLastActivity() > INACTIVITY_TIMEOUT_MS) {
-    ESP_LOGI(TAG, "Inactivity timeout reached (%.1f minutes)", 
+    ESP_LOGI(TAG, "Inactivity timeout reached (%.1f minutes) in IdleState", 
              getTimeSinceLastActivity() / 60000.0f);
     return true;
   }

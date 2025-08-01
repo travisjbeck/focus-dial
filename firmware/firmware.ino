@@ -676,7 +676,7 @@ void setup() {
     USBSerial.println("Setup complete");
     USBSerial.println("--- Integration Testing Available ---");
     USBSerial.println("Commands: 'test' (full tests), 'debug' (encoder), 'led' (LED tests), 'white' (simple LED test)");
-    USBSerial.println("         'clearwifi' (clear WiFi credentials)");
+    USBSerial.println("         'clearwifi' (clear WiFi credentials), 'sleep' (go to deep sleep immediately)");
 }
 
 void loop() {
@@ -731,6 +731,17 @@ void loop() {
             USBSerial.println("Restarting device...");
             delay(1000);
             ESP.restart();
+        }
+        else if (command.equalsIgnoreCase("SLEEP") || command.equalsIgnoreCase("sleep")) {
+            USBSerial.println("=== MANUAL SLEEP COMMAND ===");
+            USBSerial.println("Transitioning to deep sleep immediately (inactivity mode)...");
+            // Get the sleep state and configure it for inactivity mode (deep sleep, not power button)
+            SleepState* sleepState = stateMachine.sleepState;
+            if (sleepState) {
+                sleepState->setDeepSleep(true); // Use deep sleep like inactivity timeout
+                // Transition to sleep state
+                stateMachine.changeState(sleepState);
+            }
         }
         else if (command.equalsIgnoreCase("WHITE") || command.equalsIgnoreCase("white")) {
             USBSerial.println("=== SIMPLE WHITE TEST ===");
