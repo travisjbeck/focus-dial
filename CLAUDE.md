@@ -1,5 +1,9 @@
 # Task Master AI - Claude Code Integration Guide
 
+## device wiki. always reference this. 
+https://www.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75
+
+
 ## CRITICAL: POWER MANAGEMENT REQUIREMENTS - MUST BE MET WITHOUT EXCEPTION
 
 ### Power Button Sleep/Wake:
