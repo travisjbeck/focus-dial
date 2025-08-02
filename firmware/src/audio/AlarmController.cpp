@@ -47,6 +47,9 @@ bool AlarmController::begin() {
         prefs.end();
     }
     
+    // Override to 70% volume for testing
+    volume = 70;
+    
     // Initialize I2S first (like the working example)
     USBSerial.println("AlarmController: Initializing I2S");
     i2s.setPins(I2S_BCK_PIN, I2S_WS_PIN, I2S_DATA_IN_PIN, I2S_DATA_PIN, I2S_MCLK_PIN);
@@ -328,7 +331,7 @@ bool AlarmController::initES8311() {
         return false;
     }
     
-    // Set initial volume
+    // Set initial volume - ES8311 expects 0-100 range
     ret = es8311_voice_volume_set(es_handle, volume, NULL);
     if (ret != ESP_OK) {
         USBSerial.println("AlarmController: Failed to set ES8311 volume");

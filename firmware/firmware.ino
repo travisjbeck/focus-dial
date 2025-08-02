@@ -683,9 +683,24 @@ void setup() {
     }
     wifiPrefs.end();
 
-    // LittleFS is already initialized earlier for web interface
-    // Sound files are now stored in LittleFS alongside web files
-    USBSerial.println("Sound files stored in LittleFS filesystem");
+    // Initialize LittleFS before alarm controller so it can find sound files
+    USBSerial.println("Initializing LittleFS...");
+    if (!LittleFS.begin()) {
+        USBSerial.println("LittleFS mount failed!");
+    } else {
+        USBSerial.println("LittleFS mounted successfully");
+        // List files in root directory
+        File root = LittleFS.open("/");
+        if (root && root.isDirectory()) {
+            USBSerial.println("Files in LittleFS:");
+            File file = root.openNextFile();
+            while (file) {
+                USBSerial.print("  - ");
+                USBSerial.println(file.name());
+                file = root.openNextFile();
+            }
+        }
+    }
     
     // Initialize alarm controller
     USBSerial.println("Initializing alarm controller...");
@@ -973,12 +988,7 @@ void startWebServer() {
     
     USBSerial.println("Starting Web Server...");
     
-    // Initialize LittleFS
-    if (!LittleFS.begin()) {
-        USBSerial.println("LittleFS mount failed! Using API-only mode.");
-    } else {
-        USBSerial.println("LittleFS mounted successfully");
-    }
+    // LittleFS already initialized in setup()
     
     // Start mDNS
     if (MDNS.begin("thetimer")) {
