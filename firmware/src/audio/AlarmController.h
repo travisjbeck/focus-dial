@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include <vector>
-#include <SD_MMC.h>
+#include <LittleFS.h>
 #include <FS.h>
 #include "ESP_I2S.h"
 
@@ -58,28 +58,34 @@ private:
     bool speakerEnabled;
     File audioFile;
     
-    // WAV file header structure
+    // WAV file header structure (standard 44-byte header)
     struct WavHeader {
+        // RIFF chunk
         char riff[4];           // "RIFF"
         uint32_t fileSize;      // File size - 8
         char wave[4];           // "WAVE"
+        // fmt sub-chunk
         char fmt[4];            // "fmt "
-        uint32_t fmtSize;       // Format chunk size
+        uint32_t fmtSize;       // Format chunk size (16 for PCM)
         uint16_t audioFormat;   // Audio format (1 = PCM)
         uint16_t numChannels;   // Number of channels
         uint32_t sampleRate;    // Sample rate
         uint32_t byteRate;      // Byte rate
         uint16_t blockAlign;    // Block align
         uint16_t bitsPerSample; // Bits per sample
+        // data sub-chunk
         char data[4];           // "data"
         uint32_t dataSize;      // Data chunk size
-    };
+    } __attribute__((packed));
     
     bool parseWavHeader(File& file, WavHeader& header);
     bool initES8311();
     
     // Default alarm sound (sine wave beep)
     void generateDefaultAlarm();
+    
+    // Play WAV file from audioFile member
+    void playWavFile();
     
     // Audio buffer for processing
     uint8_t* audioBuffer;

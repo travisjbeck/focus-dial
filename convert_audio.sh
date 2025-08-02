@@ -29,11 +29,11 @@ for file in alarm-sounds/*.m4a; do
         # Convert to WAV with ESP32-friendly settings:
         # - 16-bit PCM
         # - 16kHz sample rate (good quality for alarms, saves memory)
-        # - Mono (single speaker)
+        # - Stereo (I2S expects stereo data)
         ffmpeg -i "$file" \
                -acodec pcm_s16le \
                -ar 16000 \
-               -ac 1 \
+               -ac 2 \
                "$OUTPUT_DIR/${filename}.wav" \
                -y -loglevel error
         

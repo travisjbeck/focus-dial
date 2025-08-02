@@ -65,11 +65,22 @@ bool AlarmController::begin() {
         return false;
     }
     
-    // Check for sounds directory on SD card
-    if (SD_MMC.exists("/sounds")) {
-        USBSerial.println("AlarmController: /sounds directory found");
+    // LittleFS should already be mounted by main firmware
+    // Just check for sound files
+    if (LittleFS.exists("/groove.wav")) {
+        USBSerial.println("AlarmController: Sound files found in LittleFS");
+        
+        // List all WAV files
+        std::vector<String> sounds = listSounds();
+        if (sounds.size() > 0) {
+            USBSerial.println("AlarmController: Available sounds:");
+            for (const String& sound : sounds) {
+                USBSerial.print("  - ");
+                USBSerial.println(sound);
+            }
+        }
     } else {
-        USBSerial.println("AlarmController: /sounds directory not found - will use default beep");
+        USBSerial.println("AlarmController: No sound files found - will use default beep");
     }
     
     return true;
@@ -102,15 +113,22 @@ void AlarmController::enableSpeaker(bool enable) {
 }
 
 bool AlarmController::parseWavHeader(File& file, WavHeader& header) {
+    // Read the standard 44-byte WAV header
     if (file.read((uint8_t*)&header, sizeof(WavHeader)) != sizeof(WavHeader)) {
+        USBSerial.println("AlarmController: Failed to read WAV header");
         return false;
     }
     
     // Validate WAV header
     if (memcmp(header.riff, "RIFF", 4) != 0 || 
         memcmp(header.wave, "WAVE", 4) != 0 ||
-        memcmp(header.fmt, "fmt ", 4) != 0) {
+        memcmp(header.fmt, "fmt ", 4) != 0 ||
+        memcmp(header.data, "data", 4) != 0) {
         USBSerial.println("AlarmController: Invalid WAV file format");
+        USBSerial.printf("  RIFF: %.4s\n", header.riff);
+        USBSerial.printf("  WAVE: %.4s\n", header.wave);
+        USBSerial.printf("  fmt : %.4s\n", header.fmt);
+        USBSerial.printf("  data: %.4s\n", header.data);
         return false;
     }
     
@@ -120,26 +138,10 @@ bool AlarmController::parseWavHeader(File& file, WavHeader& header) {
         return false;
     }
     
-    USBSerial.printf("AlarmController: WAV file - %d Hz, %d bit, %d channels\n", 
-                     header.sampleRate, header.bitsPerSample, header.numChannels);
+    USBSerial.printf("AlarmController: WAV file - %d Hz, %d bit, %d channels, %d bytes\n", 
+                     header.sampleRate, header.bitsPerSample, header.numChannels, header.dataSize);
     
-    // Find data chunk (some WAV files have extra chunks)
-    char chunk[4];
-    uint32_t chunkSize;
-    while (file.available() >= 8) {
-        file.read((uint8_t*)chunk, 4);
-        file.read((uint8_t*)&chunkSize, 4);
-        
-        if (memcmp(chunk, "data", 4) == 0) {
-            header.dataSize = chunkSize;
-            return true;
-        } else {
-            // Skip this chunk
-            file.seek(file.position() + chunkSize);
-        }
-    }
-    
-    return false;
+    return true;
 }
 
 bool AlarmController::playAlarm(const char* filename) {
@@ -151,20 +153,29 @@ bool AlarmController::playAlarm(const char* filename) {
     
     bool useDefaultSound = true;
     
-    // Try to open file from SD card if filename provided
-    if (filename && SD_MMC.exists(filename)) {
-        String fullPath = String("/sounds/") + filename;
-        if (SD_MMC.exists(fullPath)) {
-            audioFile = SD_MMC.open(fullPath, FILE_READ);
+    // Try to open file from LittleFS if filename provided
+    if (filename) {
+        String fullPath = String("/") + filename;
+        USBSerial.printf("AlarmController: Looking for file: %s\n", fullPath.c_str());
+        
+        if (LittleFS.exists(fullPath)) {
+            USBSerial.println("AlarmController: File exists in LittleFS");
+            audioFile = LittleFS.open(fullPath, FILE_READ);
             if (audioFile) {
+                USBSerial.printf("AlarmController: File opened, size: %d bytes\n", audioFile.size());
                 WavHeader header;
                 if (parseWavHeader(audioFile, header)) {
                     useDefaultSound = false;
-                    USBSerial.printf("AlarmController: Playing %s\n", filename);
+                    USBSerial.printf("AlarmController: Playing %s from LittleFS\n", filename);
                 } else {
+                    USBSerial.println("AlarmController: Failed to parse WAV header");
                     audioFile.close();
                 }
+            } else {
+                USBSerial.println("AlarmController: Failed to open file");
             }
+        } else {
+            USBSerial.println("AlarmController: File not found in LittleFS");
         }
     }
     
@@ -182,6 +193,13 @@ bool AlarmController::playAlarm(const char* filename) {
             controller->generateDefaultAlarm();
             vTaskDelete(NULL);
         }, "alarm_task", 4096, this, 1, NULL);
+    } else {
+        // Play WAV file from LittleFS
+        xTaskCreate([](void* param) {
+            AlarmController* controller = (AlarmController*)param;
+            controller->playWavFile();
+            vTaskDelete(NULL);
+        }, "wav_task", 8192, this, 1, NULL);
     }
     
     return true;
@@ -248,19 +266,19 @@ void AlarmController::setVolume(uint8_t vol) {
 std::vector<String> AlarmController::listSounds() {
     std::vector<String> sounds;
     
-    File dir = SD_MMC.open("/sounds");
-    if (dir && dir.isDirectory()) {
-        File file = dir.openNextFile();
+    File root = LittleFS.open("/");
+    if (root && root.isDirectory()) {
+        File file = root.openNextFile();
         while (file) {
             String name = file.name();
+            // Remove leading slash if present
+            if (name.startsWith("/")) {
+                name = name.substring(1);
+            }
             if (name.endsWith(".wav") || name.endsWith(".WAV")) {
-                // Remove /sounds/ prefix if present
-                if (name.startsWith("/sounds/")) {
-                    name = name.substring(8);
-                }
                 sounds.push_back(name);
             }
-            file = dir.openNextFile();
+            file = root.openNextFile();
         }
     }
     
@@ -268,8 +286,8 @@ std::vector<String> AlarmController::listSounds() {
 }
 
 bool AlarmController::soundExists(const char* filename) {
-    String fullPath = String("/sounds/") + filename;
-    return SD_MMC.exists(fullPath);
+    String fullPath = String("/") + filename;
+    return LittleFS.exists(fullPath);
 }
 
 bool AlarmController::initES8311() {
@@ -327,4 +345,60 @@ bool AlarmController::initES8311() {
     USBSerial.println("AlarmController: ES8311 codec initialized successfully");
     USBSerial.printf("AlarmController: Volume set to %d%%\n", volume);
     return true;
+}
+
+void AlarmController::playWavFile() {
+    USBSerial.println("AlarmController: Playing WAV file");
+    
+    if (!audioFile) {
+        USBSerial.println("AlarmController: No audio file open");
+        playing = false;
+        return;
+    }
+    
+    // WAV header was already parsed in playAlarm()
+    // We're already at position 44 after reading the header
+    // Audio data starts immediately after the header
+    
+    // Read and play audio data in chunks
+    const size_t chunkSize = 4096;  // Read 4KB at a time
+    uint8_t* buffer = (uint8_t*)malloc(chunkSize);
+    
+    if (!buffer) {
+        USBSerial.println("AlarmController: Failed to allocate playback buffer");
+        playing = false;
+        audioFile.close();
+        return;
+    }
+    
+    unsigned long startTime = millis();
+    size_t totalBytes = 0;
+    
+    while (playing && audioFile.available()) {
+        size_t bytesRead = audioFile.read(buffer, chunkSize);
+        if (bytesRead == 0) break;
+        
+        // Write to I2S
+        size_t bytesWritten = i2s.write(buffer, bytesRead);
+        totalBytes += bytesWritten;
+        
+        // Small delay to prevent buffer overrun
+        vTaskDelay(1);
+        
+        // Safety timeout (30 seconds max)
+        if (millis() - startTime > 30000) {
+            USBSerial.println("AlarmController: Playback timeout");
+            break;
+        }
+    }
+    
+    free(buffer);
+    audioFile.close();
+    
+    unsigned long duration = millis() - startTime;
+    USBSerial.printf("AlarmController: Playback complete - %d bytes in %lu ms\n", totalBytes, duration);
+    
+    // Stop after playing
+    playing = false;
+    enableSpeaker(false);
 }

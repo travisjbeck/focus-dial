@@ -50,7 +50,9 @@ void DoneState::onEnter()
     if (selectedSound.length() > 0) {
       alarmController.playAlarm(selectedSound.c_str());
     } else {
-      alarmController.playAlarm(); // Use default sound
+      // Default to groove.wav if no sound selected
+      USBSerial.println("DoneState: Defaulting to groove.wav");
+      alarmController.playAlarm("groove.wav");
     }
     
     alarmTriggered = true;

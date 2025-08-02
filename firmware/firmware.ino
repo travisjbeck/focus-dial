@@ -47,8 +47,7 @@
 // Audio System
 #include "src/audio/AlarmController.h"
 
-// SD Card
-#include <SD_MMC.h>
+// File System
 #include <FS.h>
 
 // RTC Configuration
@@ -684,46 +683,9 @@ void setup() {
     }
     wifiPrefs.end();
 
-    // Initialize SD card using SD_MMC interface
-    USBSerial.println("Initializing SD card...");
-    if (!SD_MMC.begin("/sdcard", true)) {  // true = 1-bit mode
-        USBSerial.println("SD Card initialization failed - alarm sounds will use default beep");
-    } else {
-        uint8_t cardType = SD_MMC.cardType();
-        if (cardType == CARD_NONE) {
-            USBSerial.println("No SD card attached");
-        } else {
-            USBSerial.print("SD Card Type: ");
-            if (cardType == CARD_MMC) {
-                USBSerial.println("MMC");
-            } else if (cardType == CARD_SD) {
-                USBSerial.println("SDSC");
-            } else if (cardType == CARD_SDHC) {
-                USBSerial.println("SDHC");
-            } else {
-                USBSerial.println("UNKNOWN");
-            }
-            
-            uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
-            USBSerial.printf("SD Card Size: %lluMB\n", cardSize);
-            
-            // List sound files if any
-            if (SD_MMC.exists("/sounds")) {
-                File dir = SD_MMC.open("/sounds");
-                if (dir && dir.isDirectory()) {
-                    USBSerial.println("Sound files found:");
-                    File file = dir.openNextFile();
-                    while (file) {
-                        if (!file.isDirectory()) {
-                            USBSerial.print("  - ");
-                            USBSerial.println(file.name());
-                        }
-                        file = dir.openNextFile();
-                    }
-                }
-            }
-        }
-    }
+    // LittleFS is already initialized earlier for web interface
+    // Sound files are now stored in LittleFS alongside web files
+    USBSerial.println("Sound files stored in LittleFS filesystem");
     
     // Initialize alarm controller
     USBSerial.println("Initializing alarm controller...");

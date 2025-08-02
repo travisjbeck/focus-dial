@@ -719,11 +719,89 @@
             "testStrategy": ""
           }
         ]
+      },
+      {
+        "id": 12,
+        "title": "Implement External Button for Deep Sleep/Wake Control",
+        "description": "Add support for a physical external button on GPIO19 that acts as a simple on/off switch, triggering deep sleep when pressed while awake and waking the device when pressed during deep sleep.",
+        "details": "Implementation requires careful handling of ESP32-S3 deep sleep wake sources and GPIO configuration:\n\n1. **GPIO Configuration**:\n   - Define EXTERNAL_SLEEP_BUTTON_PIN as GPIO_NUM_19 in firmware.ino\n   - Configure GPIO19 with internal pull-up resistor using gpio_set_pull_mode()\n   - Set up falling edge interrupt for button press detection when awake\n   - Ensure GPIO19 is available as RTC GPIO (verified for ESP32-S3)\n\n2. **Button Interrupt Handler**:\n   ```cpp\n   void IRAM_ATTR onExternalButtonPress() {\n     static unsigned long lastPress = 0;\n     unsigned long now = millis();\n     if (now - lastPress > 200) { // Debounce 200ms\n       externalButtonPressed = true;\n       lastPress = now;\n     }\n   }\n   ```\n\n3. **Sleep State Modifications**:\n   - Add new sleep trigger type: SLEEP_TRIGGER_EXTERNAL_BUTTON\n   - Modify enterDeepSleep() in SleepState.cpp to accept trigger parameter\n   - Store sleep trigger in RTC memory to distinguish wake source\n   - Configure wake source based on trigger:\n     ```cpp\n     if (trigger == SLEEP_TRIGGER_EXTERNAL_BUTTON) {\n       // Only external button can wake\n       esp_sleep_enable_ext0_wakeup(GPIO_NUM_19, 0); // Wake on LOW\n     } else {\n       // Existing inactivity sleep - keep touch/encoder wake\n       configureInactivityWakeSources();\n     }\n     ```\n\n4. **Wake Detection**:\n   - Check esp_sleep_get_wakeup_cause() on boot\n   - If ESP_SLEEP_WAKEUP_EXT0, device was woken by external button\n   - Clear any sleep trigger flags stored in RTC memory\n\n5. **State Machine Integration**:\n   - Add external button check in main loop\n   - When externalButtonPressed flag is set:\n     - Save current state to RTC memory if needed\n     - Call enterDeepSleep(SLEEP_TRIGGER_EXTERNAL_BUTTON)\n   - Button should work from any state (Idle, Timer, Paused, etc.)\n\n6. **Hardware Wiring**:\n   - Connect momentary pushbutton between GPIO19 and GND\n   - No external pull-up resistor needed (use internal)\n   - Button press pulls GPIO19 LOW, release returns HIGH\n   - Consider adding 100nF capacitor for hardware debouncing\n\n7. **Power Considerations**:\n   - Deep sleep triggered by external button uses minimal power\n   - Only RTC domain remains powered for wake detection\n   - Ensure AXP2101 power management allows RTC GPIO wake\n\n8. **Conflict Avoidance**:\n   - Keep existing BOOT button (GPIO0) functionality separate\n   - Don't modify existing inactivity sleep behavior\n   - External button provides dedicated hardware on/off control",
+        "testStrategy": "1. **Basic Button Functionality**:\n   - Wire button to GPIO19 and GND\n   - Verify internal pull-up keeps pin HIGH when not pressed\n   - Test button press detection with Serial.println() in interrupt handler\n   - Confirm debouncing prevents multiple triggers\n\n2. **Sleep Trigger Testing**:\n   - Press external button while device is awake\n   - Verify device enters deep sleep immediately\n   - Check current consumption drops to ~10μA range\n   - Confirm display, LEDs, and all peripherals power down\n\n3. **Wake Testing**:\n   - With device in external-button-triggered deep sleep\n   - Press external button and verify device wakes\n   - Confirm touch screen does NOT wake device\n   - Confirm encoder rotation does NOT wake device\n   - Verify only external button can wake from this sleep mode\n\n4. **State Preservation**:\n   - Start timer, then press external button\n   - Wake device and verify timer state is lost (expected)\n   - Document that external button sleep doesn't preserve state\n\n5. **Inactivity Sleep Isolation**:\n   - Let device sleep via 3-minute inactivity timeout\n   - Verify touch and encoder still wake from inactivity sleep\n   - Confirm external button also wakes from inactivity sleep\n   - Test that both sleep modes work independently\n\n6. **Edge Cases**:\n   - Rapid button presses (test debouncing)\n   - Button held down (should trigger once)\n   - Button press during state transitions\n   - Power-on with button already pressed\n\n7. **Integration Testing**:\n   - Test external button from each state (Idle, Timer, Paused, etc.)\n   - Verify no interference with existing UI interactions\n   - Confirm WiFi/web server state after wake\n   - Test with production test suite to ensure compatibility",
+        "status": "pending",
+        "dependencies": [
+          9
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure GPIO19 and Hardware Setup",
+            "description": "Set up GPIO19 with proper pull-up configuration, verify RTC GPIO compatibility, and implement basic button press detection with debouncing",
+            "dependencies": [],
+            "details": "Define EXTERNAL_SLEEP_BUTTON_PIN as GPIO_NUM_19 in firmware.ino. Configure GPIO19 with internal pull-up resistor using gpio_set_pull_mode(). Verify GPIO19 is available as RTC GPIO for ESP32-S3. Implement basic interrupt handler with debouncing logic (50ms threshold). Add Serial output for button press verification during development.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Button Interrupt Handler",
+            "description": "Create IRAM_ATTR interrupt handler for button press detection with proper debouncing and state-aware behavior",
+            "dependencies": [
+              "12.1"
+            ],
+            "details": "Implement IRAM_ATTR onExternalButtonPress() handler that detects falling edge (button press). Add software debouncing with lastButtonPress timestamp check (50ms minimum). Include volatile flag for button press detection. Ensure handler only sets flags and doesn't perform complex operations. Add logic to differentiate between wake source (button vs other sources) on startup.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Integrate Deep Sleep Trigger",
+            "description": "Modify existing deep sleep implementation to support button-triggered sleep while preserving current sleep functionality",
+            "dependencies": [
+              "12.2"
+            ],
+            "details": "Add button press check in main loop that triggers enterDeepSleep() when detected. Ensure state is properly saved before sleep (current project, timer state). Maintain compatibility with existing sleep triggers (3-minute idle, power button). Add button-specific sleep entry logging. Verify RTC memory preservation for state recovery.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Configure Wake Source Detection",
+            "description": "Set up ext0 wake source for GPIO19 and implement wake reason detection to distinguish button wake from other sources",
+            "dependencies": [
+              "12.3"
+            ],
+            "details": "Configure esp_sleep_enable_ext0_wakeup(GPIO_NUM_19, 0) for LOW level wake. Implement wake source detection using esp_sleep_get_wakeup_cause(). Add specific handling for ESP_SLEEP_WAKEUP_EXT0 to identify button wake. Ensure wake detection doesn't conflict with existing touch/encoder wake sources. Add wake source logging for debugging.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Modify State Machine for Button Control",
+            "description": "Update state machine to handle button-triggered sleep/wake transitions and ensure proper state restoration",
+            "dependencies": [
+              "12.4"
+            ],
+            "details": "Add button press handling to StateManager that triggers deep sleep from any active state. Implement state preservation logic that saves current state/project before button-triggered sleep. Ensure proper state restoration when waking from button press (return to previous state). Add button event to state machine transition logic. Maintain compatibility with existing state transitions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Comprehensive Testing and Validation",
+            "description": "Execute thorough testing procedures for button functionality, sleep/wake cycles, state preservation, and edge cases",
+            "dependencies": [
+              "12.5"
+            ],
+            "details": "Test basic button functionality with oscilloscope to verify pull-up and debouncing. Validate sleep trigger from all states (Idle, Timer, Paused, etc.). Test wake functionality and verify device returns to correct state. Perform rapid press testing to ensure debouncing prevents issues. Test interaction with existing sleep sources (idle timeout, power button). Verify no power consumption increase during sleep. Document any GPIO19 conflicts or limitations discovered.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-08-01T19:21:20.081Z",
+      "updated": "2025-08-02T04:06:07.034Z",
       "description": "Tasks for master context"
     }
   }
