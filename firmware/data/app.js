@@ -20,19 +20,20 @@ document.addEventListener('DOMContentLoaded', () => {
     webhookForm.addEventListener('submit', handleWebhookSubmit);
   }
 
-  const alarmForm = document.getElementById('alarm-form');
-  if (alarmForm) {
-    alarmForm.addEventListener('submit', handleAlarmSubmit);
+  // Auto-save alarm settings on change
+  const alarmSound = document.getElementById('alarm-sound');
+  if (alarmSound) {
+    // Sound dropdown already handled by initDropdown
+  }
+  
+  const alarmEnabled = document.getElementById('alarm-enabled');
+  if (alarmEnabled) {
+    alarmEnabled.addEventListener('change', handleAlarmSettingChange);
   }
 
   const previewButton = document.getElementById('preview-sound');
   if (previewButton) {
-    previewButton.addEventListener('click', handlePreviewSound);
-  }
-
-  const stopButton = document.getElementById('stop-sound');
-  if (stopButton) {
-    stopButton.addEventListener('click', handleStopSound);
+    previewButton.addEventListener('click', handlePreviewToggle);
   }
 
   // Initialize color picker with default color
@@ -1165,6 +1166,11 @@ function initDropdown(triggerId, menuId, itemsId, inputId) {
       if (value) {
         document.getElementById('preview-sound').disabled = false;
       }
+      
+      // Auto-save alarm sound selection
+      if (triggerId === 'alarm-sound-trigger') {
+        handleAlarmSettingChange();
+      }
     }
   });
   
@@ -1232,12 +1238,9 @@ async function fetchAlarmSettings() {
   }
 }
 
-async function handleAlarmSubmit(event) {
-  event.preventDefault();
-  
-  const formData = new FormData(event.target);
-  const sound = formData.get('alarm-sound');
-  const enabled = formData.get('alarm-enabled') === 'on';
+async function handleAlarmSettingChange() {
+  const sound = document.getElementById('alarm-sound').value;
+  const enabled = document.getElementById('alarm-enabled').checked;
   
   try {
     const response = await fetch('/api/alarm/settings', {
@@ -1248,72 +1251,89 @@ async function handleAlarmSubmit(event) {
       body: JSON.stringify({ sound, enabled })
     });
 
-    if (response.ok) {
-      showMessage('Alarm settings saved successfully', 'success');
-    } else {
-      showMessage('Failed to save alarm settings', 'error');
+    if (!response.ok) {
+      console.error('Failed to save alarm settings');
     }
   } catch (error) {
     console.error('Error saving alarm settings:', error);
-    showMessage('Error saving alarm settings', 'error');
   }
 }
 
 let previewTimeout = null;
+let isPlaying = false;
 
-async function handlePreviewSound() {
-  const sound = document.getElementById('alarm-sound').value;
-  if (!sound) {
-    showMessage('Please select a sound first', 'warning');
-    return;
-  }
-
-  const previewButton = document.getElementById('preview-sound');
-  const stopButton = document.getElementById('stop-sound');
+async function handlePreviewToggle() {
+  const button = document.getElementById('preview-sound');
+  const icon = button.querySelector('.icon');
+  const text = button.querySelector('span');
   
-  previewButton.style.display = 'none';
-  stopButton.style.display = 'block';
-
-  try {
-    const response = await fetch('/api/alarm/preview', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ sound })
-    });
-
-    if (response.ok) {
-      // Sound will play until manually stopped
-    } else {
-      stopButton.style.display = 'none';
-      previewButton.style.display = 'block';
-      showMessage('Failed to preview sound', 'error');
+  if (!isPlaying) {
+    // Start preview
+    const sound = document.getElementById('alarm-sound').value;
+    if (!sound) {
+      showMessage('Please select a sound first', 'warning');
+      return;
     }
-  } catch (error) {
-    console.error('Error previewing sound:', error);
-    stopButton.style.display = 'none';
-    previewButton.style.display = 'block';
-    showMessage('Error previewing sound', 'error');
-  }
-}
+    
+    // Change button to stop state
+    isPlaying = true;
+    button.classList.remove('secondary-btn');
+    button.classList.add('danger-btn');
+    icon.setAttribute('data-lucide', 'square');
+    text.textContent = 'Stop';
+    lucide.createIcons();
 
-async function handleStopSound() {
-  if (previewTimeout) {
-    clearTimeout(previewTimeout);
-    previewTimeout = null;
-  }
+    try {
+      const response = await fetch('/api/alarm/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sound })
+      });
 
-  try {
-    await fetch('/api/alarm/stop', {
-      method: 'POST'
-    });
-  } catch (error) {
-    console.error('Error stopping sound:', error);
-  }
+      if (!response.ok) {
+        // Reset button on error
+        isPlaying = false;
+        button.classList.remove('danger-btn');
+        button.classList.add('secondary-btn');
+        icon.setAttribute('data-lucide', 'play');
+        text.textContent = 'Preview';
+        lucide.createIcons();
+        showMessage('Failed to preview sound', 'error');
+      }
+    } catch (error) {
+      console.error('Error previewing sound:', error);
+      // Reset button on error
+      isPlaying = false;
+      button.classList.remove('danger-btn');
+      button.classList.add('secondary-btn');
+      icon.setAttribute('data-lucide', 'play');
+      text.textContent = 'Preview';
+      lucide.createIcons();
+      showMessage('Error previewing sound', 'error');
+    }
+  } else {
+    // Stop preview
+    if (previewTimeout) {
+      clearTimeout(previewTimeout);
+      previewTimeout = null;
+    }
 
-  const previewButton = document.getElementById('preview-sound');
-  const stopButton = document.getElementById('stop-sound');
-  stopButton.style.display = 'none';
-  previewButton.style.display = 'block';
+    try {
+      await fetch('/api/alarm/stop', {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error('Error stopping sound:', error);
+    }
+
+    // Change button back to preview state
+    isPlaying = false;
+    button.classList.remove('danger-btn');
+    button.classList.add('secondary-btn');
+    icon.setAttribute('data-lucide', 'play');
+    text.textContent = 'Preview';
+    lucide.createIcons();
+  }
 }

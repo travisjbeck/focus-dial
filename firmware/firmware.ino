@@ -1434,7 +1434,7 @@ void handleApiAlarmSettingsGet() {
     StaticJsonDocument<256> doc;
     doc["sound"] = prefs.getString("sound", "");
     doc["enabled"] = prefs.getBool("enabled", true);
-    doc["volume"] = prefs.getUChar("volume", 75);
+    doc["volume"] = prefs.getUChar("volume", 70);
     
     prefs.end();
     
