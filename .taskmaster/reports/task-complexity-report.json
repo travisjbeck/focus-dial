@@ -1,21 +1,45 @@
 {
 	"meta": {
-		"generatedAt": "2025-08-02T04:18:29.641Z",
-		"tasksAnalyzed": 1,
-		"totalTasks": 12,
-		"analysisCount": 1,
+		"generatedAt": "2025-08-02T19:45:57.298Z",
+		"tasksAnalyzed": 4,
+		"totalTasks": 13,
+		"analysisCount": 4,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
 		"usedResearch": true
 	},
 	"complexityAnalysis": [
 		{
-			"taskId": 12,
-			"taskTitle": "Implement External Button for Deep Sleep/Wake Control",
+			"taskId": 10,
+			"taskTitle": "Production Test Suite",
+			"complexityScore": 5,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the production test suite into specific test sequences: hardware validation tests (display, touch, encoder, LED ring), timer functionality tests (start/stop/complete cycle), power management tests (sleep/wake modes), network tests (WiFi connection and web interface), and final validation checklist. Each subtask should be a clear pass/fail test that can be completed quickly.",
+			"reasoning": "Medium complexity as it involves integrating multiple existing features into a cohesive test flow. The test suite needs to be comprehensive yet efficient (under 5 minutes), requiring careful design of test sequences and clear pass/fail criteria for each hardware component and software feature."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Implement Alarm Notification Sound Functionality",
 			"complexityScore": 7,
 			"recommendedSubtasks": 6,
-			"expansionPrompt": "Break down the external button implementation into subtasks covering GPIO configuration, interrupt handling, deep sleep integration, wake detection, state machine modifications, and comprehensive testing procedures for GPIO19 button control.",
-			"reasoning": "This task involves complex ESP32-S3 deep sleep/wake mechanisms, RTC GPIO configuration, interrupt handling with debouncing, state preservation across sleep cycles, and careful integration with existing power management. The implementation requires coordination between hardware interrupts, sleep modes, and the existing state machine while maintaining compatibility with current wake sources."
+			"expansionPrompt": "Implement alarm sound functionality by breaking into: ESP32-S3 I2S driver configuration with AXP2101 speaker control, SD card sound file management system, WAV audio playback engine with streaming and buffering, web API endpoints for sound configuration and preview, timer system integration with alarm triggering logic, and power-efficient audio management with proper sleep handling. Focus on non-blocking audio playback and smooth integration with existing systems.",
+			"reasoning": "High complexity due to multiple technical challenges: hardware audio configuration (I2S + AXP2101), file system operations, audio format parsing, web API integration, and power management considerations. Requires careful coordination between hardware drivers, file system, web server, and state machine."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Implement External Button for Deep Sleep/Wake Control",
+			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Implement external button sleep control by: configuring GPIO19 with proper pull-up and RTC GPIO setup, creating interrupt handler with debouncing, integrating deep sleep trigger into main loop, configuring ext0 wake source for button detection, modifying state machine to handle button-triggered transitions, and comprehensive testing of all sleep/wake scenarios. Ensure compatibility with existing sleep modes.",
+			"reasoning": "Moderate to high complexity due to ESP32-S3 deep sleep intricacies, RTC GPIO configuration requirements, interrupt handling, and the need to maintain compatibility with existing sleep modes while adding new functionality. Requires careful testing to avoid conflicts."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Fix Inactivity Sleep Wake-Up Failure After Extended Duration",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Fix the critical sleep wake failure by: analyzing root cause of GPIO wake configuration loss in light sleep mode, implementing deep sleep replacement for inactivity timeout with proper RTC memory state preservation, configuring reliable wake sources (ext0 for touch, ext1 for encoder), integrating wake detection and state restoration logic, and comprehensive testing of extended sleep durations. Focus on Option B (deep sleep) as the more reliable solution.",
+			"reasoning": "High complexity critical bug fix requiring deep understanding of ESP32-S3 sleep modes, RTC peripherals, and wake source configuration. The issue affects core functionality after extended periods, requiring careful implementation of deep sleep with state persistence and thorough long-duration testing."
 		}
 	]
 }

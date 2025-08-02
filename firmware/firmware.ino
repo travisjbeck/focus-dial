@@ -204,6 +204,11 @@ void handleApiKeyPost();
 void handleNotFound();
 void handleApiColorPreview();
 void handleApiColorReset();
+void handleApiAlarmSounds();
+void handleApiAlarmSettingsGet();
+void handleApiAlarmSettingsPost();
+void handleApiAlarmPreview();
+void handleApiAlarmStop();
 void syncTimeFromNTP();
 void updateDateTimeDisplay();
 
@@ -1034,6 +1039,11 @@ void startWebServer() {
     apiServer.on("/api/status", HTTP_GET, handleApiStatus);
     apiServer.on("/api/color/preview", HTTP_POST, handleApiColorPreview);
     apiServer.on("/api/color/reset", HTTP_POST, handleApiColorReset);
+    apiServer.on("/api/alarm/sounds", HTTP_GET, handleApiAlarmSounds);
+    apiServer.on("/api/alarm/settings", HTTP_GET, handleApiAlarmSettingsGet);
+    apiServer.on("/api/alarm/settings", HTTP_POST, handleApiAlarmSettingsPost);
+    apiServer.on("/api/alarm/preview", HTTP_POST, handleApiAlarmPreview);
+    apiServer.on("/api/alarm/stop", HTTP_POST, handleApiAlarmStop);
     apiServer.onNotFound(handleNotFound);
     
     // Start server
@@ -1399,6 +1409,118 @@ void handleApiColorReset() {
     } else {
         apiServer.send(500, "application/json", "{\"error\":\"LED controller not available\"}");
     }
+}
+
+// Handle GET /api/alarm/sounds - Get available alarm sounds
+void handleApiAlarmSounds() {
+    StaticJsonDocument<512> doc;
+    JsonArray sounds = doc.to<JsonArray>();
+    
+    std::vector<String> soundList = alarmController.listSounds();
+    for (const String& sound : soundList) {
+        sounds.add(sound);
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+// Handle GET /api/alarm/settings - Get current alarm settings
+void handleApiAlarmSettingsGet() {
+    Preferences prefs;
+    prefs.begin("alarm", true);
+    
+    StaticJsonDocument<256> doc;
+    doc["sound"] = prefs.getString("sound", "");
+    doc["enabled"] = prefs.getBool("enabled", true);
+    doc["volume"] = prefs.getUChar("volume", 75);
+    
+    prefs.end();
+    
+    String response;
+    serializeJson(doc, response);
+    apiServer.send(200, "application/json", response);
+}
+
+// Handle POST /api/alarm/settings - Update alarm settings
+void handleApiAlarmSettingsPost() {
+    if (!apiServer.hasArg("plain")) {
+        apiServer.send(400, "application/json", "{\"error\":\"No data received\"}");
+        return;
+    }
+    
+    String body = apiServer.arg("plain");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    
+    if (error) {
+        apiServer.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    
+    Preferences prefs;
+    prefs.begin("alarm", false);
+    
+    if (doc.containsKey("sound")) {
+        prefs.putString("sound", doc["sound"].as<String>());
+    }
+    
+    if (doc.containsKey("enabled")) {
+        prefs.putBool("enabled", doc["enabled"].as<bool>());
+    }
+    
+    if (doc.containsKey("volume")) {
+        uint8_t volume = doc["volume"].as<uint8_t>();
+        prefs.putUChar("volume", volume);
+        alarmController.setVolume(volume);
+    }
+    
+    prefs.end();
+    
+    apiServer.send(200, "application/json", "{\"success\":true}");
+}
+
+// Handle POST /api/alarm/preview - Preview an alarm sound
+void handleApiAlarmPreview() {
+    if (!apiServer.hasArg("plain")) {
+        apiServer.send(400, "application/json", "{\"error\":\"No data received\"}");
+        return;
+    }
+    
+    String body = apiServer.arg("plain");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, body);
+    
+    if (error) {
+        apiServer.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+    
+    const char* sound = doc["sound"];
+    if (!sound) {
+        apiServer.send(400, "application/json", "{\"error\":\"Missing sound parameter\"}");
+        return;
+    }
+    
+    // Check if the sound file exists
+    if (!alarmController.soundExists(sound)) {
+        apiServer.send(404, "application/json", "{\"error\":\"Sound file not found\"}");
+        return;
+    }
+    
+    // Play the preview (will play entire sound unless stopped manually)
+    USBSerial.printf("Previewing alarm sound: %s\n", sound);
+    alarmController.playAlarm(sound);
+    
+    apiServer.send(200, "application/json", "{\"status\":\"playing\"}");
+}
+
+// Handle POST /api/alarm/stop - Stop alarm preview
+void handleApiAlarmStop() {
+    alarmController.stopAlarm();
+    USBSerial.println("Alarm preview stopped");
+    apiServer.send(200, "application/json", "{\"status\":\"stopped\"}");
 }
 
 // Sync time from NTP server and update RTC

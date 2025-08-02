@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchAndRenderProjects();
   fetchWebhookUrl();
   fetchApiKey();
+  fetchAlarmSettings();
 
   const form = document.getElementById('add-project-form');
   if (form) {
@@ -17,6 +18,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const webhookForm = document.getElementById('webhook-form');
   if (webhookForm) {
     webhookForm.addEventListener('submit', handleWebhookSubmit);
+  }
+
+  const alarmForm = document.getElementById('alarm-form');
+  if (alarmForm) {
+    alarmForm.addEventListener('submit', handleAlarmSubmit);
+  }
+
+  const previewButton = document.getElementById('preview-sound');
+  if (previewButton) {
+    previewButton.addEventListener('click', handlePreviewSound);
+  }
+
+  const stopButton = document.getElementById('stop-sound');
+  if (stopButton) {
+    stopButton.addEventListener('click', handleStopSound);
   }
 
   // Initialize color picker with default color
@@ -1098,4 +1114,206 @@ function updateEditFromRGB() {
   document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
+}
+
+// Dropdown functionality
+function initDropdown(triggerId, menuId, itemsId, inputId) {
+  const trigger = document.getElementById(triggerId);
+  const menu = document.getElementById(menuId);
+  const items = document.getElementById(itemsId);
+  const input = document.getElementById(inputId);
+  const valueSpan = trigger.querySelector('.dropdown-value');
+  
+  // Toggle dropdown
+  trigger.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isOpen = menu.classList.contains('open');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu.open').forEach(m => {
+      if (m !== menu) m.classList.remove('open');
+    });
+    document.querySelectorAll('.dropdown-trigger[aria-expanded="true"]').forEach(t => {
+      if (t !== trigger) t.setAttribute('aria-expanded', 'false');
+    });
+    
+    menu.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', !isOpen);
+  });
+  
+  // Handle item selection
+  items.addEventListener('click', (e) => {
+    const item = e.target.closest('.dropdown-item');
+    if (item) {
+      const value = item.dataset.value;
+      const text = item.textContent;
+      
+      // Update display
+      valueSpan.textContent = text;
+      valueSpan.dataset.value = value;
+      input.value = value;
+      
+      // Update selected state
+      items.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      
+      // Close dropdown
+      menu.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+      
+      // Enable preview button
+      if (value) {
+        document.getElementById('preview-sound').disabled = false;
+      }
+    }
+  });
+  
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+      menu.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+// Alarm Settings Functions
+async function fetchAlarmSettings() {
+  try {
+    // Fetch available sounds
+    const soundsResponse = await fetch('/api/alarm/sounds');
+    if (soundsResponse.ok) {
+      const sounds = await soundsResponse.json();
+      const soundItems = document.getElementById('alarm-sound-items');
+      soundItems.innerHTML = '';
+      
+      sounds.forEach(sound => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.dataset.value = sound;
+        item.textContent = sound.replace('.wav', '').replace(/-/g, ' ').replace(/_/g, ' ');
+        soundItems.appendChild(item);
+      });
+      
+      // Initialize dropdown
+      initDropdown('alarm-sound-trigger', 'alarm-sound-menu', 'alarm-sound-items', 'alarm-sound');
+    }
+
+    // Fetch current settings
+    const settingsResponse = await fetch('/api/alarm/settings');
+    if (settingsResponse.ok) {
+      const settings = await settingsResponse.json();
+      
+      // Set selected sound
+      if (settings.sound) {
+        const trigger = document.getElementById('alarm-sound-trigger');
+        const valueSpan = trigger.querySelector('.dropdown-value');
+        const input = document.getElementById('alarm-sound');
+        const items = document.getElementById('alarm-sound-items');
+        
+        valueSpan.textContent = settings.sound.replace('.wav', '').replace(/-/g, ' ').replace(/_/g, ' ');
+        valueSpan.dataset.value = settings.sound;
+        input.value = settings.sound;
+        
+        // Mark as selected
+        items.querySelectorAll('.dropdown-item').forEach(item => {
+          if (item.dataset.value === settings.sound) {
+            item.classList.add('selected');
+          }
+        });
+        
+        document.getElementById('preview-sound').disabled = false;
+      }
+      
+      document.getElementById('alarm-enabled').checked = settings.enabled !== false;
+    }
+  } catch (error) {
+    console.error('Error fetching alarm settings:', error);
+  }
+}
+
+async function handleAlarmSubmit(event) {
+  event.preventDefault();
+  
+  const formData = new FormData(event.target);
+  const sound = formData.get('alarm-sound');
+  const enabled = formData.get('alarm-enabled') === 'on';
+  
+  try {
+    const response = await fetch('/api/alarm/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sound, enabled })
+    });
+
+    if (response.ok) {
+      showMessage('Alarm settings saved successfully', 'success');
+    } else {
+      showMessage('Failed to save alarm settings', 'error');
+    }
+  } catch (error) {
+    console.error('Error saving alarm settings:', error);
+    showMessage('Error saving alarm settings', 'error');
+  }
+}
+
+let previewTimeout = null;
+
+async function handlePreviewSound() {
+  const sound = document.getElementById('alarm-sound').value;
+  if (!sound) {
+    showMessage('Please select a sound first', 'warning');
+    return;
+  }
+
+  const previewButton = document.getElementById('preview-sound');
+  const stopButton = document.getElementById('stop-sound');
+  
+  previewButton.style.display = 'none';
+  stopButton.style.display = 'block';
+
+  try {
+    const response = await fetch('/api/alarm/preview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sound })
+    });
+
+    if (response.ok) {
+      // Sound will play until manually stopped
+    } else {
+      stopButton.style.display = 'none';
+      previewButton.style.display = 'block';
+      showMessage('Failed to preview sound', 'error');
+    }
+  } catch (error) {
+    console.error('Error previewing sound:', error);
+    stopButton.style.display = 'none';
+    previewButton.style.display = 'block';
+    showMessage('Error previewing sound', 'error');
+  }
+}
+
+async function handleStopSound() {
+  if (previewTimeout) {
+    clearTimeout(previewTimeout);
+    previewTimeout = null;
+  }
+
+  try {
+    await fetch('/api/alarm/stop', {
+      method: 'POST'
+    });
+  } catch (error) {
+    console.error('Error stopping sound:', error);
+  }
+
+  const previewButton = document.getElementById('preview-sound');
+  const stopButton = document.getElementById('stop-sound');
+  stopButton.style.display = 'none';
+  previewButton.style.display = 'block';
 }

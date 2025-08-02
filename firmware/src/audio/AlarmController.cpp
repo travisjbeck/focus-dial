@@ -43,12 +43,14 @@ bool AlarmController::begin() {
     // Load saved volume from NVS
     Preferences prefs;
     if (prefs.begin("alarm", true)) {
-        volume = prefs.getUChar("volume", 90);  // Default to 90% volume like example
+        volume = prefs.getUChar("volume", 75);  // Default to 75% volume
         prefs.end();
     }
     
-    // Override to 70% volume for testing
-    volume = 70;
+    // Ensure minimum 75% volume
+    if (volume < 75) {
+        volume = 75;
+    }
     
     // Initialize I2S first (like the working example)
     USBSerial.println("AlarmController: Initializing I2S");
