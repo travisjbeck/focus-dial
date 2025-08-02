@@ -19,5 +19,9 @@ protected:
 private:
   unsigned long elapsedTime;
   unsigned long stateStartTime;
+  unsigned long alarmStartTime;
+  bool alarmTriggered;
+  
   static const unsigned long AUTO_TRANSITION_DELAY = 30000; // 30 seconds
+  static const unsigned long ALARM_MAX_DURATION = 30000; // 30 seconds max alarm
 };

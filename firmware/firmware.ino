@@ -44,6 +44,13 @@
 // Production Test
 #include "src/SimpleProductionTest.h"
 
+// Audio System
+#include "src/audio/AlarmController.h"
+
+// SD Card
+#include <SD_MMC.h>
+#include <FS.h>
+
 // RTC Configuration
 SensorPCF85063 rtc;
 bool rtcInitialized = false;
@@ -81,6 +88,7 @@ bool is_sleeping = false;  // Keep for now to avoid breaking other code
 // Wake-up configuration
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
 #define PMU_IRQ_PIN GPIO_NUM_6      // AXP2101 IRQ pin (potentially direct connection)
+
 RTC_DATA_ATTR int bootCount = 0;   // RTC memory variable to track boot count
 
 // Display Configuration
@@ -675,6 +683,67 @@ void setup() {
         }
     }
     wifiPrefs.end();
+
+    // Initialize SD card using SD_MMC interface
+    USBSerial.println("Initializing SD card...");
+    if (!SD_MMC.begin("/sdcard", true)) {  // true = 1-bit mode
+        USBSerial.println("SD Card initialization failed - alarm sounds will use default beep");
+    } else {
+        uint8_t cardType = SD_MMC.cardType();
+        if (cardType == CARD_NONE) {
+            USBSerial.println("No SD card attached");
+        } else {
+            USBSerial.print("SD Card Type: ");
+            if (cardType == CARD_MMC) {
+                USBSerial.println("MMC");
+            } else if (cardType == CARD_SD) {
+                USBSerial.println("SDSC");
+            } else if (cardType == CARD_SDHC) {
+                USBSerial.println("SDHC");
+            } else {
+                USBSerial.println("UNKNOWN");
+            }
+            
+            uint64_t cardSize = SD_MMC.cardSize() / (1024 * 1024);
+            USBSerial.printf("SD Card Size: %lluMB\n", cardSize);
+            
+            // List sound files if any
+            if (SD_MMC.exists("/sounds")) {
+                File dir = SD_MMC.open("/sounds");
+                if (dir && dir.isDirectory()) {
+                    USBSerial.println("Sound files found:");
+                    File file = dir.openNextFile();
+                    while (file) {
+                        if (!file.isDirectory()) {
+                            USBSerial.print("  - ");
+                            USBSerial.println(file.name());
+                        }
+                        file = dir.openNextFile();
+                    }
+                }
+            }
+        }
+    }
+    
+    // Initialize alarm controller
+    USBSerial.println("Initializing alarm controller...");
+    if (alarmController.begin()) {
+        USBSerial.println("Alarm controller initialized successfully");
+        
+        // List available sounds
+        std::vector<String> sounds = alarmController.listSounds();
+        if (sounds.size() > 0) {
+            USBSerial.println("Available alarm sounds:");
+            for (const String& sound : sounds) {
+                USBSerial.print("  - ");
+                USBSerial.println(sound);
+            }
+        } else {
+            USBSerial.println("No custom alarm sounds found - will use default beep");
+        }
+    } else {
+        USBSerial.println("Alarm controller initialization failed");
+    }
 
     USBSerial.println("Setup complete");
     USBSerial.println("--- Integration Testing Available ---");

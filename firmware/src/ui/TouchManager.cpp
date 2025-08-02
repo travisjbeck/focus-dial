@@ -2,6 +2,7 @@
 #include "../state_machine/include/StateMachine.h"
 #include "ScreenManager.h"
 #include "../state_machine/states/ProjectSelectState.h"
+#include "../audio/AlarmController.h"
 #include <esp_log.h>
 #include <lvgl.h>
 
@@ -246,6 +247,14 @@ void TouchManager::handleConfirmDialogTouch() {
 
 void TouchManager::handleDoneScreenTouch() {
     ESP_LOGI(getLogTag(), ">>> TRANSITION: DoneState -> IdleState (tap to continue) <<<");
+    
+    // Stop alarm if playing
+    extern AlarmController alarmController;
+    if (alarmController.isPlaying()) {
+        ESP_LOGI(getLogTag(), "Stopping alarm on user interaction");
+        alarmController.stopAlarm();
+    }
+    
     blockTouchDuringTransition();
     stateMachine->changeState((State*)stateMachine->idleState);
 }
