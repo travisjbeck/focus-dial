@@ -8,6 +8,9 @@
   <title>TheTimer | Projects</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     /* Professional Vercel-inspired styles for TheTimer */
@@ -18,12 +21,14 @@
       --color-border: #222222;
       --color-text-primary: #ffffff;
       --color-text-secondary: #888888;
-      --color-accent: #a3e635;
-      --color-accent-hover: #84cc16;
+      --color-accent: hsl(81, 59%, 71%);
+      --color-accent-hover: hsl(81, 59%, 61%);
       --color-error: #ff4444;
       --color-success: #00cc88;
       --color-warning: #f5a623;
-      --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      --font-sans: "Lato", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-heading: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
         "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         "Liberation Mono", "Courier New", monospace;
@@ -33,7 +38,22 @@
       --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
       --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-      --max-width: 960px;
+      --max-width: 1200px;
+    }
+    
+    /* Light mode variables */
+    body.light-mode {
+      --color-bg: #ffffff;
+      --color-bg-secondary: #f9fafb;
+      --color-bg-tertiary: #f3f4f6;
+      --color-border: #e5e7eb;
+      --color-text-primary: #111827;
+      --color-text-secondary: #6b7280;
+      --color-accent: hsl(81, 59%, 71%);
+      --color-accent-hover: hsl(81, 59%, 61%);
+      --color-error: #dc2626;
+      --color-success: #059669;
+      --color-warning: #d97706;
     }
 
     * {
@@ -53,36 +73,205 @@
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      margin: 0;
+      padding-top: 64px; /* Space for fixed navbar */
+    }
+    
+    /* Navbar Styles */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background-color: var(--color-bg-secondary);
+      border-bottom: 1px solid var(--color-border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    
+    .navbar-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .navbar-brand {
+      flex-shrink: 0;
+    }
+    
+    .navbar-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--color-text-primary);
+      text-decoration: none;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1.125rem;
+      transition: opacity var(--transition-fast);
+    }
+    
+    .navbar-logo:hover {
+      opacity: 0.8;
+    }
+    
+    .navbar-logo svg {
+      flex-shrink: 0;
+    }
+    
+    .navbar-center {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+    
+    .navbar-link {
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      font-size: 0.9375rem;
+      transition: color var(--transition-fast);
+    }
+    
+    .navbar-link:hover {
+      color: var(--color-text-primary);
+    }
+    
+    .navbar-end {
+      flex-shrink: 0;
+    }
+    
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius-sm);
+      padding: 0.5rem;
+      cursor: pointer;
+      color: var(--color-text-primary);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+    }
+    
+    .theme-toggle:hover {
+      background-color: var(--color-bg-tertiary);
+      border-color: var(--color-text-secondary);
+    }
+    
+    .theme-toggle .light-icon {
+      display: none;
+    }
+    
+    .theme-toggle .dark-icon {
+      display: block;
+    }
+    
+    /* Light mode - theme toggle icons */
+    body.light-mode .theme-toggle .light-icon {
+      display: block;
+    }
+    
+    body.light-mode .theme-toggle .dark-icon {
+      display: none;
+    }
+    
+    /* Light mode specific adjustments */
+    body.light-mode .navbar {
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    body.light-mode .mobile-menu {
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+    
+    body.light-mode .hamburger-menu {
+      background-color: #ffffff;
+      border: 1px solid #d1d5db;
+    }
+    
+    body.light-mode .hamburger-menu:hover {
+      background-color: #f3f4f6;
+      border-color: #9ca3af;
+    }
+    
+    body.light-mode .card {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+    
+    body.light-mode #project-list th {
+      background-color: #f9fafb;
+    }
+    
+    
+    body.light-mode .spinner .path {
+      stroke: var(--color-accent);
+    }
+    
+    /* Light mode input styles */
+    body.light-mode input[type="text"],
+    body.light-mode input[type="url"],
+    body.light-mode input[type="password"],
+    body.light-mode input[type="number"] {
+      background-color: #ffffff;
+      border: 1px solid #d1d5db;
+    }
+    
+    body.light-mode input[type="text"]:focus,
+    body.light-mode input[type="url"]:focus,
+    body.light-mode input[type="password"]:focus,
+    body.light-mode input[type="number"]:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-accent);
+    }
+    
+    body.light-mode .dropdown-trigger {
+      background-color: #ffffff;
+      border: 1px solid #d1d5db;
+    }
+    
+    body.light-mode .dropdown-menu {
+      background-color: #ffffff;
+      border: 1px solid #d1d5db;
+    }
+    
+    body.light-mode .dropdown-item:hover {
+      background-color: #f3f4f6;
+    }
+    
+    body.light-mode .dropdown-item.selected {
+      background-color: #f3f4f6;
     }
 
     .container {
       width: 100%;
       max-width: var(--max-width);
       margin: 0 auto;
-      padding: 2rem 1.5rem;
+      padding: 1.5rem 1.5rem 2rem;
     }
 
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-heading);
+    }
+    
     header {
-      margin-bottom: 3rem;
       text-align: center;
+      margin-bottom: 2rem;
     }
-
+    
     h1 {
-      font-size: 1.875rem;
+      font-size: 1.75rem;
       font-weight: 600;
       letter-spacing: -0.025em;
-      margin-bottom: 0.5rem;
-      text-align: center;
-      background: linear-gradient(to right, var(--color-accent), #84cc16);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .subtitle {
-      color: var(--color-text-secondary);
-      font-size: 1rem;
-      margin-top: 0.5rem;
+      color: var(--color-text-primary);
+      margin: 0;
     }
 
     h2 {
@@ -106,28 +295,36 @@
       overflow: hidden;
     }
 
-    /* Special styling for projects section - no nested background */
+    /* Allow overflow for editing state */
+    .card:has(.editing) {
+      overflow: visible;
+    }
+
+    /* Special styling for projects section - integrated design */
     #projects-section {
-      background-color: transparent;
-      border: none;
-      box-shadow: none;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow);
       padding: 0;
       overflow: visible;
     }
 
     #projects-section .card-header {
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-radius: var(--border-radius) var(--border-radius) 0 0;
+      background-color: rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid var(--color-border);
       margin-bottom: 0;
+      padding: 1rem 1.5rem;
     }
 
     #projects-section #project-list table {
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-top: none;
-      border-radius: 0 0 var(--border-radius) var(--border-radius);
-      overflow: hidden;
+      background-color: transparent;
+      border: none;
+      overflow: visible;
+      margin: 0;
+    }
+
+    #projects-section .add-project-section {
+      background-color: transparent;
     }
 
     .card-header {
@@ -138,6 +335,19 @@
 
     .card > form {
       padding: 1.5rem;
+    }
+
+    /* Alarm section padding to match projects height */
+    #alarm-section .form-content {
+      padding: 1.5rem;
+    }
+
+    #alarm-section .form-group {
+      margin-bottom: 2rem;
+    }
+
+    #alarm-section .form-group:last-child {
+      margin-bottom: 0;
     }
 
     #project-list {
@@ -166,6 +376,8 @@
       text-align: left;
       font-size: 0.9375rem;
       table-layout: fixed;
+      overflow: visible;
+      position: relative;
     }
 
     #project-list th {
@@ -200,16 +412,10 @@
       padding-right: 1.5rem;
     }
 
-    /* Ensure buttons display horizontally */
-    #project-list td:nth-child(2) {
-      display: table-cell;
+    #project-list tbody tr:last-child td {
+      border-bottom: none;
     }
-
-    #project-list .btn {
-      display: inline-flex;
-      margin: 0 0.25rem;
-    }
-
+    
     #project-list tr:hover {
       background-color: rgba(255, 255, 255, 0.03);
     }
@@ -297,6 +503,12 @@
       box-shadow: 0 0 0 1px var(--color-accent);
     }
 
+    .color-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
     input[type="color"] {
       -webkit-appearance: none;
       width: 2.5rem;
@@ -318,6 +530,12 @@
       padding: 0;
     }
 
+    .color-hex {
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+    }
+
     .form-actions {
       display: flex;
       justify-content: flex-end;
@@ -329,24 +547,46 @@
       position: relative;
       padding: 0.625rem 1.25rem;
       font-size: 0.875rem;
-      font-weight: 500;
+      font-weight: 400;
       border-radius: var(--border-radius-sm);
       transition: all var(--transition-fast);
       cursor: pointer;
-      border: none;
+      border: 1px solid transparent;
       white-space: nowrap;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      outline: none;
+    }
+
+    .btn .icon {
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .btn span {
+      display: inline-block;
     }
 
     .btn:hover {
       opacity: 0.9;
     }
 
+    .btn:focus {
+      outline: none;
+    }
+
+    .btn:active {
+      transform: none;
+    }
+
     .primary-btn {
       background-color: var(--color-accent);
-      color: #000000;
+      color: #1a1a1a;
       display: inline-flex;
       align-items: center;
       padding: 0.625rem 1.25rem;
@@ -354,6 +594,34 @@
 
     .primary-btn:hover {
       background-color: var(--color-accent-hover);
+    }
+
+    .primary-btn:active,
+    .primary-btn:focus {
+      background-color: var(--color-accent);
+      color: #1a1a1a;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(163, 230, 53, 0.2);
+    }
+
+    .secondary-btn {
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+    }
+
+    .secondary-btn:hover:not(:disabled) {
+      background-color: var(--color-bg-tertiary);
+      border-color: var(--color-text-secondary);
+    }
+
+    .secondary-btn:active,
+    .secondary-btn:focus {
+      background-color: var(--color-bg-secondary);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.2);
     }
 
     .edit-btn {
@@ -383,6 +651,28 @@
       border-color: rgba(255, 69, 58, 0.2);
     }
 
+    .save-btn {
+      background-color: var(--color-accent);
+      color: #000000;
+      margin-right: 0.5rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .save-btn:hover {
+      background-color: var(--color-accent-hover);
+    }
+
+    .cancel-btn {
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      padding: 0.5rem 0.75rem;
+    }
+
+    .cancel-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
     /* Icons */
     .icon {
       width: 1rem;
@@ -396,8 +686,7 @@
     }
 
     h2,
-    label,
-    .btn {
+    label {
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -459,6 +748,233 @@
     }
 
     /* Footer */
+    /* Sound Selection */
+    .sound-selection {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .preview-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* ShadCN-style Dropdown */
+    .custom-dropdown {
+      position: relative;
+      width: 100%;
+      max-width: 250px;
+    }
+    
+    /* Responsive dropdown for alarm section */
+    #alarm-section .custom-dropdown {
+      max-width: none;
+      width: 100%;
+    }
+    
+    #alarm-section .sound-selection {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+    
+    #alarm-section .preview-controls {
+      width: 100%;
+    }
+    
+    #alarm-section .preview-controls .btn {
+      width: 100%;
+    }
+
+    .dropdown-trigger {
+      width: 100%;
+      padding: 0.5rem 1rem;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all var(--transition-fast);
+    }
+
+    .dropdown-trigger .dropdown-value {
+      text-transform: capitalize;
+    }
+
+    .dropdown-trigger:hover {
+      border-color: var(--color-text-secondary);
+    }
+
+    .dropdown-trigger:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 2px rgba(163, 230, 53, 0.2);
+    }
+
+    .dropdown-chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-secondary);
+      transition: transform var(--transition-fast);
+    }
+
+    .dropdown-trigger[aria-expanded="true"] .dropdown-chevron {
+      transform: rotate(180deg);
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: all var(--transition-fast);
+      z-index: 50;
+    }
+
+    .dropdown-menu.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-items {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0.25rem;
+    }
+
+    .dropdown-item {
+      padding: 0.5rem 0.75rem;
+      margin: 0.125rem;
+      border-radius: calc(var(--border-radius) - 2px);
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: block;
+      width: calc(100% - 0.25rem);
+      text-transform: capitalize;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--color-bg-tertiary);
+    }
+
+    .dropdown-item.selected {
+      background-color: var(--color-bg-tertiary);
+      color: var(--color-accent);
+    }
+
+    /* Danger Button */
+    .danger-btn {
+      background-color: var(--color-bg-secondary) !important;
+      color: #dc2626 !important;
+      border: 1px solid var(--color-border) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.5rem !important;
+    }
+
+    .danger-btn:hover:not(:disabled) {
+      background-color: var(--color-bg-tertiary) !important;
+      border-color: #dc2626 !important;
+      color: #dc2626 !important;
+    }
+
+    .danger-btn:active,
+    .danger-btn:focus {
+      background-color: var(--color-bg-secondary) !important;
+      color: #dc2626 !important;
+      border: 1px solid var(--color-border) !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2) !important;
+    }
+
+    .danger-btn .icon {
+      color: inherit !important;
+    }
+
+    .danger-btn span {
+      color: inherit !important;
+    }
+
+    /* Toggle Switch */
+    .switch-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .switch-label span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--color-bg-tertiary);
+      transition: var(--transition);
+      border-radius: 24px;
+      border: 1px solid var(--color-border);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--color-text-secondary);
+      transition: var(--transition);
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+
+    input:checked + .slider:before {
+      background-color: var(--color-bg);
+      transform: translateX(24px);
+    }
+
     footer {
       margin-top: 2rem;
       text-align: center;
@@ -477,6 +993,568 @@
       font-size: 0.8125rem;
     }
 
+    /* Editing row styles */
+    .editing td {
+      background-color: var(--color-bg-tertiary);
+      padding: 0.75rem 1rem;
+      position: relative;
+    }
+
+    .editing td:first-child {
+      overflow: visible;
+    }
+
+    .editing input[type="text"],
+    .editing input[type="color"] {
+      margin: 0;
+    }
+
+    .editing .color-picker-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 1rem;
+      z-index: 9999;
+      margin-top: 0.5rem;
+    }
+
+    /* Hamburger menu styles */
+    .hamburger-menu {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius-sm);
+      padding: 0.5rem;
+      cursor: pointer;
+      color: var(--color-text-primary);
+      transition: all var(--transition-fast);
+      width: 40px;
+      height: 40px;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .hamburger-menu:hover {
+      background-color: var(--color-bg-tertiary);
+      border-color: var(--color-text-secondary);
+    }
+    
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 64px;
+      left: 0;
+      right: 0;
+      background-color: var(--color-bg-secondary);
+      border-bottom: 1px solid var(--color-border);
+      box-shadow: var(--shadow);
+      z-index: 999;
+      animation: slideDown 0.3s ease-out;
+    }
+    
+    .mobile-menu.active {
+      display: block;
+    }
+    
+    .mobile-menu-items {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .mobile-menu-items .navbar-link {
+      display: block;
+      padding: 0.75rem 1rem;
+      border-radius: var(--border-radius-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .mobile-menu-items .navbar-link:hover {
+      background-color: var(--color-bg-tertiary);
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Navbar responsive styles */
+    @media (max-width: 768px) {
+      .navbar-container {
+        padding: 0 1rem;
+      }
+      
+      .navbar-brand {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      
+      .navbar-center {
+        display: none;
+      }
+      
+      .navbar-logo span {
+        display: none;
+      }
+      
+      .hamburger-menu {
+        display: flex;
+      }
+      
+      .navbar-end {
+        margin-left: auto;
+        display: flex;
+        gap: 0.5rem;
+      }
+    }
+    
+    /* Responsive - Small screens */
+    @media (max-width: 640px) {
+      html {
+        font-size: 15px;
+      }
+
+      .container {
+        padding: 1.5rem 1rem;
+      }
+
+      .card {
+        padding: 0;
+      }
+
+      .card-header {
+        padding: 1rem;
+      }
+
+      .card > form,
+      #project-list > table,
+      #project-list > div,
+      .form-content {
+        padding: 1rem;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+      }
+
+      /* Stack project actions vertically on very small screens */
+      #project-list td:last-child {
+        width: 100%;
+      }
+      
+      #project-list .btn {
+        display: block;
+        width: 100%;
+        margin: 0.25rem 0;
+      }
+
+      .save-btn,
+      .cancel-btn,
+      .edit-btn,
+      .delete-btn {
+        margin: 0.25rem 0;
+      }
+      
+      /* Reduce padding on add project form */
+      .add-project-form .form-content {
+        padding: 1rem;
+      }
+      
+      /* Make color selection stack vertically */
+      .color-selection-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .color-selection-wrapper .selected-color {
+        width: 100%;
+        height: 3rem;
+      }
+      
+      .color-selection-wrapper .btn {
+        margin-top: 0.5rem;
+      }
+    }
+    
+    /* Very small screens */
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem 0.75rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      /* Make table more compact */
+      #project-list th,
+      #project-list td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      /* Hide table headers on very small screens */
+      #project-list thead {
+        display: none;
+      }
+      
+      /* Make each row look like a card */
+      #project-list tbody tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius-sm);
+        background-color: rgba(255, 255, 255, 0.02);
+      }
+      
+      #project-list td {
+        display: block;
+        border: none;
+        padding: 0.5rem;
+      }
+      
+      #project-list td:first-child {
+        padding-bottom: 0.25rem;
+      }
+      
+      #project-list td:last-child {
+        padding-top: 0.25rem;
+        border-top: 1px solid var(--color-border);
+      }
+    }
+
+    /* Bento Box Grid Layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      grid-template-rows: 1fr auto;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    #projects-section {
+      grid-column: 1;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #projects-section #project-list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    #alarm-section {
+      grid-column: 2;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #alarm-section .form-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 2rem;
+    }
+
+    #oauth-section {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    
+    .card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Responsive Layout */
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      
+      #projects-section {
+        grid-column: 1;
+        grid-row: auto;
+        height: auto;
+      }
+      
+      #alarm-section {
+        grid-column: 1;
+        grid-row: auto;
+      }
+      
+      #oauth-section {
+        grid-column: 1;
+        grid-row: auto;
+      }
+      
+      .sound-selection {
+        flex-direction: column !important;
+        align-items: stretch !important;
+      }
+      
+      .custom-dropdown {
+        max-width: none !important;
+      }
+      
+      .preview-controls {
+        width: 100%;
+      }
+      
+      .preview-controls .btn {
+        width: 100%;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      .button-group .btn {
+        width: 100%;
+      }
+    }
+
+    /* OAuth Section Styles */
+    .oauth-content {
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    
+    .oauth-state {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    #oauth-disconnected {
+      max-width: 800px;
+    }
+    
+    .oauth-status-icon {
+      width: 4rem;
+      height: 4rem;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .oauth-status-icon.disconnected {
+      background-color: rgba(136, 136, 136, 0.1);
+      color: var(--color-text-secondary);
+    }
+    
+    .oauth-status-icon.connected {
+      background-color: rgba(0, 204, 136, 0.1);
+      color: var(--color-success);
+    }
+    
+    .oauth-status-icon .icon {
+      width: 2rem;
+      height: 2rem;
+    }
+    
+    .oauth-state h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--color-text-primary);
+    }
+    
+    .oauth-description {
+      color: var(--color-text-secondary);
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    
+    .oauth-connect-btn {
+      min-width: 200px;
+    }
+    
+    .oauth-account-info {
+      background-color: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .account-detail {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0;
+      color: var(--color-text-primary);
+      font-size: 0.875rem;
+    }
+    
+    .account-detail .icon {
+      width: 1rem;
+      height: 1rem;
+      color: var(--color-text-secondary);
+    }
+    
+    .oauth-sync-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--color-success);
+      font-size: 0.875rem;
+      margin: 1rem 0 1.5rem;
+    }
+    
+    .oauth-sync-status .icon {
+      width: 1rem;
+      height: 1rem;
+    }
+    
+    .icon.spin {
+      animation: rotate 2s linear infinite;
+    }
+    
+    .oauth-disconnect-btn {
+      min-width: 160px;
+    }
+    
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+      text-align: left;
+    }
+    
+    .feature-item {
+      background-color: var(--color-bg-tertiary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: 1.25rem;
+      transition: all var(--transition-fast);
+    }
+    
+    .feature-item:hover {
+      border-color: var(--color-accent);
+      transform: translateY(-2px);
+    }
+    
+    .feature-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: var(--color-accent);
+      margin-bottom: 0.75rem;
+    }
+    
+    .feature-item h4 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .feature-item p {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+      margin: 0;
+    }
+    
+    /* CTA Section */
+    .cta-section {
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--color-border);
+    }
+    
+    .cta-text {
+      font-size: 0.9375rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 1.5rem;
+    }
+    
+    .cta-text strong {
+      color: var(--color-text-primary);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .button-group .btn {
+      min-width: 160px;
+    }
+    
+    /* Light mode OAuth styles */
+    body.light-mode .oauth-account-info {
+      background-color: #f9fafb;
+      border-color: #e5e7eb;
+    }
+    
+    body.light-mode .oauth-status-icon.disconnected {
+      background-color: rgba(107, 114, 128, 0.1);
+    }
+    
+    body.light-mode .oauth-status-icon.connected {
+      background-color: rgba(5, 150, 105, 0.1);
+    }
+    
+    body.light-mode .feature-item {
+      background-color: #f9fafb;
+      border-color: #e5e7eb;
+    }
+    
+    body.light-mode .feature-item:hover {
+      background-color: #ffffff;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    body.light-mode .cta-section {
+      border-top-color: #e5e7eb;
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      animation: fadeIn 0.3s ease-out;
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -489,26 +1567,31 @@
       font-size: 0.9375rem;
     }
 
-    /* Inline form for create project */
-    .form-inline {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1.5rem;
+    /* Buttons in table should be more compact */
+    #project-list .btn {
+      padding: 0.375rem 0.625rem;
+      min-width: auto;
+      font-size: 0.8125rem;
     }
 
-    .form-inline input[type="text"] {
-      flex: 1;
-      margin: 0;
+    /* Ensure buttons on same line */
+    #project-list td:last-child {
+      text-align: right;
+      padding-right: 1rem;
+      white-space: nowrap;
     }
 
-    .form-inline input[type="color"] {
-      margin: 0;
-      flex-shrink: 0;
+    /* Fix button layout in tables */
+    #project-list .btn {
+      padding: 0.5rem 0.75rem;
+      min-width: auto;
+      display: inline-flex;
+      margin: 0 0.25rem;
     }
 
-    .form-inline .btn {
-      margin: 0;
+    /* Remove the flexbox layout from the buttons cell */
+    #project-list td:last-child {
+      display: table-cell;
     }
 
     /* Form help text */
@@ -548,19 +1631,19 @@
       background-color: var(--color-bg-secondary);
       border: 1px solid var(--color-border);
       border-radius: var(--border-radius);
-      padding: 1rem;
+      padding: 0.75rem;
       margin-top: 0.75rem;
       box-shadow: var(--shadow);
-      width: 320px;
+      width: 240px;
     }
 
     .color-presets {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-      margin-bottom: 1rem;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
       justify-items: center;
-      padding: 0.5rem;
+      padding: 0;
     }
 
     .color-preset {
@@ -584,16 +1667,16 @@
 
     .custom-color-section {
       border-top: 1px solid var(--color-border);
-      padding-top: 1rem;
+      padding-top: 0.75rem;
     }
 
     .custom-color-header {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
       color: var(--color-text-secondary);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
     }
 
@@ -605,14 +1688,14 @@
 
     .color-picker-main {
       display: flex;
-      gap: 1rem;
+      gap: 0.75rem;
       align-items: flex-start;
     }
 
     .color-preview-large {
-      width: 3rem;
-      height: 3rem;
-      border-radius: var(--border-radius);
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: var(--border-radius-sm);
       border: 2px solid var(--color-border);
       flex-shrink: 0;
     }
@@ -621,12 +1704,12 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .hue-saturation-picker {
       width: 100%;
-      height: 100px;
+      height: 60px;
       background: linear-gradient(to top, #000, transparent), 
                   linear-gradient(to right, #fff, transparent),
                   linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
@@ -637,8 +1720,8 @@
     }
 
     .hue-sat-cursor {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border: 2px solid #fff;
       border-radius: 50%;
       position: absolute;
@@ -649,7 +1732,7 @@
 
     .hue-slider {
       width: 100%;
-      height: 20px;
+      height: 14px;
       background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
       border-radius: var(--border-radius-sm);
       position: relative;
@@ -659,7 +1742,7 @@
 
     .hue-cursor {
       width: 4px;
-      height: 24px;
+      height: 18px;
       background: #fff;
       border: 1px solid #000;
       position: absolute;
@@ -671,9 +1754,9 @@
 
     .rgb-inputs {
       display: flex;
-      justify-content: flex-start;
-      gap: 1rem;
-      margin-left: 4rem;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
     }
 
     .rgb-input-group {
@@ -691,14 +1774,14 @@
     }
 
     .rgb-input-group input {
-      width: 60px;
-      padding: 0.5rem;
+      width: 50px;
+      padding: 0.375rem;
       text-align: center;
       border-radius: var(--border-radius-sm);
       border: 1px solid var(--color-border);
       background-color: var(--color-bg-tertiary);
       color: var(--color-text-primary);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
     }
 
     .rgb-input-group input:focus {
@@ -706,212 +1789,439 @@
       border-color: var(--color-accent);
     }
 
-    /* Animation */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    /* Fix for inline form */
+    .form-inline {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
     }
 
-    .card {
-      animation: fadeIn 0.3s ease-out;
+    .form-inline input[type="text"] {
+      flex: 1;
+      margin: 0;
+    }
+
+    .form-inline input[type="color"] {
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .form-inline .btn {
+      margin: 0;
+    }
+
+    /* Edit project wrapper - inline color and name inputs */
+    .edit-project-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .edit-project-wrapper .edit-color {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border-radius: var(--border-radius-sm);
+    }
+
+    .edit-project-wrapper .edit-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Add project section styles */
+    .add-project-section {
+      border-top: 1px solid var(--color-border);
+      margin: 0;
+    }
+
+    .add-project-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .add-project-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.5rem;
+      background: transparent;
+      border: none;
+      color: var(--color-text-secondary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      width: 100%;
+      justify-content: center;
+      position: relative;
+    }
+
+    .add-project-toggle:hover {
+      color: var(--color-text-primary);
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .add-project-toggle .chevron-icon {
+      transition: transform var(--transition-fast);
+      position: absolute;
+      right: 1.5rem;
+    }
+
+    .add-project-toggle.expanded .chevron-icon {
+      transform: rotate(180deg);
+    }
+
+    .add-project-form {
+      border-top: 1px solid var(--color-border);
+      background-color: rgba(0, 0, 0, 0.3);
+      transition: all var(--transition);
+    }
+
+    .add-project-form .form-content {
+      padding: 1.25rem 1.5rem;
+    }
+
+    .add-project-form .form-group {
+      margin-bottom: 0;
+    }
+
+
+    /* Make the color picker dropdown position correctly within the integrated form */
+    .add-project-section {
+      position: relative;
+    }
+
+    .add-project-form {
+      position: relative;
+    }
+
+    .add-project-form .color-picker-dropdown {
+      position: absolute;
+      z-index: 1000;
+      top: 3.5rem;
+      left: 0;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
 
 <body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <a href="#" class="navbar-logo">
+          <svg viewBox="0 0 634 178" fill="none" xmlns="http://www.w3.org/2000/svg" style="height: 36px; width: auto;">
+            <path class="logo-stroke" d="M87.500,2.1000 C134.168,2.1000 171.1000,40.832
+  171.1000,87.500 C171.1000,134.168 134.168,171.1000 87.500,171.1000 C40.832,171.1000 3.000,134.168 3.000,87.500 C3.000,40.832 40.832,2.1000
+  87.500,2.1000 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="butt" stroke-miterlimit="10"/>
+            <path class="logo-fill-accent" d="M87.1000,40.1000 C113.957,40.1000 135.000,62.043 135.000,87.1000 C135.000,113.957 113.957,134.1000
+  87.1000,134.1000 C62.043,134.1000 41.000,113.957 41.000,87.1000 C41.000,62.043 62.043,40.1000 87.1000,40.1000 Z" fill="var(--color-accent)"/>
+            <path class="logo-fill-primary" d="M635.136,83.940 C633.601,85.903 631.479,87.418 628.769,88.488 L640.860,131.181 L625.024,131.181
+  L614.538,91.484 L607.262,91.484 L607.262,131.181 L591.426,131.181 L591.426,44.511 L612.184,44.511 C618.032,44.511 622.973,45.206 627.004,46.597
+   C631.033,47.988 634.101,50.361 636.206,53.713 C638.309,57.067 639.362,61.631 639.362,67.409 C639.362,70.905 639.041,74.043 638.399,76.825
+  C637.757,79.607 636.669,81.979 635.136,83.940 ZM622.189,58.581 C620.584,56.406 617.534,55.318 613.040,55.318 L607.262,55.318 L607.262,81.533
+  L612.184,81.533 C615.250,81.533 617.695,81.088 619.514,80.195 C621.333,79.304 622.633,77.878 623.419,75.915 C624.203,73.954 624.596,71.440
+  624.596,68.372 C624.596,64.022 623.794,60.758 622.189,58.581 ZM545.630,44.511 L582.010,44.511 L582.010,55.639 L561.466,55.639 L561.466,80.570
+  L577.623,80.570 L577.623,91.591 L561.466,91.591 L561.466,120.267 L582.224,120.267 L582.224,131.181 L545.630,131.181 L545.630,44.511
+  ZM519.736,70.940 L507.431,131.181 L497.908,131.181 L485.389,70.726 L484.212,131.181 L472.335,131.181 L473.833,44.511 L490.204,44.511
+  L502.509,104.538 L515.349,44.511 L531.185,44.511 L532.790,131.181 L521.020,131.181 L519.736,70.940 ZM443.552,44.511 L459.174,44.511
+  L459.174,131.181 L443.552,131.181 L443.552,44.511 ZM421.617,131.181 L405.781,131.181 L405.781,56.174 L391.978,56.174 L391.978,44.511
+  L435.206,44.511 L435.206,56.174 L421.617,56.174 L421.617,131.181 ZM325.317,44.511 L361.697,44.511 L361.697,55.639 L341.153,55.639
+  L341.153,80.570 L357.310,80.570 L357.310,91.591 L341.153,91.591 L341.153,120.267 L361.911,120.267 L361.911,131.181 L325.317,131.181
+  L325.317,44.511 ZM296.320,92.019 L278.558,92.019 L278.558,131.181 L262.829,131.181 L262.829,44.511 L278.558,44.511 L278.558,80.784
+  L296.320,80.784 L296.320,44.511 L312.049,44.511 L312.049,131.181 L296.320,131.181 L296.320,92.019 ZM241.108,131.181 L225.272,131.181
+  L225.272,56.174 L211.469,56.174 L211.469,44.511 L254.697,44.511 L254.697,56.174 L241.108,56.174 L241.108,131.181 Z" fill="currentColor"/>
+          </svg>
+        </a>
+      </div>
+      
+      <div class="navbar-center">
+        <a href="https://thetimer.store" class="navbar-link" target="_blank">Timer Store</a>
+        <a href="https://thetimer.app" class="navbar-link" target="_blank">Timer App</a>
+      </div>
+      
+      <div class="navbar-end">
+        <button class="hamburger-menu" id="hamburgerMenu" aria-label="Toggle menu">
+          <i data-lucide="menu" class="icon"></i>
+        </button>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="icon light-icon"></i>
+          <i data-lucide="moon" class="icon dark-icon"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile menu dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+      <div class="mobile-menu-items">
+        <a href="https://thetimer.store" class="navbar-link" target="_blank">Timer Store</a>
+        <a href="https://thetimer.app" class="navbar-link" target="_blank">Timer App</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <header>
-      <h1>TheTimer</h1>
-      <p class="subtitle">Manage your project timers</p>
+      <h1>Device Configuration</h1>
     </header>
-
-    <main>
+    <main class="main-grid">
       <section class="card" id="projects-section">
-        <div class="card-header">
-          <h2>
-            <i data-lucide="list-todo" class="icon"></i>
-            Projects
-          </h2>
-        </div>
-        <div id="project-list">
-          <!-- Mock data for demonstration -->
-          <table>
-            <thead>
-              <tr>
-                <th>Project</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr data-index="0">
-                <td>
-                  <span class="color-preview" style="background-color: #f97316;"></span>
-                  Exercise
-                </td>
-                <td>
-                  <button class="btn edit-btn" onclick="handleEditClick(0)">
-                    <i data-lucide="edit-2" class="icon"></i>
-                    Edit
-                  </button>
-                  <button class="btn delete-btn" onclick="handleDeleteClick(0)">
-                    <i data-lucide="trash-2" class="icon"></i>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-              <tr data-index="1">
-                <td>
-                  <span class="color-preview" style="background-color: #8b5cf6;"></span>
-                  Work Project
-                </td>
-                <td>
-                  <button class="btn edit-btn" onclick="handleEditClick(1)">
-                    <i data-lucide="edit-2" class="icon"></i>
-                    Edit
-                  </button>
-                  <button class="btn delete-btn" onclick="handleDeleteClick(1)">
-                    <i data-lucide="trash-2" class="icon"></i>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-              <tr data-index="2">
-                <td>
-                  <span class="color-preview" style="background-color: #eab308;"></span>
-                  Personal
-                </td>
-                <td>
-                  <button class="btn edit-btn" onclick="handleEditClick(2)">
-                    <i data-lucide="edit-2" class="icon"></i>
-                    Edit
-                  </button>
-                  <button class="btn delete-btn" onclick="handleDeleteClick(2)">
-                    <i data-lucide="trash-2" class="icon"></i>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card" id="add-project-section">
-        <div class="card-header">
-          <h2>
-            <i data-lucide="plus-circle" class="icon"></i>
-            Create New Project
-          </h2>
-        </div>
-        <form id="add-project-form">
-          <div class="form-content">
-            <!-- Color Selection -->
-            <div class="form-group">
-              <div class="color-selection-wrapper">
-                <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
-                <input type="text" id="name" name="name" placeholder="Enter project name" required>
-                <button type="submit" class="btn primary-btn">
-                  <i data-lucide="plus" class="icon"></i>
-                  <span>Create Project</span>
-                </button>
+            <div class="card-header">
+              <h2>
+                <i data-lucide="list-todo" class="icon"></i>
+                Projects
+              </h2>
+            </div>
+            <div id="project-list">
+              <!-- Project list will be loaded here -->
+              <div class="loading">
+                <svg class="spinner" viewBox="0 0 50 50">
+                  <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                </svg>
+                <p>Loading projects...</p>
               </div>
             </div>
+            
+            <!-- Add new project section integrated within the card -->
+            <div class="add-project-section">
+              <div class="add-project-divider">
+                <button type="button" class="add-project-toggle" id="addProjectToggle" onclick="toggleAddProject()">
+                  <i data-lucide="plus-circle" class="icon"></i>
+                  <span>Add New Project</span>
+                  <i data-lucide="chevron-down" class="icon chevron-icon"></i>
+                </button>
+              </div>
               
-            <!-- Color Picker Dropdown -->
-            <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
-                <!-- Tailwind 500 Colors -->
-                <div class="color-presets">
-                  <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
-                  <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
-                  <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
-                  <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
-                  <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
-                  <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
-                  <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
-                  <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
-                  <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
-                </div>
-                
-                <!-- Custom Color Section -->
-                <div class="custom-color-section">
-                  <div class="custom-color-header">
-                    <i data-lucide="edit-3" class="icon"></i>
-                    <span>Custom Color</span>
-                  </div>
-                  <div class="custom-color-picker">
-                    <div class="color-picker-main">
-                      <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
-                      <div class="color-gradient-picker">
-                        <div class="hue-saturation-picker" id="hueSatPicker">
-                          <div class="hue-sat-cursor" id="hueSatCursor"></div>
-                        </div>
-                        <div class="hue-slider" id="hueSlider">
-                          <div class="hue-cursor" id="hueCursor"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="rgb-inputs">
-                      <div class="rgb-input-group">
-                        <label>R</label>
-                        <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
-                      </div>
-                      <div class="rgb-input-group">
-                        <label>G</label>
-                        <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
-                      </div>
-                      <div class="rgb-input-group">
-                        <label>B</label>
-                        <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
-                      </div>
+              <form id="add-project-form" class="add-project-form" style="display: none;">
+                <div class="form-content">
+                  <!-- Color Selection -->
+                  <div class="form-group">
+                    <div class="color-selection-wrapper">
+                      <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
+                      <input type="text" id="name" name="name" placeholder="Enter project name" required>
+                      <button type="submit" class="btn primary-btn">
+                        <i data-lucide="plus" class="icon"></i>
+                        <span>Create</span>
+                      </button>
                     </div>
                   </div>
+                    
+                  <!-- Color Picker Dropdown -->
+                  <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
+                      <!-- Tailwind 500 Colors -->
+                      <div class="color-presets">
+                        <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+                        <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+                        <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+                        <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+                        <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+                        <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+                        <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+                        <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+                        <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+                      </div>
+                      
+                      <!-- Custom Color Section -->
+                      <div class="custom-color-section">
+                        <div class="custom-color-header">
+                          <i data-lucide="edit-3" class="icon"></i>
+                          <span>Custom Color</span>
+                        </div>
+                        <div class="custom-color-picker">
+                          <div class="color-picker-main">
+                            <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
+                            <div class="color-gradient-picker">
+                              <div class="hue-saturation-picker" id="hueSatPicker">
+                                <div class="hue-sat-cursor" id="hueSatCursor"></div>
+                              </div>
+                              <div class="hue-slider" id="hueSlider">
+                                <div class="hue-cursor" id="hueCursor"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="rgb-inputs">
+                            <div class="rgb-input-group">
+                              <label>R</label>
+                              <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
+                            </div>
+                            <div class="rgb-input-group">
+                              <label>G</label>
+                              <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
+                            </div>
+                            <div class="rgb-input-group">
+                              <label>B</label>
+                              <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                  </div>
                 </div>
+              </form>
             </div>
-          </div>
-        </form>
       </section>
 
-      <section class="card" id="webhook-section">
-        <div class="card-header">
-          <h2>
-            <i data-lucide="webhook" class="icon"></i>
-            Webhook Configuration
-          </h2>
-        </div>
-        <form id="webhook-form">
-          <div class="form-group">
-            <label for="webhook-url">
-              <i data-lucide="link" class="icon"></i>
-              Webhook URL
-            </label>
-            <input type="url" id="webhook-url" name="webhook-url" placeholder="Enter webhook URL (optional)" required>
-            <p class="form-help">The webhook will be called when a timer completes. You can leave this empty if you
-              don't need webhook notifications.</p>
-          </div>
+      <section class="card" id="alarm-section">
+            <div class="card-header">
+              <h2>
+                <i data-lucide="bell" class="icon"></i>
+                Alarm Settings
+              </h2>
+            </div>
+            <div class="form-content">
+              <div class="form-group">
+                <label for="alarm-sound">
+                  <i data-lucide="music" class="icon"></i>
+                  Alarm Sound
+                </label>
+                <div class="sound-selection">
+                  <div class="custom-dropdown">
+                    <button type="button" class="dropdown-trigger" id="alarm-sound-trigger">
+                      <span class="dropdown-value" data-value="">Select a sound...</span>
+                      <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                    </button>
+                    <div class="dropdown-menu" id="alarm-sound-menu">
+                      <div class="dropdown-items" id="alarm-sound-items">
+                        <!-- Sound options will be populated here -->
+                      </div>
+                    </div>
+                    <input type="hidden" id="alarm-sound" name="alarm-sound" value="">
+                  </div>
+                  <div class="preview-controls">
+                    <button type="button" class="btn secondary-btn" id="preview-sound" disabled>
+                      <i data-lucide="play" class="icon"></i>
+                      <span>Preview</span>
+                    </button>
+                  </div>
+                </div>
+                <p class="form-help">Select the sound that will play when a timer completes.</p>
+              </div>
 
-          <div class="form-group">
-            <label for="api-key">
-              <i data-lucide="key" class="icon"></i>
-              API Key
-            </label>
-            <input type="password" id="api-key" name="api-key" placeholder="Enter API Key (required for webhook)"
-              autocomplete="off">
-            <p class="form-help">The API key provided by your time tracking application for authentication.</p>
-          </div>
+              <div class="form-group">
+                <label class="switch-label">
+                  <span>
+                    <i data-lucide="volume-2" class="icon"></i>
+                    Alarm Enabled
+                  </span>
+                  <label class="switch">
+                    <input type="checkbox" id="alarm-enabled" name="alarm-enabled" checked>
+                    <span class="slider"></span>
+                  </label>
+                </label>
+                <p class="form-help">Enable or disable alarm notifications when timers complete.</p>
+              </div>
 
-          <div class="form-actions">
-            <button type="submit" class="btn primary-btn">
-              <i data-lucide="save" class="icon"></i>
-              <span>Save Settings</span>
-            </button>
-          </div>
-        </form>
+            </div>
+          </section>
+
+          <section class="card" id="oauth-section">
+            <div class="card-header">
+              <h2>
+                <i data-lucide="cloud" class="icon"></i>
+                TheTimer.app Integration
+              </h2>
+            </div>
+            <div class="oauth-content">
+              <!-- Disconnected State -->
+              <div id="oauth-disconnected" class="oauth-state">
+                <div class="oauth-status-icon disconnected">
+                  <i data-lucide="timer" class="icon"></i>
+                </div>
+                <h3>Supercharge Your Time Tracking</h3>
+                <p class="oauth-description">
+                  TheTimer.app transforms your tracked time into actionable insights for both professional projects and personal wellness habits.
+                </p>
+                
+                <div class="features-grid">
+                  <div class="feature-item">
+                    <i data-lucide="bar-chart-2" class="feature-icon"></i>
+                    <h4>Project & Habit Analytics</h4>
+                    <p>Track both work projects and personal habits like meditation, exercise, and journaling with insightful stats</p>
+                  </div>
+                  <div class="feature-item">
+                    <i data-lucide="dollar-sign" class="feature-icon"></i>
+                    <h4>Billing Integration</h4>
+                    <p>Convert tracked time directly into invoices and manage client retainers effortlessly</p>
+                  </div>
+                  <div class="feature-item">
+                    <i data-lucide="sparkles" class="feature-icon"></i>
+                    <h4>AI-Powered Descriptions</h4>
+                    <p>Auto-generate time entries from Git commits, Notion updates, Google Docs changes, and other API integrations</p>
+                  </div>
+                  <div class="feature-item">
+                    <i data-lucide="heart" class="feature-icon"></i>
+                    <h4>Wellness Tracking</h4>
+                    <p>Monitor mental health activities and build positive habits with streak tracking and progress visualization</p>
+                  </div>
+                  <div class="feature-item">
+                    <i data-lucide="bell" class="feature-icon"></i>
+                    <h4>Smart Reminders</h4>
+                    <p>Stay consistent with intelligent notifications for work deadlines and habit streaks based on your patterns</p>
+                  </div>
+                  <div class="feature-item">
+                    <i data-lucide="file-text" class="feature-icon"></i>
+                    <h4>Detailed Reports</h4>
+                    <p>Export comprehensive time reports for clients and track personal growth with weekly wellness summaries</p>
+                  </div>
+                </div>
+                
+                <div class="cta-section">
+                  <p class="cta-text">
+                    <strong>New to TheTimer.app?</strong> Start your free 7-day trial and experience the future of time tracking.
+                  </p>
+                  <div class="button-group">
+                    <a href="https://thetimer.app/signup?ref=device" target="_blank" class="btn secondary-btn">
+                      <i data-lucide="external-link" class="icon"></i>
+                      <span>Start Free Trial</span>
+                    </a>
+                    <button type="button" class="btn primary-btn oauth-connect-btn" id="oauth-connect-btn">
+                      <i data-lucide="log-in" class="icon"></i>
+                      <span>Connect Account</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Connected State -->
+              <div id="oauth-connected" class="oauth-state" style="display: none;">
+                <div class="oauth-status-icon connected">
+                  <i data-lucide="check-circle" class="icon"></i>
+                </div>
+                <h3>Connected to TheTimer.app</h3>
+                <div class="oauth-account-info">
+                  <div class="account-detail">
+                    <i data-lucide="user" class="icon"></i>
+                    <span id="oauth-account-name">Loading...</span>
+                  </div>
+                  <div class="account-detail">
+                    <i data-lucide="mail" class="icon"></i>
+                    <span id="oauth-account-email">Loading...</span>
+                  </div>
+                </div>
+                <p class="oauth-sync-status">
+                  <i data-lucide="refresh-cw" class="icon spin"></i>
+                  Projects and timers are syncing automatically
+                </p>
+                <button type="button" class="btn secondary-btn danger-btn oauth-disconnect-btn" id="oauth-disconnect-btn">
+                  <i data-lucide="log-out" class="icon"></i>
+                  <span>Disconnect</span>
+                </button>
+              </div>
+              
+              <!-- Connecting State -->
+              <div id="oauth-connecting" class="oauth-state" style="display: none;">
+                <div class="loading">
+                  <svg class="spinner" viewBox="0 0 50 50">
+                    <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                  </svg>
+                  <p>Connecting to TheTimer.app...</p>
+                </div>
+              </div>
+            </div>
       </section>
     </main>
 
@@ -922,17 +2232,659 @@
   </div>
 
   <script>
-    let selectedColorValue = '#3b82f6';
-    let currentHue = 220;
-    let currentSaturation = 100;
-    let currentLightness = 62;
+    // TheTimer Project Management app.js
+
+    // Color preview timeout for debouncing
+    let colorPreviewTimeout = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM fully loaded');
+      
+      // Initialize lucide icons
+      lucide.createIcons();
+      
+      // For mockup, we'll use static data instead of fetching
+      renderMockProjects();
+      // Initialize mock alarm settings
+      initializeMockAlarmSettings();
+
+      const form = document.getElementById('add-project-form');
+      if (form) {
+        form.addEventListener('submit', handleAddProjectSubmit);
+      }
+
+      // Initialize OAuth functionality
+      initializeOAuth();
+
+      // Auto-save alarm settings on change
+      const alarmSound = document.getElementById('alarm-sound');
+      if (alarmSound) {
+        // Sound dropdown already handled by initDropdown
+      }
+      
+      const alarmEnabled = document.getElementById('alarm-enabled');
+      if (alarmEnabled) {
+        alarmEnabled.addEventListener('change', handleAlarmSettingChange);
+      }
+
+      const previewButton = document.getElementById('preview-sound');
+      if (previewButton) {
+        previewButton.addEventListener('click', handlePreviewToggle);
+      }
+
+      // Initialize color picker with default color
+      window.selectedColorValue = '#3b82f6';
+      window.currentHue = 220;
+      window.currentSaturation = 100;
+      window.currentLightness = 62;
+      
+      // Initialize hamburger menu
+      const hamburgerMenu = document.getElementById('hamburgerMenu');
+      const mobileMenu = document.getElementById('mobileMenu');
+      
+      if (hamburgerMenu && mobileMenu) {
+        hamburgerMenu.addEventListener('click', () => {
+          mobileMenu.classList.toggle('active');
+          const icon = hamburgerMenu.querySelector('i');
+          if (mobileMenu.classList.contains('active')) {
+            icon.setAttribute('data-lucide', 'x');
+          } else {
+            icon.setAttribute('data-lucide', 'menu');
+          }
+          lucide.createIcons();
+        });
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (event) => {
+          if (!hamburgerMenu.contains(event.target) && !mobileMenu.contains(event.target)) {
+            mobileMenu.classList.remove('active');
+            const icon = hamburgerMenu.querySelector('i');
+            icon.setAttribute('data-lucide', 'menu');
+            lucide.createIcons();
+          }
+        });
+        
+        // Close mobile menu when clicking on a link
+        const mobileLinks = mobileMenu.querySelectorAll('.navbar-link');
+        mobileLinks.forEach(link => {
+          link.addEventListener('click', () => {
+            mobileMenu.classList.remove('active');
+            const icon = hamburgerMenu.querySelector('i');
+            icon.setAttribute('data-lucide', 'menu');
+            lucide.createIcons();
+          });
+        });
+      }
+    });
+
+    // Mock function to render static projects
+    function renderMockProjects() {
+      const projects = [
+        { name: 'Exercise', color: '#ef4444' },
+        { name: 'Work Project', color: '#3b82f6' },
+        { name: 'Personal', color: '#f59e0b' },
+        { name: 'Learning', color: '#10b981' }
+      ];
+      renderProjectList(projects);
+    }
+
+    // Mock function to initialize alarm settings
+    function initializeMockAlarmSettings() {
+      const sounds = ['bell.wav', 'chime.wav', 'notification.wav', 'ping.wav', 'ding.wav'];
+      const soundItems = document.getElementById('alarm-sound-items');
+      soundItems.innerHTML = '';
+      
+      sounds.forEach(sound => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.dataset.value = sound;
+        item.textContent = sound.replace('.wav', '').replace(/-/g, ' ').replace(/_/g, ' ');
+        soundItems.appendChild(item);
+      });
+      
+      // Initialize dropdown
+      initDropdown('alarm-sound-trigger', 'alarm-sound-menu', 'alarm-sound-items', 'alarm-sound');
+    }
+
+    // Function to send color update via HTTP, with debounce
+    async function sendColorUpdate(colorHex) {
+      // For mockup, just log the color
+      console.log('Color preview:', colorHex);
+    }
+
+    // Function to send reset command
+    async function sendResetColorUpdate() {
+      console.log('Reset color preview');
+    }
+
+    const apiBaseUrl = '/api/projects';
+    const projectListDiv = document.getElementById('project-list');
+    const messageArea = document.getElementById('message-area');
+
+    // --- OAuth Configuration ---
+    const OAUTH_CONFIG = {
+      clientId: 'timer-device-client',
+      authorizationUrl: 'https://thetimer.app/oauth/authorize',
+      tokenUrl: 'https://thetimer.app/oauth/token',
+      redirectUri: window.location.origin + '/oauth/callback',
+      scope: 'projects:read projects:write timers:write user:read'
+    };
+    
+    let oauthState = null;
+    let oauthVerifier = null;
+    let oauthPopup = null;
+    
+    // Initialize OAuth functionality
+    function initializeOAuth() {
+      // Check if we have stored OAuth token
+      checkOAuthConnection();
+      
+      // Set up event listeners
+      const connectBtn = document.getElementById('oauth-connect-btn');
+      if (connectBtn) {
+        connectBtn.addEventListener('click', handleOAuthConnect);
+      }
+      
+      const disconnectBtn = document.getElementById('oauth-disconnect-btn');
+      if (disconnectBtn) {
+        disconnectBtn.addEventListener('click', handleOAuthDisconnect);
+      }
+      
+      // Listen for OAuth callback messages
+      window.addEventListener('message', handleOAuthMessage);
+    }
+    
+    // Check OAuth connection status
+    async function checkOAuthConnection() {
+      // For mockup, simulate checking stored token
+      const hasToken = localStorage.getItem('oauth_token_mock');
+      
+      if (hasToken) {
+        showOAuthState('connected');
+        // Simulate loading user info
+        setTimeout(() => {
+          document.getElementById('oauth-account-name').textContent = 'John Doe';
+          document.getElementById('oauth-account-email').textContent = 'john@example.com';
+        }, 500);
+      } else {
+        showOAuthState('disconnected');
+      }
+    }
+    
+    // Handle OAuth connect button click
+    function handleOAuthConnect() {
+      // Generate PKCE challenge
+      oauthVerifier = generateCodeVerifier();
+      const challenge = generateCodeChallenge(oauthVerifier);
+      
+      // Generate state for CSRF protection
+      oauthState = generateRandomString(32);
+      
+      // Build authorization URL
+      const params = new URLSearchParams({
+        client_id: OAUTH_CONFIG.clientId,
+        redirect_uri: OAUTH_CONFIG.redirectUri,
+        response_type: 'code',
+        scope: OAUTH_CONFIG.scope,
+        state: oauthState,
+        code_challenge: challenge,
+        code_challenge_method: 'S256'
+      });
+      
+      const authUrl = `${OAUTH_CONFIG.authorizationUrl}?${params.toString()}`;
+      
+      // Show connecting state
+      showOAuthState('connecting');
+      
+      // Open OAuth popup
+      const width = 600;
+      const height = 700;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      
+      oauthPopup = window.open(
+        authUrl,
+        'OAuth Login',
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+      );
+      
+      // For mockup, simulate successful OAuth after 3 seconds
+      setTimeout(() => {
+        if (oauthPopup && !oauthPopup.closed) {
+          oauthPopup.close();
+        }
+        handleOAuthSuccess({
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600
+        });
+      }, 3000);
+    }
+    
+    // Handle OAuth disconnect
+    function handleOAuthDisconnect() {
+      // Clear stored tokens
+      localStorage.removeItem('oauth_token_mock');
+      localStorage.removeItem('oauth_refresh_token_mock');
+      
+      // Show disconnected state
+      showOAuthState('disconnected');
+      showMessage('Disconnected from TheTimer.app', 'success');
+    }
+    
+    // Handle OAuth callback messages
+    function handleOAuthMessage(event) {
+      // Validate origin
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+      
+      // Handle OAuth callback
+      if (event.data.type === 'oauth-callback') {
+        if (event.data.state !== oauthState) {
+          showMessage('OAuth authentication failed: Invalid state', 'error');
+          showOAuthState('disconnected');
+          return;
+        }
+        
+        if (event.data.error) {
+          showMessage(`OAuth authentication failed: ${event.data.error}`, 'error');
+          showOAuthState('disconnected');
+          return;
+        }
+        
+        // Exchange code for token
+        exchangeCodeForToken(event.data.code);
+      }
+    }
+    
+    // Exchange authorization code for access token
+    async function exchangeCodeForToken(code) {
+      // For mockup, simulate token exchange
+      setTimeout(() => {
+        handleOAuthSuccess({
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          expires_in: 3600
+        });
+      }, 1000);
+    }
+    
+    // Handle successful OAuth
+    function handleOAuthSuccess(tokenData) {
+      // Store tokens
+      localStorage.setItem('oauth_token_mock', tokenData.access_token);
+      localStorage.setItem('oauth_refresh_token_mock', tokenData.refresh_token);
+      
+      // Show connected state
+      showOAuthState('connected');
+      
+      // Load user info
+      setTimeout(() => {
+        document.getElementById('oauth-account-name').textContent = 'John Doe';
+        document.getElementById('oauth-account-email').textContent = 'john@example.com';
+      }, 500);
+      
+      showMessage('Successfully connected to TheTimer.app', 'success');
+    }
+    
+    // Show OAuth state
+    function showOAuthState(state) {
+      const states = ['disconnected', 'connecting', 'connected'];
+      states.forEach(s => {
+        const element = document.getElementById(`oauth-${s}`);
+        if (element) {
+          element.style.display = s === state ? 'block' : 'none';
+        }
+      });
+      
+      // Update lucide icons
+      lucide.createIcons();
+    }
+    
+    // PKCE helper functions
+    function generateRandomString(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+    
+    function generateCodeVerifier() {
+      return generateRandomString(128);
+    }
+    
+    function generateCodeChallenge(verifier) {
+      // For mockup, return a simple hash
+      // In production, this would use SHA256 and base64url encoding
+      return btoa(verifier).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    // --- Fetch and Render Projects --- 
+    async function fetchAndRenderProjects() {
+      // For mockup, use renderMockProjects
+      renderMockProjects();
+    }
+
+    function renderProjectList(projects) {
+      if (!projectListDiv) return;
+
+      if (projects.length === 0) {
+        projectListDiv.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="folder-open" style="width: 3rem; height: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+            <p>No projects yet</p>
+            <p style="font-size: 0.875rem; opacity: 0.7;">Click "Add New Project" below to get started</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      let tableHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+      projects.forEach((project, index) => {
+        tableHtml += `
+                <tr data-index="${index}">
+                    <td>
+                      <span class="color-preview" style="background-color: ${escapeHtml(project.color)};"></span>
+                      ${escapeHtml(project.name)}
+                    </td>
+                    <td>
+                        <button class="btn edit-btn" onclick="handleEditClick(${index})">
+                          <i data-lucide="edit-2" class="icon"></i>
+                          Edit
+                        </button>
+                        <button class="btn delete-btn" onclick="handleDeleteClick(${index})">
+                          <i data-lucide="trash-2" class="icon"></i>
+                          Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+      });
+
+      tableHtml += `
+                </tbody>
+            </table>
+        `;
+
+      projectListDiv.innerHTML = tableHtml;
+
+      // Initialize Lucide icons in the newly added content
+      lucide.createIcons();
+    }
+
+    // --- Add Project --- 
+    async function handleAddProjectSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      const nameInput = document.getElementById('name');
+
+      const name = nameInput.value.trim();
+      const color = window.selectedColorValue || '#3b82f6';
+
+      if (!name) {
+        showMessage('Project name cannot be empty.', 'error');
+        return;
+      }
+
+      showMessage('Project added successfully (mock).', 'success');
+      form.reset();
+      window.selectedColorValue = '#3b82f6';
+      document.getElementById('selectedColor').style.backgroundColor = '#3b82f6';
+      document.getElementById('colorPickerDropdown').style.display = 'none';
+      
+      // Close the add project form
+      toggleAddProject();
+      
+      // In a real implementation, we would add the project to the list
+      // For the mockup, let's refresh the projects
+      renderMockProjects();
+    }
+
+    // --- Edit/Delete --- 
+    function handleEditClick(index) {
+      console.log(`Edit clicked for index: ${index}`);
+      const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
+      if (!row || row.classList.contains('editing')) return;
+
+      row.classList.add('editing');
+
+      const nameCell = row.cells[0];
+      const actionsCell = row.cells[1];
+
+      const colorPreview = nameCell.querySelector('.color-preview');
+      const currentName = nameCell.textContent.trim();
+      const currentColorHex = colorPreview ? rgbToHex(colorPreview.style.backgroundColor) || colorPreview.style.backgroundColor : '#000000';
+
+      row.dataset.originalName = currentName;
+      row.dataset.originalColor = currentColorHex;
+
+      window.editingRow = row;
+      window.editingIndex = index;
+      window.editingOriginalColor = currentColorHex;
+      
+      nameCell.innerHTML = `
+        <div class="edit-project-wrapper">
+          <div class="selected-color" id="editSelectedColor" onclick="toggleEditColorPicker()" style="background-color: ${escapeHtml(currentColorHex)};"></div>
+          <input type="text" class="edit-name" id="editName" value="${escapeHtml(currentName)}" required>
+        </div>
+        <div class="color-picker-dropdown" id="editColorPickerDropdown" style="display: none;">
+            <!-- Tailwind 500 Colors -->
+            <div class="color-presets">
+              <div class="color-preset" data-color="#ef4444" onclick="selectEditColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+              <div class="color-preset" data-color="#f59e0b" onclick="selectEditColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+              <div class="color-preset" data-color="#84cc16" onclick="selectEditColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+              <div class="color-preset" data-color="#10b981" onclick="selectEditColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+              <div class="color-preset" data-color="#06b6d4" onclick="selectEditColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+              <div class="color-preset" data-color="#3b82f6" onclick="selectEditColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+              <div class="color-preset" data-color="#8b5cf6" onclick="selectEditColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+              <div class="color-preset" data-color="#d946ef" onclick="selectEditColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+              <div class="color-preset" data-color="#f43f5e" onclick="selectEditColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+            </div>
+            
+            <!-- Custom Color Section -->
+            <div class="custom-color-section">
+              <div class="custom-color-header">
+                <i data-lucide="edit-3" class="icon"></i>
+                <span>Custom Color</span>
+              </div>
+              <div class="custom-color-picker">
+                <div class="color-picker-main">
+                  <div class="color-preview-large" id="editColorPreviewLarge" style="background-color: ${escapeHtml(currentColorHex)};"></div>
+                  <div class="color-gradient-picker">
+                    <div class="hue-saturation-picker" id="editHueSatPicker">
+                      <div class="hue-sat-cursor" id="editHueSatCursor"></div>
+                    </div>
+                    <div class="hue-slider" id="editHueSlider">
+                      <div class="hue-cursor" id="editHueCursor"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="rgb-inputs">
+                  <div class="rgb-input-group">
+                    <label>R</label>
+                    <input type="number" id="editRInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+                  </div>
+                  <div class="rgb-input-group">
+                    <label>G</label>
+                    <input type="number" id="editGInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+                  </div>
+                  <div class="rgb-input-group">
+                    <label>B</label>
+                    <input type="number" id="editBInput" min="0" max="255" value="0" onchange="updateEditFromRGB()">
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+      `;
+      
+      window.editSelectedColorValue = currentColorHex;
+      
+      const rgb = hexToRgb2(currentColorHex);
+      if (rgb) {
+        document.getElementById('editRInput').value = rgb.r;
+        document.getElementById('editGInput').value = rgb.g;
+        document.getElementById('editBInput').value = rgb.b;
+      }
+      actionsCell.innerHTML = `
+            <button class="btn save-btn" onclick="handleSaveClick(${index})">
+              <i data-lucide="check" class="icon"></i>
+              Save
+            </button>
+            <button class="btn cancel-btn" onclick="handleCancelClick(${index})">
+              <i data-lucide="x" class="icon"></i>
+              Cancel
+            </button>
+        `;
+
+      lucide.createIcons();
+    }
+
+    function handleCancelClick(index) {
+      console.log(`Cancel clicked for index: ${index}`);
+      const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
+      if (!row) return;
+
+      sendResetColorUpdate();
+
+      const originalName = row.dataset.originalName;
+      const originalColor = row.dataset.originalColor;
+
+      row.cells[0].innerHTML = `
+        <span class="color-preview" style="background-color: ${escapeHtml(originalColor)};"></span>
+        ${escapeHtml(originalName)}
+      `;
+      row.cells[1].innerHTML = `
+        <button class="btn edit-btn" onclick="handleEditClick(${index})">
+          <i data-lucide="edit-2" class="icon"></i>
+          Edit
+        </button>
+        <button class="btn delete-btn" onclick="handleDeleteClick(${index})">
+          <i data-lucide="trash-2" class="icon"></i>
+          Delete
+        </button>
+      `;
+
+      lucide.createIcons();
+
+      row.classList.remove('editing');
+      showMessage('Edit cancelled.', '');
+    }
+
+    async function handleSaveClick(index) {
+      console.log(`Save clicked for index: ${index}`);
+      showMessage('Project updated successfully (mock).', 'success');
+      fetchAndRenderProjects();
+    }
+
+    // --- Delete --- 
+    async function handleDeleteClick(index) {
+      console.log(`Delete clicked for index: ${index}`);
+      const row = projectListDiv.querySelector(`tr[data-index="${index}"]`);
+      const projectName = row ? row.cells[0].textContent.trim() : `Project at index ${index}`;
+
+      if (!confirm(`Are you sure you want to delete project "${projectName}"?`)) {
+        return;
+      }
+
+      showMessage(`Project "${projectName}" deleted successfully (mock).`, 'success');
+      fetchAndRenderProjects();
+    }
+
+    // --- Utility Functions --- 
+    function showMessage(msg, type = '') {
+      if (messageArea) {
+        messageArea.textContent = msg;
+        messageArea.className = '';
+
+        if (type === 'success') {
+          messageArea.classList.add('success-message');
+        } else if (type === 'error') {
+          messageArea.classList.add('error-message');
+        }
+      }
+      console.log(msg);
+    }
+
+    function renderError(msg) {
+      if (projectListDiv) {
+        projectListDiv.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="alert-triangle" style="width: 3rem; height: 3rem; color: var(--color-error); margin-bottom: 1rem;"></i>
+            <p class="error-message">${escapeHtml(msg)}</p>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+      showMessage(msg, 'error');
+    }
+
+    function escapeHtml(unsafe) {
+      if (unsafe === null || unsafe === undefined) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function rgbToHex(rgb) {
+      if (!rgb || !rgb.startsWith('rgb')) return null;
+      const result = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgb);
+      if (!result) return null;
+      const r = parseInt(result[1], 10).toString(16).padStart(2, '0');
+      const g = parseInt(result[2], 10).toString(16).padStart(2, '0');
+      const b = parseInt(result[3], 10).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`;
+    }
+
+    // Toggle add project form
+    function toggleAddProject() {
+      const form = document.getElementById('add-project-form');
+      const toggle = document.getElementById('addProjectToggle');
+      
+      if (form.style.display === 'none') {
+        form.style.display = 'block';
+        toggle.classList.add('expanded');
+        // Focus on the name input for better UX
+        setTimeout(() => {
+          document.getElementById('name').focus();
+        }, 100);
+      } else {
+        form.style.display = 'none';
+        toggle.classList.remove('expanded');
+        // Reset form when closing
+        form.reset();
+        window.selectedColorValue = '#3b82f6';
+        document.getElementById('selectedColor').style.backgroundColor = '#3b82f6';
+        document.getElementById('colorPickerDropdown').style.display = 'none';
+      }
+      
+      // Re-initialize icons
+      lucide.createIcons();
+    }
 
     // Color picker functionality
     function toggleColorPicker() {
       const dropdown = document.getElementById('colorPickerDropdown');
       dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
       
-      // Initialize color picker if it's being shown
       if (dropdown.style.display === 'block') {
         initializeColorPicker();
       }
@@ -944,11 +2896,9 @@
       const hueSatCursor = document.getElementById('hueSatCursor');
       const hueCursor = document.getElementById('hueCursor');
       
-      // Initialize cursor positions
       updateHueSatPicker();
       updateHueSlider();
       
-      // Add event listeners
       hueSatPicker.addEventListener('mousedown', onHueSatMouseDown);
       hueSlider.addEventListener('mousedown', onHueMouseDown);
     }
@@ -961,8 +2911,8 @@
         const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
         const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
         
-        currentSaturation = (x / rect.width) * 100;
-        currentLightness = 100 - (y / rect.height) * 100;
+        window.currentSaturation = (x / rect.width) * 100;
+        window.currentLightness = 100 - (y / rect.height) * 100;
         
         updateColorFromHSL();
         updateHueSatCursor(x, y);
@@ -984,7 +2934,7 @@
       
       function onMouseMove(e) {
         const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-        currentHue = (x / rect.width) * 360;
+        window.currentHue = (x / rect.width) * 360;
         
         updateColorFromHSL();
         updateHueSlider();
@@ -1002,19 +2952,19 @@
     }
 
     function updateColorFromHSL() {
-      const rgb = hslToRgb(currentHue / 360, currentSaturation / 100, currentLightness / 100);
-      const hexColor = rgbToHex(rgb.r, rgb.g, rgb.b);
+      const rgb = hslToRgb(window.currentHue / 360, window.currentSaturation / 100, window.currentLightness / 100);
+      const hexColor = rgbToHex2(rgb.r, rgb.g, rgb.b);
       
-      selectedColorValue = hexColor;
+      window.selectedColorValue = hexColor;
       document.getElementById('selectedColor').style.backgroundColor = hexColor;
       document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
       
-      // Update RGB inputs
       document.getElementById('rInput').value = rgb.r;
       document.getElementById('gInput').value = rgb.g;
       document.getElementById('bInput').value = rgb.b;
       
-      // Clear preset selections
+      sendColorUpdate(hexColor);
+      
       document.querySelectorAll('.color-preset').forEach(preset => {
         preset.classList.remove('selected');
       });
@@ -1028,8 +2978,8 @@
       } else {
         const picker = document.getElementById('hueSatPicker');
         const rect = picker.getBoundingClientRect();
-        const x = (currentSaturation / 100) * picker.offsetWidth;
-        const y = ((100 - currentLightness) / 100) * picker.offsetHeight;
+        const x = (window.currentSaturation / 100) * picker.offsetWidth;
+        const y = ((100 - window.currentLightness) / 100) * picker.offsetHeight;
         cursor.style.left = x + 'px';
         cursor.style.top = y + 'px';
       }
@@ -1038,13 +2988,13 @@
     function updateHueSlider() {
       const cursor = document.getElementById('hueCursor');
       const slider = document.getElementById('hueSlider');
-      const x = (currentHue / 360) * slider.offsetWidth;
+      const x = (window.currentHue / 360) * slider.offsetWidth;
       cursor.style.left = x + 'px';
     }
 
     function updateHueSatPicker() {
       const picker = document.getElementById('hueSatPicker');
-      const hueColor = `hsl(${currentHue}, 100%, 50%)`;
+      const hueColor = `hsl(${window.currentHue}, 100%, 50%)`;
       picker.style.background = `
         linear-gradient(to top, #000, transparent), 
         linear-gradient(to right, #fff, transparent),
@@ -1054,25 +3004,33 @@
     }
 
     function selectColor(color) {
-      selectedColorValue = color;
+      window.selectedColorValue = color;
       document.getElementById('selectedColor').style.backgroundColor = color;
       document.getElementById('colorPreviewLarge').style.backgroundColor = color;
       
-      // Update RGB inputs
-      const rgb = hexToRgb(color);
+      const rgb = hexToRgb2(color);
       if (rgb) {
         document.getElementById('rInput').value = rgb.r;
         document.getElementById('gInput').value = rgb.g;
         document.getElementById('bInput').value = rgb.b;
+        
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        window.currentHue = hsl.h * 360;
+        window.currentSaturation = hsl.s * 100;
+        window.currentLightness = hsl.l * 100;
+        updateHueSatPicker();
+        updateHueSlider();
       }
       
-      // Clear preset selections and mark this one as selected
+      sendColorUpdate(color);
+      
       document.querySelectorAll('.color-preset').forEach(preset => {
         preset.classList.remove('selected');
       });
-      document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+      if (document.querySelector(`[data-color="${color}"]`)) {
+        document.querySelector(`[data-color="${color}"]`).classList.add('selected');
+      }
       
-      // Close dropdown
       document.getElementById('colorPickerDropdown').style.display = 'none';
     }
 
@@ -1081,30 +3039,29 @@
       const g = parseInt(document.getElementById('gInput').value) || 0;
       const b = parseInt(document.getElementById('bInput').value) || 0;
       
-      const hexColor = rgbToHex(r, g, b);
-      selectedColorValue = hexColor;
+      const hexColor = rgbToHex2(r, g, b);
+      window.selectedColorValue = hexColor;
       
-      // Convert RGB to HSL for the color picker
       const hsl = rgbToHsl(r, g, b);
-      currentHue = hsl.h * 360;
-      currentSaturation = hsl.s * 100;
-      currentLightness = hsl.l * 100;
+      window.currentHue = hsl.h * 360;
+      window.currentSaturation = hsl.s * 100;
+      window.currentLightness = hsl.l * 100;
       
       document.getElementById('selectedColor').style.backgroundColor = hexColor;
       document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
       
-      // Update color picker visuals
       updateHueSatPicker();
       updateHueSlider();
       
-      // Clear preset selections
+      sendColorUpdate(hexColor);
+      
       document.querySelectorAll('.color-preset').forEach(preset => {
         preset.classList.remove('selected');
       });
     }
 
     // Color conversion utilities
-    function hexToRgb(hex) {
+    function hexToRgb2(hex) {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? {
         r: parseInt(result[1], 16),
@@ -1113,7 +3070,7 @@
       } : null;
     }
 
-    function rgbToHex(r, g, b) {
+    function rgbToHex2(r, g, b) {
       return "#" + [r, g, b].map(x => {
         const hex = x.toString(16);
         return hex.length === 1 ? "0" + hex : hex;
@@ -1124,7 +3081,7 @@
       let r, g, b;
 
       if (s === 0) {
-        r = g = b = l; // achromatic
+        r = g = b = l;
       } else {
         const hue2rgb = (p, q, t) => {
           if (t < 0) t += 1;
@@ -1159,7 +3116,7 @@
       let h, s, l = (max + min) / 2;
 
       if (max === min) {
-        h = s = 0; // achromatic
+        h = s = 0;
       } else {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -1178,27 +3135,319 @@
     document.addEventListener('click', function(event) {
       const colorPicker = document.getElementById('colorPickerDropdown');
       const selectedColor = document.getElementById('selectedColor');
+      const editColorPicker = document.getElementById('editColorPickerDropdown');
+      const editSelectedColor = document.getElementById('editSelectedColor');
       
-      if (!colorPicker.contains(event.target) && event.target !== selectedColor) {
+      if (colorPicker && selectedColor && !colorPicker.contains(event.target) && event.target !== selectedColor) {
         colorPicker.style.display = 'none';
+      }
+      
+      if (editColorPicker && editSelectedColor && !editColorPicker.contains(event.target) && event.target !== editSelectedColor) {
+        editColorPicker.style.display = 'none';
       }
     });
 
-    // Basic functionality for demo purposes
-    function handleEditClick(index) {
-      console.log('Edit clicked for index:', index);
-      // Edit functionality would go here
+    // Edit color picker functions
+    function toggleEditColorPicker() {
+      const dropdown = document.getElementById('editColorPickerDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      
+      if (dropdown.style.display === 'block') {
+        initializeEditColorPicker();
+      }
     }
 
-    function handleDeleteClick(index) {
-      console.log('Delete clicked for index:', index);
-      // Delete functionality would go here
+    function initializeEditColorPicker() {
+      const hueSatPicker = document.getElementById('editHueSatPicker');
+      const hueSlider = document.getElementById('editHueSlider');
+      
+      const rgb = hexToRgb2(window.editSelectedColorValue);
+      if (rgb) {
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        window.editCurrentHue = hsl.h * 360;
+        window.editCurrentSaturation = hsl.s * 100;
+        window.editCurrentLightness = hsl.l * 100;
+        updateEditHueSatPicker();
+        updateEditHueSlider();
+      }
+      
+      hueSatPicker.addEventListener('mousedown', onEditHueSatMouseDown);
+      hueSlider.addEventListener('mousedown', onEditHueMouseDown);
     }
 
-    // Initialize default selected color
-    document.addEventListener('DOMContentLoaded', function() {
-      selectColor('#3b82f6');
-      lucide.createIcons();
+    function onEditHueSatMouseDown(e) {
+      e.preventDefault();
+      const rect = e.target.getBoundingClientRect();
+      
+      function onMouseMove(e) {
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        
+        window.editCurrentSaturation = (x / rect.width) * 100;
+        window.editCurrentLightness = 100 - (y / rect.height) * 100;
+        
+        updateEditColorFromHSL();
+        updateEditHueSatCursor(x, y);
+      }
+      
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      
+      onMouseMove(e);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function onEditHueMouseDown(e) {
+      e.preventDefault();
+      const rect = e.target.getBoundingClientRect();
+      
+      function onMouseMove(e) {
+        const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        window.editCurrentHue = (x / rect.width) * 360;
+        
+        updateEditColorFromHSL();
+        updateEditHueSlider();
+        updateEditHueSatPicker();
+      }
+      
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      
+      onMouseMove(e);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function updateEditColorFromHSL() {
+      const rgb = hslToRgb(window.editCurrentHue / 360, window.editCurrentSaturation / 100, window.editCurrentLightness / 100);
+      const hexColor = rgbToHex2(rgb.r, rgb.g, rgb.b);
+      
+      window.editSelectedColorValue = hexColor;
+      document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
+      document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
+      
+      document.getElementById('editRInput').value = rgb.r;
+      document.getElementById('editGInput').value = rgb.g;
+      document.getElementById('editBInput').value = rgb.b;
+      
+      sendColorUpdate(hexColor);
+      
+      document.querySelectorAll('.color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+    }
+
+    function updateEditHueSatCursor(x, y) {
+      const cursor = document.getElementById('editHueSatCursor');
+      if (x !== undefined && y !== undefined) {
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+      } else {
+        const picker = document.getElementById('editHueSatPicker');
+        const x = (window.editCurrentSaturation / 100) * picker.offsetWidth;
+        const y = ((100 - window.editCurrentLightness) / 100) * picker.offsetHeight;
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+      }
+    }
+
+    function updateEditHueSlider() {
+      const cursor = document.getElementById('editHueCursor');
+      const slider = document.getElementById('editHueSlider');
+      const x = (window.editCurrentHue / 360) * slider.offsetWidth;
+      cursor.style.left = x + 'px';
+    }
+
+    function updateEditHueSatPicker() {
+      const picker = document.getElementById('editHueSatPicker');
+      const hueColor = `hsl(${window.editCurrentHue}, 100%, 50%)`;
+      picker.style.background = `
+        linear-gradient(to top, #000, transparent), 
+        linear-gradient(to right, #fff, transparent),
+        ${hueColor}
+      `;
+      updateEditHueSatCursor();
+    }
+
+    function selectEditColor(color) {
+      window.editSelectedColorValue = color;
+      document.getElementById('editSelectedColor').style.backgroundColor = color;
+      document.getElementById('editColorPreviewLarge').style.backgroundColor = color;
+      
+      const rgb = hexToRgb2(color);
+      if (rgb) {
+        document.getElementById('editRInput').value = rgb.r;
+        document.getElementById('editGInput').value = rgb.g;
+        document.getElementById('editBInput').value = rgb.b;
+        
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        window.editCurrentHue = hsl.h * 360;
+        window.editCurrentSaturation = hsl.s * 100;
+        window.editCurrentLightness = hsl.l * 100;
+        updateEditHueSatPicker();
+        updateEditHueSlider();
+      }
+      
+      sendColorUpdate(color);
+      
+      document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+      document.querySelector(`#editColorPickerDropdown [data-color="${color}"]`).classList.add('selected');
+      
+      document.getElementById('editColorPickerDropdown').style.display = 'none';
+    }
+
+    function updateEditFromRGB() {
+      const r = parseInt(document.getElementById('editRInput').value) || 0;
+      const g = parseInt(document.getElementById('editGInput').value) || 0;
+      const b = parseInt(document.getElementById('editBInput').value) || 0;
+      
+      const hexColor = rgbToHex2(r, g, b);
+      window.editSelectedColorValue = hexColor;
+      
+      const hsl = rgbToHsl(r, g, b);
+      window.editCurrentHue = hsl.h * 360;
+      window.editCurrentSaturation = hsl.s * 100;
+      window.editCurrentLightness = hsl.l * 100;
+      
+      document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
+      document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
+      
+      updateEditHueSatPicker();
+      updateEditHueSlider();
+      
+      sendColorUpdate(hexColor);
+      
+      document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
+        preset.classList.remove('selected');
+      });
+    }
+
+    // Dropdown functionality
+    function initDropdown(triggerId, menuId, itemsId, inputId) {
+      const trigger = document.getElementById(triggerId);
+      const menu = document.getElementById(menuId);
+      const items = document.getElementById(itemsId);
+      const input = document.getElementById(inputId);
+      const valueSpan = trigger.querySelector('.dropdown-value');
+      
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = menu.classList.contains('open');
+        
+        document.querySelectorAll('.dropdown-menu.open').forEach(m => {
+          if (m !== menu) m.classList.remove('open');
+        });
+        document.querySelectorAll('.dropdown-trigger[aria-expanded="true"]').forEach(t => {
+          if (t !== trigger) t.setAttribute('aria-expanded', 'false');
+        });
+        
+        menu.classList.toggle('open');
+        trigger.setAttribute('aria-expanded', !isOpen);
+      });
+      
+      items.addEventListener('click', (e) => {
+        const item = e.target.closest('.dropdown-item');
+        if (item) {
+          const value = item.dataset.value;
+          const text = item.textContent;
+          
+          valueSpan.textContent = text;
+          valueSpan.dataset.value = value;
+          input.value = value;
+          
+          items.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+          
+          menu.classList.remove('open');
+          trigger.setAttribute('aria-expanded', 'false');
+          
+          if (value) {
+            document.getElementById('preview-sound').disabled = false;
+          }
+          
+          if (triggerId === 'alarm-sound-trigger') {
+            handleAlarmSettingChange();
+          }
+        }
+      });
+      
+      document.addEventListener('click', (e) => {
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) {
+          menu.classList.remove('open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    // Alarm Settings Functions
+    async function fetchAlarmSettings() {
+      // Mock implementation
+      console.log('Fetching alarm settings (mock)');
+    }
+
+    async function handleAlarmSettingChange() {
+      console.log('Alarm settings changed (mock)');
+    }
+
+    let previewTimeout = null;
+    let isPlaying = false;
+
+    async function handlePreviewToggle() {
+      const button = document.getElementById('preview-sound');
+      const icon = button.querySelector('.icon');
+      const text = button.querySelector('span');
+      
+      if (!isPlaying) {
+        const sound = document.getElementById('alarm-sound').value;
+        if (!sound) {
+          showMessage('Please select a sound first', 'warning');
+          return;
+        }
+        
+        isPlaying = true;
+        button.classList.remove('secondary-btn');
+        button.classList.add('danger-btn');
+        icon.setAttribute('data-lucide', 'square');
+        text.textContent = 'Stop';
+        lucide.createIcons();
+
+        console.log('Playing sound:', sound);
+      } else {
+        if (previewTimeout) {
+          clearTimeout(previewTimeout);
+          previewTimeout = null;
+        }
+
+        isPlaying = false;
+        button.classList.remove('danger-btn');
+        button.classList.add('secondary-btn');
+        icon.setAttribute('data-lucide', 'play');
+        text.textContent = 'Preview';
+        lucide.createIcons();
+      }
+    }
+
+    // Theme switching functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+    
+    // Check for saved theme preference or default to dark mode
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    if (currentTheme === 'light') {
+      body.classList.add('light-mode');
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      body.classList.toggle('light-mode');
+      const theme = body.classList.contains('light-mode') ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
     });
 
     // Initialize all Lucide icons

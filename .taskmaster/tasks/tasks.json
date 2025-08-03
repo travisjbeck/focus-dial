@@ -864,11 +864,78 @@
             "testStrategy": ""
           }
         ]
+      },
+      {
+        "id": 14,
+        "title": "Implement thetimer.app OAuth Integration",
+        "description": "Replace manual webhook/API key configuration with automated OAuth flow allowing users to click 'Connect to thetimer.app', authenticate via popup, and automatically receive API credentials.",
+        "details": "Implementation requires comprehensive OAuth 2.0 flow integration:\n\n1. **OAuth Client Configuration**:\n   - Register device application with thetimer.app OAuth provider\n   - Configure redirect URIs for device web interface\n   - Store client ID and secret securely in device firmware\n   - Implement PKCE (Proof Key for Code Exchange) for enhanced security\n\n2. **Web Interface Updates**:\n   - Add 'Connect to thetimer.app' button to device settings page\n   - Implement OAuth popup window using window.open() with proper dimensions\n   - Handle postMessage communication between popup and parent window\n   - Display connection status with visual indicators (connected/disconnected)\n   - Show connected account information and disconnect option\n\n3. **OAuth Flow Implementation**:\n   - Generate authorization URL with state parameter and PKCE challenge\n   - Handle authorization callback with code exchange for access token\n   - Implement token refresh mechanism for long-term connectivity\n   - Store tokens securely in device NVS with encryption\n\n4. **API Integration**:\n   - Replace manual webhook configuration with OAuth-authenticated API calls\n   - Implement automatic project sync from thetimer.app account\n   - Add real-time timer status updates to connected thetimer.app account\n   - Handle API errors gracefully with user-friendly messages\n\n5. **Security Considerations**:\n   - Implement proper CSRF protection using state parameter\n   - Validate all OAuth responses and handle edge cases\n   - Secure token storage with device-specific encryption keys\n   - Add token expiration handling and automatic refresh",
+        "testStrategy": "1. **OAuth Flow Testing**: Test complete authorization flow from button click to token receipt, verify popup window opens correctly and handles user authentication, confirm postMessage communication works between popup and parent window\n\n2. **Connection Status Validation**: Test connection status display updates correctly after successful OAuth, verify disconnect functionality removes stored tokens, confirm reconnection works after disconnect\n\n3. **API Integration Testing**: Test automatic project sync from connected thetimer.app account, verify timer status updates are sent to thetimer.app during timer sessions, confirm error handling when thetimer.app API is unreachable\n\n4. **Security Validation**: Test CSRF protection by manipulating state parameters, verify tokens are stored securely and encrypted in NVS, confirm token refresh works before expiration, test behavior with expired or invalid tokens\n\n5. **Edge Case Testing**: Test behavior when popup is blocked by browser, verify handling of network connectivity issues during OAuth flow, test multiple rapid connection attempts, confirm graceful degradation when OAuth fails",
+        "status": "pending",
+        "dependencies": [
+          8
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Configure OAuth Client Registration and PKCE Implementation",
+            "description": "Set up OAuth client configuration with thetimer.app provider and implement PKCE security",
+            "dependencies": [],
+            "details": "Register device application with thetimer.app OAuth provider to obtain client ID and secret. Store these credentials securely in device firmware using NVS encryption. Implement PKCE (Proof Key for Code Exchange) code generation and verification. Configure redirect URIs pointing to device web interface endpoints. Add OAuth configuration constants and helper functions for generating authorization URLs with state parameters and PKCE challenges.",
+            "status": "pending",
+            "testStrategy": "Verify client credentials are stored securely in NVS, test PKCE code generation produces valid challenge/verifier pairs, confirm authorization URL generation includes all required parameters"
+          },
+          {
+            "id": 2,
+            "title": "Add OAuth Connect Button and Popup Window Management",
+            "description": "Update web interface with OAuth connection UI and popup window handling",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "Add 'Connect to thetimer.app' button to device settings page in the web interface. Implement popup window creation using window.open() with appropriate dimensions (600x700px). Set up postMessage communication system between popup and parent window to handle OAuth callback data. Add visual connection status indicators showing connected/disconnected states. Include connected account information display and disconnect functionality.",
+            "status": "pending",
+            "testStrategy": "Test button click opens popup window correctly, verify popup dimensions and positioning, confirm postMessage communication works bidirectionally, test connection status updates properly"
+          },
+          {
+            "id": 3,
+            "title": "Implement Authorization Flow and Token Exchange",
+            "description": "Handle OAuth authorization callback and implement secure token exchange mechanism",
+            "dependencies": [
+              "14.2"
+            ],
+            "details": "Create authorization callback endpoint on device web server to receive OAuth authorization codes. Implement code exchange for access tokens using PKCE verifier. Add token refresh mechanism for maintaining long-term connectivity. Store access and refresh tokens securely in device NVS with encryption. Handle OAuth errors and edge cases gracefully with appropriate user feedback messages.",
+            "status": "pending",
+            "testStrategy": "Test authorization code reception and validation, verify token exchange produces valid access tokens, confirm tokens are stored securely in NVS, test token refresh mechanism works automatically"
+          },
+          {
+            "id": 4,
+            "title": "Replace Manual API Configuration with OAuth-Authenticated Calls",
+            "description": "Update existing API integration to use OAuth tokens instead of manual webhook configuration",
+            "dependencies": [
+              "14.3"
+            ],
+            "details": "Replace existing manual webhook/API key configuration with OAuth-authenticated API calls to thetimer.app. Implement automatic project synchronization from connected thetimer.app account. Update timer status reporting to use OAuth tokens for authentication. Add proper error handling for expired tokens and API failures with user-friendly error messages. Ensure backward compatibility for devices not using OAuth.",
+            "status": "pending",
+            "testStrategy": "Test API calls authenticate correctly with OAuth tokens, verify project sync retrieves user's projects, confirm timer status updates reach thetimer.app account, test error handling for various failure scenarios"
+          },
+          {
+            "id": 5,
+            "title": "Implement Security Validation and Token Management",
+            "description": "Add comprehensive security measures and token lifecycle management",
+            "dependencies": [
+              "14.4"
+            ],
+            "details": "Implement CSRF protection using state parameter validation throughout OAuth flow. Add comprehensive validation for all OAuth responses including error conditions. Implement automatic token expiration detection and refresh handling. Add device-specific encryption keys for secure token storage. Create token cleanup mechanisms for disconnection scenarios. Implement rate limiting and request validation for OAuth endpoints.",
+            "status": "pending",
+            "testStrategy": "Test CSRF protection prevents unauthorized requests, verify all OAuth response validation works correctly, confirm automatic token refresh handles expiration seamlessly, test token cleanup on disconnect"
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-08-02T19:45:00.827Z",
+      "updated": "2025-08-03T17:01:43.332Z",
       "description": "Tasks for master context"
     }
   }
