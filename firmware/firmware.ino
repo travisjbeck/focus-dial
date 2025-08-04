@@ -733,6 +733,9 @@ void setup() {
 }
 
 void loop() {
+    // Reset watchdog timer at the start of each loop
+    esp_task_wdt_reset();
+    
     // Check for test mode command
     if (USBSerial.available()) {
         String command = USBSerial.readString();
@@ -982,6 +985,8 @@ void loop() {
     if (webServerRunning) {
         apiServer.handleClient();
         // webSocket.loop();
+        // Reset watchdog after handling web requests
+        esp_task_wdt_reset();
     }
     
     delay(5);  // 5ms as per working example

@@ -5,9 +5,11 @@ let colorPreviewTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM fully loaded');
+  
+  // Initialize lucide icons
+  lucide.createIcons();
+  
   fetchAndRenderProjects();
-  fetchWebhookUrl();
-  fetchApiKey();
   fetchAlarmSettings();
 
   const form = document.getElementById('add-project-form');
@@ -15,10 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', handleAddProjectSubmit);
   }
 
-  const webhookForm = document.getElementById('webhook-form');
-  if (webhookForm) {
-    webhookForm.addEventListener('submit', handleWebhookSubmit);
-  }
+  // Initialize OAuth functionality
+  initializeOAuth();
 
   // Auto-save alarm settings on change
   const alarmSound = document.getElementById('alarm-sound');
@@ -41,6 +41,47 @@ document.addEventListener('DOMContentLoaded', () => {
   window.currentHue = 220;
   window.currentSaturation = 100;
   window.currentLightness = 62;
+  
+  // Initialize hamburger menu
+  const hamburgerMenu = document.getElementById('hamburgerMenu');
+  const mobileMenu = document.getElementById('mobileMenu');
+  
+  if (hamburgerMenu && mobileMenu) {
+    hamburgerMenu.addEventListener('click', () => {
+      mobileMenu.classList.toggle('active');
+      const icon = hamburgerMenu.querySelector('i');
+      if (mobileMenu.classList.contains('active')) {
+        icon.setAttribute('data-lucide', 'x');
+      } else {
+        icon.setAttribute('data-lucide', 'menu');
+      }
+      lucide.createIcons();
+    });
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (event) => {
+      if (!hamburgerMenu.contains(event.target) && !mobileMenu.contains(event.target)) {
+        mobileMenu.classList.remove('active');
+        const icon = hamburgerMenu.querySelector('i');
+        icon.setAttribute('data-lucide', 'menu');
+        lucide.createIcons();
+      }
+    });
+    
+    // Close mobile menu when clicking on a link
+    const mobileLinks = mobileMenu.querySelectorAll('.navbar-link');
+    mobileLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.remove('active');
+        const icon = hamburgerMenu.querySelector('i');
+        icon.setAttribute('data-lucide', 'menu');
+        lucide.createIcons();
+      });
+    });
+  }
+
+  // Initialize theme
+  initializeTheme();
 });
 
 // Function to send color update via HTTP, with debounce
@@ -98,135 +139,236 @@ const apiBaseUrl = '/api/projects';
 const projectListDiv = document.getElementById('project-list');
 const messageArea = document.getElementById('message-area');
 
-// --- Webhook URL & API Key Configuration ---
-async function fetchWebhookUrl() {
+// --- OAuth Configuration ---
+const OAUTH_CONFIG = {
+  clientId: 'timer-device-client',
+  authorizationUrl: 'https://thetimer.app/oauth/authorize',
+  tokenUrl: 'https://thetimer.app/oauth/token',
+  redirectUri: window.location.origin + '/oauth/callback',
+  scope: 'projects:read projects:write timers:write user:read'
+};
+
+let oauthState = null;
+let oauthVerifier = null;
+let oauthPopup = null;
+
+// Initialize OAuth functionality
+function initializeOAuth() {
+  // Check if we have stored OAuth token
+  checkOAuthConnection();
+  
+  // Set up event listeners
+  const connectBtn = document.getElementById('oauth-connect-btn');
+  if (connectBtn) {
+    connectBtn.addEventListener('click', handleOAuthConnect);
+  }
+  
+  const disconnectBtn = document.getElementById('oauth-disconnect-btn');
+  if (disconnectBtn) {
+    disconnectBtn.addEventListener('click', handleOAuthDisconnect);
+  }
+  
+  // Listen for OAuth callback messages
+  window.addEventListener('message', handleOAuthMessage);
+}
+
+// Check OAuth connection status
+async function checkOAuthConnection() {
   try {
-    const response = await fetch('/api/webhook');
-    if (!response.ok) {
-      // Silently fail if the endpoint doesn't exist yet - don't show error to user
-      console.log('Webhook endpoint not available yet');
-      return;
-    }
-    const data = await response.json();
-
-    const webhookInput = document.getElementById('webhook-url');
-    if (webhookInput && data.url) {
-      // Clean up the URL if needed before displaying
-      let displayUrl = data.url;
-
-      // Check for double protocol issue (e.g., http://HTTPS://...)
-      const protocolMatch = displayUrl.match(/^(https?:\/\/)(https?:\/\/)/i);
-      if (protocolMatch) {
-        // Remove the first protocol prefix if we have a duplicate
-        displayUrl = displayUrl.substring(protocolMatch[1].length);
-        console.log('Fixed double protocol in URL:', displayUrl);
+    const response = await fetch('/api/oauth/status');
+    if (response.ok) {
+      const data = await response.json();
+      if (data.connected) {
+        showOAuthState('connected');
+        // Load user info
+        if (data.user) {
+          document.getElementById('oauth-account-name').textContent = data.user.name || 'Unknown';
+          document.getElementById('oauth-account-email').textContent = data.user.email || 'Unknown';
+        }
+      } else {
+        showOAuthState('disconnected');
       }
-
-      webhookInput.value = displayUrl;
+    } else {
+      showOAuthState('disconnected');
     }
   } catch (error) {
-    // Just log to console, don't show error message to the user
-    console.error('Error fetching webhook URL:', error);
+    console.error('Error checking OAuth status:', error);
+    showOAuthState('disconnected');
   }
 }
 
-// New function to fetch API Key
-async function fetchApiKey() {
+// Handle OAuth connect button click
+function handleOAuthConnect() {
+  // Generate PKCE challenge
+  oauthVerifier = generateCodeVerifier();
+  const challenge = generateCodeChallenge(oauthVerifier);
+  
+  // Generate state for CSRF protection
+  oauthState = generateRandomString(32);
+  
+  // Build authorization URL
+  const params = new URLSearchParams({
+    client_id: OAUTH_CONFIG.clientId,
+    redirect_uri: OAUTH_CONFIG.redirectUri,
+    response_type: 'code',
+    scope: OAUTH_CONFIG.scope,
+    state: oauthState,
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  });
+  
+  const authUrl = `${OAUTH_CONFIG.authorizationUrl}?${params.toString()}`;
+  
+  // Show connecting state
+  showOAuthState('connecting');
+  
+  // Open OAuth popup
+  const width = 600;
+  const height = 700;
+  const left = (window.screen.width - width) / 2;
+  const top = (window.screen.height - height) / 2;
+  
+  oauthPopup = window.open(
+    authUrl,
+    'OAuth Login',
+    `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`
+  );
+  
+  // Check popup status
+  const popupInterval = setInterval(() => {
+    if (oauthPopup && oauthPopup.closed) {
+      clearInterval(popupInterval);
+      // If popup was closed without completing OAuth, revert to disconnected state
+      if (document.getElementById('oauth-connecting').style.display !== 'none') {
+        showOAuthState('disconnected');
+      }
+    }
+  }, 1000);
+}
+
+// Handle OAuth disconnect
+async function handleOAuthDisconnect() {
   try {
-    // Assuming a new GET endpoint exists
-    const response = await fetch('/api/apikey');
-    if (!response.ok) {
-      console.log('API Key endpoint not available or key not set');
-      return;
-    }
-    const data = await response.json();
-    const apiKeyInput = document.getElementById('api-key');
-    if (apiKeyInput && data.key_present) {
-      // Don't display the actual key, just indicate it's set
-      // Or use a placeholder if preferred
-      apiKeyInput.placeholder = 'API Key is set (********)';
-      // Optionally, could have a separate status indicator
+    const response = await fetch('/api/oauth/disconnect', {
+      method: 'POST'
+    });
+    
+    if (response.ok) {
+      showOAuthState('disconnected');
+      showMessage('Disconnected from TheTimer.app', 'success');
+    } else {
+      showMessage('Failed to disconnect from TheTimer.app', 'error');
     }
   } catch (error) {
-    console.error('Error fetching API key status:', error);
+    console.error('Error disconnecting OAuth:', error);
+    showMessage('Error disconnecting from TheTimer.app', 'error');
   }
 }
 
-async function handleWebhookSubmit(event) {
-  event.preventDefault();
-  const form = event.target;
-  const webhookInput = document.getElementById('webhook-url');
-  const apiKeyInput = document.getElementById('api-key'); // Get API Key input
-
-  let webhookUrl = webhookInput.value.trim();
-  let apiKey = apiKeyInput.value.trim(); // Get API Key value
-
-  // Keep URL validation (allow empty URL to clear it)
-  if (webhookUrl) {
-    if (!webhookUrl.match(/^https?:\/\//i)) {
-      webhookUrl = 'http://' + webhookUrl;
-    }
-    try {
-      new URL(webhookUrl);
-    } catch (e) {
-      showMessage('Please enter a valid URL or leave it empty to clear.', 'error');
-      return;
-    }
-  }
-
-  // Basic check: if URL is provided, API key should also be provided
-  if (webhookUrl && !apiKey) {
-    showMessage('API Key is required when Webhook URL is set.', 'error');
-    apiKeyInput.focus(); // Focus the API key input
+// Handle OAuth callback messages
+function handleOAuthMessage(event) {
+  // Validate origin
+  if (event.origin !== window.location.origin) {
     return;
   }
-
-  showMessage('Saving settings...', '');
-
-  // Use Promise.allSettled to send both requests and handle results
-  const results = await Promise.allSettled([
-    // Request 1: Update Webhook URL (using JSON)
-    fetch('/api/webhook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: webhookUrl }), // Send empty string to clear
-    }),
-    // Request 2: Update API Key (using URL-encoded form data)
-    fetch('/api/apikey', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `api_key=${encodeURIComponent(apiKey)}`, // Send empty string to potentially clear
-    })
-  ]);
-
-  // Process results
-  const urlResult = results[0];
-  const keyResult = results[1];
-  let success = true;
-  let messages = [];
-
-  if (urlResult.status === 'fulfilled' && urlResult.value.ok) {
-    messages.push('Webhook URL updated.');
-  } else {
-    success = false;
-    const errorMsg = urlResult.reason ? urlResult.reason.message : `HTTP ${urlResult.value?.status}`;
-    messages.push(`Webhook URL update failed: ${errorMsg}`);
-    console.error('Webhook URL update failed:', urlResult.reason || urlResult.value);
+  
+  // Handle OAuth callback
+  if (event.data.type === 'oauth-callback') {
+    if (event.data.state !== oauthState) {
+      showMessage('OAuth authentication failed: Invalid state', 'error');
+      showOAuthState('disconnected');
+      return;
+    }
+    
+    if (event.data.error) {
+      showMessage(`OAuth authentication failed: ${event.data.error}`, 'error');
+      showOAuthState('disconnected');
+      return;
+    }
+    
+    // Exchange code for token
+    exchangeCodeForToken(event.data.code);
   }
+}
 
-  if (keyResult.status === 'fulfilled' && keyResult.value.ok) {
-    messages.push('API Key updated.');
-    // Clear the input field after successful save for security
-    apiKeyInput.value = '';
-    apiKeyInput.placeholder = 'API Key is set (********)';
-  } else {
-    success = false;
-    const errorMsg = keyResult.reason ? keyResult.reason.message : `HTTP ${keyResult.value?.status}`;
-    messages.push(`API Key update failed: ${errorMsg}`);
-    console.error('API Key update failed:', keyResult.reason || keyResult.value);
+// Exchange authorization code for access token
+async function exchangeCodeForToken(code) {
+  try {
+    const response = await fetch('/api/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code: code,
+        code_verifier: oauthVerifier,
+        redirect_uri: OAUTH_CONFIG.redirectUri
+      })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      handleOAuthSuccess(data);
+    } else {
+      showMessage('Failed to complete OAuth authentication', 'error');
+      showOAuthState('disconnected');
+    }
+  } catch (error) {
+    console.error('Error exchanging code for token:', error);
+    showMessage('Error completing OAuth authentication', 'error');
+    showOAuthState('disconnected');
   }
+}
 
-  showMessage(messages.join('<br>'), success ? 'success' : 'error');
+// Handle successful OAuth
+function handleOAuthSuccess(data) {
+  // Show connected state
+  showOAuthState('connected');
+  
+  // Load user info
+  if (data.user) {
+    document.getElementById('oauth-account-name').textContent = data.user.name || 'Unknown';
+    document.getElementById('oauth-account-email').textContent = data.user.email || 'Unknown';
+  }
+  
+  showMessage('Successfully connected to TheTimer.app', 'success');
+  
+  // Refresh projects to get synced data
+  fetchAndRenderProjects();
+}
+
+// Show OAuth state
+function showOAuthState(state) {
+  const states = ['disconnected', 'connecting', 'connected'];
+  states.forEach(s => {
+    const element = document.getElementById(`oauth-${s}`);
+    if (element) {
+      element.style.display = s === state ? 'block' : 'none';
+    }
+  });
+  
+  // Update lucide icons
+  lucide.createIcons();
+}
+
+// PKCE helper functions
+function generateRandomString(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function generateCodeVerifier() {
+  return generateRandomString(128);
+}
+
+function generateCodeChallenge(verifier) {
+  // In production, this would use SHA256 and base64url encoding
+  // For now, return a simple hash
+  return btoa(verifier).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 // --- Fetch and Render Projects --- 
@@ -253,9 +395,9 @@ function renderProjectList(projects) {
   if (projects.length === 0) {
     projectListDiv.innerHTML = `
       <div class="empty-state">
-        <i data-lucide="clipboard-list" style="width: 3rem; height: 3rem; opacity: 0.5; margin-bottom: 1rem;"></i>
-        <p>No projects defined yet.</p>
-        <p>Create your first project using the form below.</p>
+        <i data-lucide="folder-open" style="width: 3rem; height: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+        <p>No projects yet</p>
+        <p style="font-size: 0.875rem; opacity: 0.7;">Click "Add New Project" below to get started</p>
       </div>
     `;
     lucide.createIcons();
@@ -337,7 +479,10 @@ async function handleAddProjectSubmit(event) {
       window.selectedColorValue = '#3b82f6'; // Reset color to default
       document.getElementById('selectedColor').style.backgroundColor = '#3b82f6';
       document.getElementById('colorPickerDropdown').style.display = 'none';
-
+      
+      // Close the add project form
+      toggleAddProject();
+      
       fetchAndRenderProjects(); // Refresh the list
     } else {
       const errorData = await response.json().catch(() => ({ error: 'Failed to add project. Invalid response from device.' }));
@@ -586,19 +731,16 @@ async function handleDeleteClick(index) {
 // --- Utility Functions --- 
 function showMessage(msg, type = '') {
   if (messageArea) {
-    messageArea.textContent = msg;
-
-    // Reset all classes
+    messageArea.innerHTML = msg; // Use innerHTML to support line breaks
     messageArea.className = '';
 
-    // Add message type class if specified
     if (type === 'success') {
       messageArea.classList.add('success-message');
     } else if (type === 'error') {
       messageArea.classList.add('error-message');
     }
   }
-  console.log(msg); // Also log to console
+  console.log(msg);
 }
 
 function renderError(msg) {
@@ -611,7 +753,7 @@ function renderError(msg) {
     `;
     lucide.createIcons();
   }
-  showMessage(msg, 'error'); // Show in message area too
+  showMessage(msg, 'error');
 }
 
 function escapeHtml(unsafe) {
@@ -625,18 +767,40 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;");
 }
 
-// Helper to convert rgb(r, g, b) back to hex - needed for color input
-// Basic version, may not handle all edge cases perfectly
 function rgbToHex(rgb) {
   if (!rgb || !rgb.startsWith('rgb')) return null;
-  // Extract numbers
   const result = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgb);
   if (!result) return null;
-  // Convert each part to hex
   const r = parseInt(result[1], 10).toString(16).padStart(2, '0');
   const g = parseInt(result[2], 10).toString(16).padStart(2, '0');
   const b = parseInt(result[3], 10).toString(16).padStart(2, '0');
   return `#${r}${g}${b}`;
+}
+
+// Toggle add project form
+function toggleAddProject() {
+  const form = document.getElementById('add-project-form');
+  const toggle = document.getElementById('addProjectToggle');
+  
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    toggle.classList.add('expanded');
+    // Focus on the name input for better UX
+    setTimeout(() => {
+      document.getElementById('name').focus();
+    }, 100);
+  } else {
+    form.style.display = 'none';
+    toggle.classList.remove('expanded');
+    // Reset form when closing
+    form.reset();
+    window.selectedColorValue = '#3b82f6';
+    document.getElementById('selectedColor').style.backgroundColor = '#3b82f6';
+    document.getElementById('colorPickerDropdown').style.display = 'none';
+  }
+  
+  // Re-initialize icons
+  lucide.createIcons();
 }
 
 // Color picker functionality
@@ -644,7 +808,6 @@ function toggleColorPicker() {
   const dropdown = document.getElementById('colorPickerDropdown');
   dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
   
-  // Initialize color picker if it's being shown
   if (dropdown.style.display === 'block') {
     initializeColorPicker();
   }
@@ -656,11 +819,9 @@ function initializeColorPicker() {
   const hueSatCursor = document.getElementById('hueSatCursor');
   const hueCursor = document.getElementById('hueCursor');
   
-  // Initialize cursor positions
   updateHueSatPicker();
   updateHueSlider();
   
-  // Add event listeners
   hueSatPicker.addEventListener('mousedown', onHueSatMouseDown);
   hueSlider.addEventListener('mousedown', onHueMouseDown);
 }
@@ -721,15 +882,12 @@ function updateColorFromHSL() {
   document.getElementById('selectedColor').style.backgroundColor = hexColor;
   document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
   
-  // Update RGB inputs
   document.getElementById('rInput').value = rgb.r;
   document.getElementById('gInput').value = rgb.g;
   document.getElementById('bInput').value = rgb.b;
   
-  // Send color update to device
   sendColorUpdate(hexColor);
   
-  // Clear preset selections
   document.querySelectorAll('.color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
@@ -773,14 +931,12 @@ function selectColor(color) {
   document.getElementById('selectedColor').style.backgroundColor = color;
   document.getElementById('colorPreviewLarge').style.backgroundColor = color;
   
-  // Update RGB inputs
   const rgb = hexToRgb2(color);
   if (rgb) {
     document.getElementById('rInput').value = rgb.r;
     document.getElementById('gInput').value = rgb.g;
     document.getElementById('bInput').value = rgb.b;
     
-    // Update HSL values
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
     window.currentHue = hsl.h * 360;
     window.currentSaturation = hsl.s * 100;
@@ -789,10 +945,8 @@ function selectColor(color) {
     updateHueSlider();
   }
   
-  // Send color update to device
   sendColorUpdate(color);
   
-  // Clear preset selections and mark this one as selected
   document.querySelectorAll('.color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
@@ -800,7 +954,6 @@ function selectColor(color) {
     document.querySelector(`[data-color="${color}"]`).classList.add('selected');
   }
   
-  // Close dropdown
   document.getElementById('colorPickerDropdown').style.display = 'none';
 }
 
@@ -812,7 +965,6 @@ function updateFromRGB() {
   const hexColor = rgbToHex2(r, g, b);
   window.selectedColorValue = hexColor;
   
-  // Convert RGB to HSL for the color picker
   const hsl = rgbToHsl(r, g, b);
   window.currentHue = hsl.h * 360;
   window.currentSaturation = hsl.s * 100;
@@ -821,14 +973,11 @@ function updateFromRGB() {
   document.getElementById('selectedColor').style.backgroundColor = hexColor;
   document.getElementById('colorPreviewLarge').style.backgroundColor = hexColor;
   
-  // Update color picker visuals
   updateHueSatPicker();
   updateHueSlider();
   
-  // Send color update to device
   sendColorUpdate(hexColor);
   
-  // Clear preset selections
   document.querySelectorAll('.color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
@@ -855,7 +1004,7 @@ function hslToRgb(h, s, l) {
   let r, g, b;
 
   if (s === 0) {
-    r = g = b = l; // achromatic
+    r = g = b = l;
   } else {
     const hue2rgb = (p, q, t) => {
       if (t < 0) t += 1;
@@ -890,7 +1039,7 @@ function rgbToHsl(r, g, b) {
   let h, s, l = (max + min) / 2;
 
   if (max === min) {
-    h = s = 0; // achromatic
+    h = s = 0;
   } else {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
@@ -935,7 +1084,6 @@ function initializeEditColorPicker() {
   const hueSatPicker = document.getElementById('editHueSatPicker');
   const hueSlider = document.getElementById('editHueSlider');
   
-  // Initialize cursor positions for current color
   const rgb = hexToRgb2(window.editSelectedColorValue);
   if (rgb) {
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
@@ -946,7 +1094,6 @@ function initializeEditColorPicker() {
     updateEditHueSlider();
   }
   
-  // Add event listeners
   hueSatPicker.addEventListener('mousedown', onEditHueSatMouseDown);
   hueSlider.addEventListener('mousedown', onEditHueMouseDown);
 }
@@ -1007,15 +1154,12 @@ function updateEditColorFromHSL() {
   document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
   document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
   
-  // Update RGB inputs
   document.getElementById('editRInput').value = rgb.r;
   document.getElementById('editGInput').value = rgb.g;
   document.getElementById('editBInput').value = rgb.b;
   
-  // Send color update to device
   sendColorUpdate(hexColor);
   
-  // Clear preset selections
   document.querySelectorAll('.color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
@@ -1058,14 +1202,12 @@ function selectEditColor(color) {
   document.getElementById('editSelectedColor').style.backgroundColor = color;
   document.getElementById('editColorPreviewLarge').style.backgroundColor = color;
   
-  // Update RGB inputs
   const rgb = hexToRgb2(color);
   if (rgb) {
     document.getElementById('editRInput').value = rgb.r;
     document.getElementById('editGInput').value = rgb.g;
     document.getElementById('editBInput').value = rgb.b;
     
-    // Update HSL values
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
     window.editCurrentHue = hsl.h * 360;
     window.editCurrentSaturation = hsl.s * 100;
@@ -1074,16 +1216,13 @@ function selectEditColor(color) {
     updateEditHueSlider();
   }
   
-  // Send color update to device
   sendColorUpdate(color);
   
-  // Clear preset selections and mark this one as selected
   document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
   document.querySelector(`#editColorPickerDropdown [data-color="${color}"]`).classList.add('selected');
   
-  // Close dropdown
   document.getElementById('editColorPickerDropdown').style.display = 'none';
 }
 
@@ -1095,7 +1234,6 @@ function updateEditFromRGB() {
   const hexColor = rgbToHex2(r, g, b);
   window.editSelectedColorValue = hexColor;
   
-  // Convert RGB to HSL for the color picker
   const hsl = rgbToHsl(r, g, b);
   window.editCurrentHue = hsl.h * 360;
   window.editCurrentSaturation = hsl.s * 100;
@@ -1104,14 +1242,11 @@ function updateEditFromRGB() {
   document.getElementById('editSelectedColor').style.backgroundColor = hexColor;
   document.getElementById('editColorPreviewLarge').style.backgroundColor = hexColor;
   
-  // Update color picker visuals
   updateEditHueSatPicker();
   updateEditHueSlider();
   
-  // Send color update to device
   sendColorUpdate(hexColor);
   
-  // Clear preset selections
   document.querySelectorAll('#editColorPickerDropdown .color-preset').forEach(preset => {
     preset.classList.remove('selected');
   });
@@ -1125,12 +1260,10 @@ function initDropdown(triggerId, menuId, itemsId, inputId) {
   const input = document.getElementById(inputId);
   const valueSpan = trigger.querySelector('.dropdown-value');
   
-  // Toggle dropdown
   trigger.addEventListener('click', (e) => {
     e.preventDefault();
     const isOpen = menu.classList.contains('open');
     
-    // Close all other dropdowns
     document.querySelectorAll('.dropdown-menu.open').forEach(m => {
       if (m !== menu) m.classList.remove('open');
     });
@@ -1142,39 +1275,32 @@ function initDropdown(triggerId, menuId, itemsId, inputId) {
     trigger.setAttribute('aria-expanded', !isOpen);
   });
   
-  // Handle item selection
   items.addEventListener('click', (e) => {
     const item = e.target.closest('.dropdown-item');
     if (item) {
       const value = item.dataset.value;
       const text = item.textContent;
       
-      // Update display
       valueSpan.textContent = text;
       valueSpan.dataset.value = value;
       input.value = value;
       
-      // Update selected state
       items.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('selected'));
       item.classList.add('selected');
       
-      // Close dropdown
       menu.classList.remove('open');
       trigger.setAttribute('aria-expanded', 'false');
       
-      // Enable preview button
       if (value) {
         document.getElementById('preview-sound').disabled = false;
       }
       
-      // Auto-save alarm sound selection
       if (triggerId === 'alarm-sound-trigger') {
         handleAlarmSettingChange();
       }
     }
   });
   
-  // Close on outside click
   document.addEventListener('click', (e) => {
     if (!trigger.contains(e.target) && !menu.contains(e.target)) {
       menu.classList.remove('open');
@@ -1268,14 +1394,12 @@ async function handlePreviewToggle() {
   const text = button.querySelector('span');
   
   if (!isPlaying) {
-    // Start preview
     const sound = document.getElementById('alarm-sound').value;
     if (!sound) {
       showMessage('Please select a sound first', 'warning');
       return;
     }
     
-    // Change button to stop state
     isPlaying = true;
     button.classList.remove('secondary-btn');
     button.classList.add('danger-btn');
@@ -1293,7 +1417,6 @@ async function handlePreviewToggle() {
       });
 
       if (!response.ok) {
-        // Reset button on error
         isPlaying = false;
         button.classList.remove('danger-btn');
         button.classList.add('secondary-btn');
@@ -1304,7 +1427,6 @@ async function handlePreviewToggle() {
       }
     } catch (error) {
       console.error('Error previewing sound:', error);
-      // Reset button on error
       isPlaying = false;
       button.classList.remove('danger-btn');
       button.classList.add('secondary-btn');
@@ -1314,7 +1436,6 @@ async function handlePreviewToggle() {
       showMessage('Error previewing sound', 'error');
     }
   } else {
-    // Stop preview
     if (previewTimeout) {
       clearTimeout(previewTimeout);
       previewTimeout = null;
@@ -1328,12 +1449,31 @@ async function handlePreviewToggle() {
       console.error('Error stopping sound:', error);
     }
 
-    // Change button back to preview state
     isPlaying = false;
     button.classList.remove('danger-btn');
     button.classList.add('secondary-btn');
     icon.setAttribute('data-lucide', 'play');
     text.textContent = 'Preview';
     lucide.createIcons();
+  }
+}
+
+// Theme switching functionality
+function initializeTheme() {
+  const themeToggle = document.getElementById('themeToggle');
+  const body = document.body;
+  
+  // Check for saved theme preference or default to dark mode
+  const currentTheme = localStorage.getItem('theme') || 'dark';
+  if (currentTheme === 'light') {
+    body.classList.add('light-mode');
+  }
+  
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      body.classList.toggle('light-mode');
+      const theme = body.classList.contains('light-mode') ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
+    });
   }
 }

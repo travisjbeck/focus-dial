@@ -1,25 +1,80 @@
-<!-- Focus Dial Project Management -->
+<!-- TheTimer Device Configuration -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TheTimer | Projects</title>
-  <link rel="stylesheet" href="style.css">
+  <title>TheTimer | Device Configuration</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <a href="#" class="navbar-logo">
+          <svg viewBox="0 0 634 178" fill="none" xmlns="http://www.w3.org/2000/svg" style="height: 36px; width: auto;">
+            <path class="logo-stroke" d="M87.500,2.1000 C134.168,2.1000 171.1000,40.832
+  171.1000,87.500 C171.1000,134.168 134.168,171.1000 87.500,171.1000 C40.832,171.1000 3.000,134.168 3.000,87.500 C3.000,40.832 40.832,2.1000
+  87.500,2.1000 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="butt" stroke-miterlimit="10"/>
+            <path class="logo-fill-accent" d="M87.1000,40.1000 C113.957,40.1000 135.000,62.043 135.000,87.1000 C135.000,113.957 113.957,134.1000
+  87.1000,134.1000 C62.043,134.1000 41.000,113.957 41.000,87.1000 C41.000,62.043 62.043,40.1000 87.1000,40.1000 Z" fill="var(--color-accent)"/>
+            <path class="logo-fill-primary" d="M635.136,83.940 C633.601,85.903 631.479,87.418 628.769,88.488 L640.860,131.181 L625.024,131.181
+  L614.538,91.484 L607.262,91.484 L607.262,131.181 L591.426,131.181 L591.426,44.511 L612.184,44.511 C618.032,44.511 622.973,45.206 627.004,46.597
+   C631.033,47.988 634.101,50.361 636.206,53.713 C638.309,57.067 639.362,61.631 639.362,67.409 C639.362,70.905 639.041,74.043 638.399,76.825
+  C637.757,79.607 636.669,81.979 635.136,83.940 ZM622.189,58.581 C620.584,56.406 617.534,55.318 613.040,55.318 L607.262,55.318 L607.262,81.533
+  L612.184,81.533 C615.250,81.533 617.695,81.088 619.514,80.195 C621.333,79.304 622.633,77.878 623.419,75.915 C624.203,73.954 624.596,71.440
+  624.596,68.372 C624.596,64.022 623.794,60.758 622.189,58.581 ZM545.630,44.511 L582.010,44.511 L582.010,55.639 L561.466,55.639 L561.466,80.570
+  L577.623,80.570 L577.623,91.591 L561.466,91.591 L561.466,120.267 L582.224,120.267 L582.224,131.181 L545.630,131.181 L545.630,44.511
+  ZM519.736,70.940 L507.431,131.181 L497.908,131.181 L485.389,70.726 L484.212,131.181 L472.335,131.181 L473.833,44.511 L490.204,44.511
+  L502.509,104.538 L515.349,44.511 L531.185,44.511 L532.790,131.181 L521.020,131.181 L519.736,70.940 ZM443.552,44.511 L459.174,44.511
+  L459.174,131.181 L443.552,131.181 L443.552,44.511 ZM421.617,131.181 L405.781,131.181 L405.781,56.174 L391.978,56.174 L391.978,44.511
+  L435.206,44.511 L435.206,56.174 L421.617,56.174 L421.617,131.181 ZM325.317,44.511 L361.697,44.511 L361.697,55.639 L341.153,55.639
+  L341.153,80.570 L357.310,80.570 L357.310,91.591 L341.153,91.591 L341.153,120.267 L361.911,120.267 L361.911,131.181 L325.317,131.181
+  L325.317,44.511 ZM296.320,92.019 L278.558,92.019 L278.558,131.181 L262.829,131.181 L262.829,44.511 L278.558,44.511 L278.558,80.784
+  L296.320,80.784 L296.320,44.511 L312.049,44.511 L312.049,131.181 L296.320,131.181 L296.320,92.019 ZM241.108,131.181 L225.272,131.181
+  L225.272,56.174 L211.469,56.174 L211.469,44.511 L254.697,44.511 L254.697,56.174 L241.108,56.174 L241.108,131.181 Z" fill="currentColor"/>
+          </svg>
+        </a>
+      </div>
+      
+      <div class="navbar-center">
+        <a href="https://thetimer.store" class="navbar-link" target="_blank">Timer Store</a>
+        <a href="https://thetimer.app" class="navbar-link" target="_blank">Timer App</a>
+      </div>
+      
+      <div class="navbar-end">
+        <button class="hamburger-menu" id="hamburgerMenu" aria-label="Toggle menu">
+          <i data-lucide="menu" class="icon"></i>
+        </button>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="icon light-icon"></i>
+          <i data-lucide="moon" class="icon dark-icon"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile menu dropdown -->
+    <div class="mobile-menu" id="mobileMenu">
+      <div class="mobile-menu-items">
+        <a href="https://thetimer.store" class="navbar-link" target="_blank">Timer Store</a>
+        <a href="https://thetimer.app" class="navbar-link" target="_blank">Timer App</a>
+      </div>
+    </div>
+  </nav>
+
   <div class="container">
     <header>
-      <h1>TheTimer</h1>
-      <p class="subtitle">Manage your project timers</p>
+      <h1>Device Configuration</h1>
     </header>
-
-    <main>
+    <main class="main-grid">
       <section class="card" id="projects-section">
         <div class="card-header">
           <h2>
@@ -36,81 +91,84 @@
             <p>Loading projects...</p>
           </div>
         </div>
-      </section>
-
-      <section class="card" id="add-project-section">
-        <div class="card-header">
-          <h2>
-            <i data-lucide="plus-circle" class="icon"></i>
-            Create New Project
-          </h2>
-        </div>
-        <form id="add-project-form">
-          <div class="form-content">
-            <!-- Color Selection -->
-            <div class="form-group">
-              <div class="color-selection-wrapper">
-                <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
-                <input type="text" id="name" name="name" placeholder="Enter project name" required>
-                <button type="submit" class="btn primary-btn">
-                  <i data-lucide="plus" class="icon"></i>
-                  <span>Create Project</span>
-                </button>
+        
+        <!-- Add new project section integrated within the card -->
+        <div class="add-project-section">
+          <div class="add-project-divider">
+            <button type="button" class="add-project-toggle" id="addProjectToggle" onclick="toggleAddProject()">
+              <i data-lucide="plus-circle" class="icon"></i>
+              <span>Add New Project</span>
+              <i data-lucide="chevron-down" class="icon chevron-icon"></i>
+            </button>
+          </div>
+          
+          <form id="add-project-form" class="add-project-form" style="display: none;">
+            <div class="form-content">
+              <!-- Color Selection -->
+              <div class="form-group">
+                <div class="color-selection-wrapper">
+                  <div class="selected-color" id="selectedColor" onclick="toggleColorPicker()" style="background-color: #3b82f6;"></div>
+                  <input type="text" id="name" name="name" placeholder="Enter project name" required>
+                  <button type="submit" class="btn primary-btn">
+                    <i data-lucide="plus" class="icon"></i>
+                    <span>Create</span>
+                  </button>
+                </div>
+              </div>
+                
+              <!-- Color Picker Dropdown -->
+              <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
+                  <!-- Tailwind 500 Colors -->
+                  <div class="color-presets">
+                    <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
+                    <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
+                    <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
+                    <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
+                    <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
+                    <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
+                    <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
+                    <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
+                    <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
+                  </div>
+                  
+                  <!-- Custom Color Section -->
+                  <div class="custom-color-section">
+                    <div class="custom-color-header">
+                      <i data-lucide="edit-3" class="icon"></i>
+                      <span>Custom Color</span>
+                    </div>
+                    <div class="custom-color-picker">
+                      <div class="color-picker-main">
+                        <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
+                        <div class="color-gradient-picker">
+                          <div class="hue-saturation-picker" id="hueSatPicker">
+                            <div class="hue-sat-cursor" id="hueSatCursor"></div>
+                          </div>
+                          <div class="hue-slider" id="hueSlider">
+                            <div class="hue-cursor" id="hueCursor"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="rgb-inputs">
+                        <div class="rgb-input-group">
+                          <label>R</label>
+                          <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
+                        </div>
+                        <div class="rgb-input-group">
+                          <label>G</label>
+                          <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
+                        </div>
+                        <div class="rgb-input-group">
+                          <label>B</label>
+                          <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
               </div>
             </div>
-              
-            <!-- Color Picker Dropdown -->
-            <div class="color-picker-dropdown" id="colorPickerDropdown" style="display: none;">
-                <!-- Tailwind 500 Colors -->
-                <div class="color-presets">
-                  <div class="color-preset" data-color="#ef4444" onclick="selectColor('#ef4444')" style="background-color: #ef4444;" title="Red 500"></div>
-                  <div class="color-preset" data-color="#f59e0b" onclick="selectColor('#f59e0b')" style="background-color: #f59e0b;" title="Amber 500"></div>
-                  <div class="color-preset" data-color="#84cc16" onclick="selectColor('#84cc16')" style="background-color: #84cc16;" title="Lime 500"></div>
-                  <div class="color-preset" data-color="#10b981" onclick="selectColor('#10b981')" style="background-color: #10b981;" title="Emerald 500"></div>
-                  <div class="color-preset" data-color="#06b6d4" onclick="selectColor('#06b6d4')" style="background-color: #06b6d4;" title="Cyan 500"></div>
-                  <div class="color-preset" data-color="#3b82f6" onclick="selectColor('#3b82f6')" style="background-color: #3b82f6;" title="Blue 500"></div>
-                  <div class="color-preset" data-color="#8b5cf6" onclick="selectColor('#8b5cf6')" style="background-color: #8b5cf6;" title="Violet 500"></div>
-                  <div class="color-preset" data-color="#d946ef" onclick="selectColor('#d946ef')" style="background-color: #d946ef;" title="Fuchsia 500"></div>
-                  <div class="color-preset" data-color="#f43f5e" onclick="selectColor('#f43f5e')" style="background-color: #f43f5e;" title="Rose 500"></div>
-                </div>
-                
-                <!-- Custom Color Section -->
-                <div class="custom-color-section">
-                  <div class="custom-color-header">
-                    <i data-lucide="edit-3" class="icon"></i>
-                    <span>Custom Color</span>
-                  </div>
-                  <div class="custom-color-picker">
-                    <div class="color-picker-main">
-                      <div class="color-preview-large" id="colorPreviewLarge" style="background-color: #3b82f6;"></div>
-                      <div class="color-gradient-picker">
-                        <div class="hue-saturation-picker" id="hueSatPicker">
-                          <div class="hue-sat-cursor" id="hueSatCursor"></div>
-                        </div>
-                        <div class="hue-slider" id="hueSlider">
-                          <div class="hue-cursor" id="hueCursor"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="rgb-inputs">
-                      <div class="rgb-input-group">
-                        <label>R</label>
-                        <input type="number" id="rInput" min="0" max="255" value="59" onchange="updateFromRGB()">
-                      </div>
-                      <div class="rgb-input-group">
-                        <label>G</label>
-                        <input type="number" id="gInput" min="0" max="255" value="130" onchange="updateFromRGB()">
-                      </div>
-                      <div class="rgb-input-group">
-                        <label>B</label>
-                        <input type="number" id="bInput" min="0" max="255" value="246" onchange="updateFromRGB()">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </section>
 
       <section class="card" id="alarm-section">
@@ -166,47 +224,116 @@
         </div>
       </section>
 
-      <section class="card" id="webhook-section">
+      <section class="card" id="oauth-section">
         <div class="card-header">
           <h2>
-            <i data-lucide="webhook" class="icon"></i>
-            Webhook Configuration
+            <i data-lucide="cloud" class="icon"></i>
+            TheTimer.app Integration
           </h2>
         </div>
-        <form id="webhook-form">
-          <div class="form-group">
-            <label for="webhook-url">
-              <i data-lucide="link" class="icon"></i>
-              Webhook URL
-            </label>
-            <input type="url" id="webhook-url" name="webhook-url" placeholder="Enter webhook URL (optional)" required>
-            <p class="form-help">The webhook will be called when a timer completes. You can leave this empty if you
-              don't need webhook notifications.</p>
+        <div class="oauth-content">
+          <!-- Disconnected State -->
+          <div id="oauth-disconnected" class="oauth-state">
+            <div class="oauth-status-icon disconnected">
+              <i data-lucide="timer" class="icon"></i>
+            </div>
+            <h3>Supercharge Your Time Tracking</h3>
+            <p class="oauth-description">
+              TheTimer.app transforms your tracked time into actionable insights for both professional projects and personal wellness habits.
+            </p>
+            
+            <div class="features-grid">
+              <div class="feature-item">
+                <i data-lucide="bar-chart-2" class="feature-icon"></i>
+                <h4>Project & Habit Analytics</h4>
+                <p>Track both work projects and personal habits like meditation, exercise, and journaling with insightful stats</p>
+              </div>
+              <div class="feature-item">
+                <i data-lucide="dollar-sign" class="feature-icon"></i>
+                <h4>Billing Integration</h4>
+                <p>Convert tracked time directly into invoices and manage client retainers effortlessly</p>
+              </div>
+              <div class="feature-item">
+                <i data-lucide="sparkles" class="feature-icon"></i>
+                <h4>AI-Powered Descriptions</h4>
+                <p>Auto-generate time entries from Git commits, Notion updates, Google Docs changes, and other API integrations</p>
+              </div>
+              <div class="feature-item">
+                <i data-lucide="heart" class="feature-icon"></i>
+                <h4>Wellness Tracking</h4>
+                <p>Monitor mental health activities and build positive habits with streak tracking and progress visualization</p>
+              </div>
+              <div class="feature-item">
+                <i data-lucide="bell" class="feature-icon"></i>
+                <h4>Smart Reminders</h4>
+                <p>Stay consistent with intelligent notifications for work deadlines and habit streaks based on your patterns</p>
+              </div>
+              <div class="feature-item">
+                <i data-lucide="file-text" class="feature-icon"></i>
+                <h4>Detailed Reports</h4>
+                <p>Export comprehensive time reports for clients and track personal growth with weekly wellness summaries</p>
+              </div>
+            </div>
+            
+            <div class="cta-section">
+              <p class="cta-text">
+                <strong>New to TheTimer.app?</strong> Start your free 7-day trial and experience the future of time tracking.
+              </p>
+              <div class="button-group">
+                <a href="https://thetimer.app/signup?ref=device" target="_blank" class="btn secondary-btn">
+                  <i data-lucide="external-link" class="icon"></i>
+                  <span>Start Free Trial</span>
+                </a>
+                <button type="button" class="btn primary-btn oauth-connect-btn" id="oauth-connect-btn">
+                  <i data-lucide="log-in" class="icon"></i>
+                  <span>Connect Account</span>
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div class="form-group">
-            <label for="api-key">
-              <i data-lucide="key" class="icon"></i>
-              API Key
-            </label>
-            <input type="password" id="api-key" name="api-key" placeholder="Enter API Key (required for webhook)"
-              autocomplete="off">
-            <p class="form-help">The API key provided by your time tracking application for authentication.</p>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn primary-btn">
-              <i data-lucide="save" class="icon"></i>
-              <span>Save Webhook Settings</span>
+          
+          <!-- Connected State -->
+          <div id="oauth-connected" class="oauth-state" style="display: none;">
+            <div class="oauth-status-icon connected">
+              <i data-lucide="check-circle" class="icon"></i>
+            </div>
+            <h3>Connected to TheTimer.app</h3>
+            <div class="oauth-account-info">
+              <div class="account-detail">
+                <i data-lucide="user" class="icon"></i>
+                <span id="oauth-account-name">Loading...</span>
+              </div>
+              <div class="account-detail">
+                <i data-lucide="mail" class="icon"></i>
+                <span id="oauth-account-email">Loading...</span>
+              </div>
+            </div>
+            <p class="oauth-sync-status">
+              <i data-lucide="refresh-cw" class="icon spin"></i>
+              Projects and timers are syncing automatically
+            </p>
+            <button type="button" class="btn secondary-btn danger-btn oauth-disconnect-btn" id="oauth-disconnect-btn">
+              <i data-lucide="log-out" class="icon"></i>
+              <span>Disconnect</span>
             </button>
           </div>
-        </form>
+          
+          <!-- Connecting State -->
+          <div id="oauth-connecting" class="oauth-state" style="display: none;">
+            <div class="loading">
+              <svg class="spinner" viewBox="0 0 50 50">
+                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+              </svg>
+              <p>Connecting to TheTimer.app...</p>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
     <footer>
       <div id="message-area"></div>
-      <div class="footer-text">TheTimer Project Manager</div>
+      <div class="footer-text">TheTimer Device Configuration</div>
     </footer>
   </div>
 
