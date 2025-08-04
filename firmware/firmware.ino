@@ -729,7 +729,7 @@ void setup() {
 
     USBSerial.println("Setup complete");
     USBSerial.println("--- Integration Testing Available ---");
-    USBSerial.println("Commands: 'test' (hardware validation), 'sleep' (deep sleep), 'clearwifi' (reset WiFi)");
+    USBSerial.println("Commands: 'test' (hardware validation), 'sleep' (deep sleep), 'clearwifi' (reset WiFi), 'stayawake' (disable timeout)");
 }
 
 void loop() {
@@ -775,6 +775,13 @@ void loop() {
             USBSerial.println("Restarting device...");
             delay(1000);
             ESP.restart();
+        }
+        else if (command.equalsIgnoreCase("STAYAWAKE") || command.equalsIgnoreCase("stayawake")) {
+            USBSerial.println("=== STAY AWAKE MODE ACTIVATED ===");
+            // Note: Inactivity timeout is currently disabled in firmware
+            // This command is a placeholder for when it's re-enabled
+            USBSerial.println("Note: Inactivity timeout is currently disabled in this firmware version");
+            USBSerial.println("Device will only sleep when power button is pressed");
         }
     }
     
@@ -987,6 +994,11 @@ void loop() {
         // webSocket.loop();
         // Reset watchdog after handling web requests
         esp_task_wdt_reset();
+    } else if (WiFi.status() == WL_CONNECTED) {
+        // TEMPORARILY DISABLED - was causing reboots when accessing website after wake
+        // WiFi is connected but web server is not running - restart it
+        // USBSerial.println("WiFi connected but web server not running - restarting...");
+        // startWebServer();
     }
     
     delay(5);  // 5ms as per working example
@@ -1084,12 +1096,19 @@ void handleApiProjects() {
 }
 
 void handleApiStatus() {
+    // Add memory debugging
+    size_t free_heap = ESP.getFreeHeap();
+    size_t free_psram = ESP.getFreePsram();
+    USBSerial.printf("API Status - Free Heap: %d, Free PSRAM: %d\n", free_heap, free_psram);
+    
     StaticJsonDocument<256> doc;
     
     State* currentState = stateMachine.getCurrentState();
     doc["state"] = currentState ? currentState->getStateName() : "Unknown";
     doc["project"] = ProjectManager::getInstance().getSelectedProjectName();
     doc["duration"] = stateMachine.getPendingDuration();
+    doc["free_heap"] = free_heap;
+    doc["free_psram"] = free_psram;
     
     // Add timer info if in timer state
     if (strcmp(currentState->getStateName(), "TimerState") == 0) {

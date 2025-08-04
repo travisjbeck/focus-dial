@@ -9,6 +9,7 @@
 #include <esp_wifi.h>
 #include <esp_bt.h>
 #include <esp_bt_main.h>
+#include <Arduino.h>
 
 extern XPowersAXP2101 power;
 extern LEDController* g_ledController;
@@ -16,7 +17,7 @@ extern ScreenManager screenManager;
 
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
 
-SleepState::SleepState() : sleepInitiated(false), isDeepSleep(false), hasWokenUp(false)
+SleepState::SleepState() : sleepInitiated(false), isDeepSleep(false), hasWokenUp(false), wifiWasConnected(false)
 {
 }
 
@@ -33,6 +34,9 @@ void SleepState::onEnter()
   
   // Save current state before sleep
   saveStateToNVS();
+  
+  // Save WiFi state before disconnecting
+  saveWiFiState();
   
   // Turn off display and LEDs
   ESP_LOGI(getLogTag(), "Turning off display and LEDs");
@@ -117,6 +121,14 @@ void SleepState::onExit()
     ESP_LOGI(getLogTag(), "Calling turnOnDisplay()");
     screenManager.turnOnDisplay();
     ESP_LOGI(getLogTag(), "turnOnDisplay() called");
+    
+    // TEMPORARILY DISABLED - WiFi reconnection after wake was causing reboots
+    // Restore WiFi connection if it was connected before sleep
+    // if (wifiWasConnected) {
+    //   ESP_LOGI(getLogTag(), "Restoring WiFi connection after light sleep");
+    //   restoreWiFiConnection();
+    // }
+    ESP_LOGI(getLogTag(), "WiFi reconnection disabled - manual restart required if web access needed");
   } else {
     ESP_LOGI(getLogTag(), "Deep sleep wake - display will be reinitialized in setup()");
   }
@@ -195,7 +207,10 @@ void SleepState::configureWakeupSources()
     // Enable GPIO wakeup
     esp_sleep_enable_gpio_wakeup();
     
-    ESP_LOGI(getLogTag(), "Light sleep configured: BOOT button, encoder, and touch can wake");
+    // 4. Enable UART wake-up (any serial data will wake the device)
+    esp_sleep_enable_uart_wakeup(0); // UART0 is the USB serial
+    
+    ESP_LOGI(getLogTag(), "Light sleep configured: BOOT button, encoder, touch, and UART can wake");
   }
 }
 
@@ -226,5 +241,27 @@ void SleepState::enterSleepMode()
     } else {
       ESP_LOGE(getLogTag(), "Failed to enter light sleep: %s", esp_err_to_name(err));
     }
+  }
+}
+
+void SleepState::saveWiFiState()
+{
+  wifiWasConnected = (WiFi.status() == WL_CONNECTED);
+  if (wifiWasConnected) {
+    savedSSID = WiFi.SSID();
+    savedPassword = WiFi.psk();
+    ESP_LOGI(getLogTag(), "Saved WiFi state - Connected to: %s", savedSSID.c_str());
+  } else {
+    ESP_LOGI(getLogTag(), "WiFi not connected - no state to save");
+  }
+}
+
+void SleepState::restoreWiFiConnection()
+{
+  if (savedSSID.length() > 0) {
+    ESP_LOGI(getLogTag(), "Reconnecting to WiFi: %s", savedSSID.c_str());
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
+    // Note: Web server will be restarted automatically via WiFi event handler
   }
 }

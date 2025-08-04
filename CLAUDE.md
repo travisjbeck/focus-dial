@@ -1,5 +1,28 @@
 # Task Master AI - Claude Code Integration Guide
 
+## CRITICAL: DEVICE SLEEP BEHAVIOR - MUST READ FIRST
+
+**The device has a 3-minute inactivity timeout and will almost always be asleep when you try to interact with it.**
+
+### Sleep States:
+1. **Light Sleep** (after 3 minutes of inactivity on idle screen):
+   - Can be woken by: Touch screen, encoder rotation, BOOT button, or **UART data**
+   - WiFi is disabled but device resumes quickly
+   
+2. **Deep Sleep** (when power button is pressed):
+   - Can ONLY be woken by: BOOT button (GPIO 0)
+   - Device fully restarts on wake
+
+### ALWAYS WAKE THE DEVICE BEFORE ANY OPERATION:
+```bash
+# Wake the device first (required before EVERY operation)
+./wake_device.sh
+
+# Or manually:
+echo -e "\n" > /dev/cu.usbmodem32301
+sleep 0.5
+```
+
 ## device wiki. always reference this. 
 https://www.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75
 
@@ -16,6 +39,29 @@ https://www.waveshare.com/wiki/ESP32-S3-Touch-AMOLED-1.75
 
 **These requirements must be met consistently and without exception.**
 
+**Note: As of the latest firmware update, the 3-minute inactivity timeout is currently DISABLED in the code (commented out). The device will only sleep when the power button is pressed. The wake mechanisms above still apply for power button sleep.**
+
+## CRITICAL: WEB SERVER REBOOT ISSUE
+
+**KNOWN BUG**: Accessing the web interface after waking the device from sleep can cause a complete reboot. This is a known stability issue documented in FAILED_ATTEMPTS_COMPREHENSIVE.md.
+
+### Root Cause:
+- WiFi reconnection after wake triggers system instability
+- Sleep/wake cycle causes memory corruption or stack issues
+- Multiple ESP32-S3 sleep mechanisms conflict with web server
+
+### Workarounds:
+1. **Access web interface BEFORE device goes to sleep** - Most reliable
+2. **Restart device if web access needed after wake** - `clearwifi` command restarts
+3. **Use serial commands instead** - `test`, `sleep`, `stayawake` work reliably
+4. **If reboot occurs** - Wait 30 seconds for full boot and reconnection
+
+### Commands that work reliably after wake:
+- Serial monitor communication
+- `test` command for hardware validation  
+- `sleep` command to enter deep sleep
+- `stayawake` command (placeholder)
+
 ---
 
 ## CRITICAL: Arduino Compilation and Upload Commands
@@ -31,12 +77,15 @@ arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,Parti
 cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
 arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --build-property "compiler.cpp.extra_flags=-DTEST_MODE" --clean
 
-# UPLOAD (after compilation)
+# UPLOAD (after compilation) - ALWAYS WAKE FIRST
+./wake_device.sh && \
 arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app
 
-# COMPILE + UPLOAD + MONITOR (All in one)
+# WAKE + COMPILE + UPLOAD + MONITOR (All in one - RECOMMENDED)
 cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+./wake_device.sh && \
 arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean && \
+./wake_device.sh && \
 arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app && \
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && \
 sleep 0.5 && \
@@ -520,12 +569,13 @@ This must be uploaded separately to the SPIFFS partition (9.56MB at offset 0x6E2
 
 **Solution**: Use esptool to reset the board and cat to capture output.
 
-### Method 1: Reset and Monitor (RECOMMENDED)
+### Method 1: Wake, Reset and Monitor (RECOMMENDED)
 ```bash
 # Find the current port
 ls /dev/cu.* | grep -E "(usbmodem|wchusbserial)"
 
-# Reset the board using esptool and immediately capture output
+# Wake device first, then reset and monitor
+./wake_device.sh && \
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && sleep 0.5 && timeout 20 cat /dev/cu.usbmodem32301
 ```
 
@@ -534,9 +584,12 @@ esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && sleep 0.5 &&
 # CRITICAL: This device has 16MB flash - MUST specify FlashSize=16M and huge_app partition!
 # Complete workflow with proper startup capture AND web interface
 cd /Users/Travis/Developer/ProjectTimerDevice/firmware && \
+./wake_device.sh && \
 arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app --build-property "build.psram_type=opi" --clean && \
+./wake_device.sh && \
 arduino-cli upload -p /dev/cu.usbmodem32301 --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,FlashSize=16M,PartitionScheme=huge_app && \
 ./mklittlefs/mklittlefs -c data -b 4096 -p 256 -s 0x91E000 littlefs_current.bin && \
+./wake_device.sh && \
 esptool.py --chip esp32s3 --port /dev/cu.usbmodem32301 --baud 921600 write_flash 0x6E2000 littlefs_current.bin && \
 sleep 2 && \
 esptool.py --port /dev/cu.usbmodem32301 read_mac >/dev/null 2>&1 && \

@@ -25,8 +25,13 @@ private:
   bool sleepInitiated;
   bool isDeepSleep;
   bool hasWokenUp;
+  bool wifiWasConnected;
+  String savedSSID;
+  String savedPassword;
   
   void saveStateToNVS();
   void configureWakeupSources();
   void enterSleepMode();
+  void saveWiFiState();
+  void restoreWiFiConnection();
 };
