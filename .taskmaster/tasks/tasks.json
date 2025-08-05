@@ -804,7 +804,7 @@
         "description": "Resolve the critical issue where the device fails to wake from inactivity sleep after being asleep for more than 1 hour by implementing proper RTC GPIO wake configuration or switching to deep sleep mode.",
         "details": "This task addresses a critical power management failure where the device becomes unresponsive after extended sleep periods. The issue stems from GPIO wake configuration loss during light sleep mode on ESP32-S3.\n\n**Root Cause Analysis**:\n- GPIO module powers down during extended light sleep without proper RTC peripheral retention\n- Current gpio_wakeup_enable() implementation has known issues with ESP32-S3 Arduino Core 3.2.0\n- Wake sources (touch GPIO11, encoder GPIO17/18) lose configuration after ~1 hour\n- Missing critical power domain configuration: esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON)\n\n**Implementation Strategy - Option A (Fix Light Sleep)**:\n```cpp\n// In SleepState.cpp setupLightSleep()\nvoid setupLightSleep() {\n    // Keep RTC peripherals powered during sleep\n    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);\n    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);\n    \n    // Configure touch wake using RTC GPIO\n    rtc_gpio_init(GPIO_NUM_11);  // Touch sensor\n    rtc_gpio_set_direction(GPIO_NUM_11, RTC_GPIO_MODE_INPUT_ONLY);\n    rtc_gpio_wakeup_enable(GPIO_NUM_11, GPIO_INTR_LOW_LEVEL);\n    \n    // Configure encoder wake using RTC GPIO\n    rtc_gpio_init(GPIO_NUM_17);  // Encoder A\n    rtc_gpio_init(GPIO_NUM_18);  // Encoder B\n    rtc_gpio_pullup_en(GPIO_NUM_17);\n    rtc_gpio_pullup_en(GPIO_NUM_18);\n    rtc_gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_LOW_LEVEL);\n    rtc_gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_LOW_LEVEL);\n    \n    // Disable automatic GPIO sleep selection\n    gpio_sleep_sel_dis(GPIO_NUM_11);\n    gpio_sleep_sel_dis(GPIO_NUM_17);\n    gpio_sleep_sel_dis(GPIO_NUM_18);\n    \n    // Enable touch and GPIO wake\n    esp_sleep_enable_touchpad_wakeup();\n    esp_sleep_enable_gpio_wakeup();\n}\n```\n\n**Implementation Strategy - Option B (Switch to Deep Sleep - RECOMMENDED)**:\n```cpp\n// In SleepState.cpp - Replace light sleep with deep sleep\nvoid enterInactivitySleep() {\n    Serial.println(\"Entering deep sleep for inactivity...\");\n    \n    // Save state to RTC memory\n    RTC_DATA_ATTR static uint32_t sleepCounter = 0;\n    sleepCounter++;\n    \n    // Configure ext0 wake on touch (GPIO11)\n    esp_sleep_enable_ext0_wakeup(GPIO_NUM_11, 0);  // Wake on LOW\n    \n    // Configure ext1 wake on encoder (GPIO17/18)\n    uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);\n    esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);\n    \n    // Enable fast boot for quicker wake\n    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_ON);\n    \n    // Enter deep sleep\n    esp_deep_sleep_start();\n}\n\n// In firmware.ino setup()\nvoid handleWakeupReason() {\n    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();\n    \n    switch(wakeup_reason) {\n        case ESP_SLEEP_WAKEUP_EXT0:\n            Serial.println(\"Wakeup from touch\");\n            stateMachine.resumeFromSleep();\n            break;\n        case ESP_SLEEP_WAKEUP_EXT1:\n            Serial.println(\"Wakeup from encoder\");\n            stateMachine.resumeFromSleep();\n            break;\n        default:\n            Serial.println(\"Normal boot\");\n            break;\n    }\n}\n```\n\n**StateMachine Integration**:\n```cpp\n// Modify StateMachine.cpp inactivity handling\nvoid StateMachine::checkInactivity() {\n    if (currentState != &idleState) return;\n    \n    unsigned long currentTime = millis();\n    if (currentTime - lastActivityTime > INACTIVITY_TIMEOUT) {\n        Serial.println(\"Inactivity timeout - entering deep sleep\");\n        \n        // Save current state if needed\n        preferences.putUInt(\"lastState\", STATE_IDLE);\n        preferences.putUInt(\"lastProject\", currentProjectIndex);\n        \n        // Transition to sleep\n        sleepState.enterInactivitySleep();  // This will reset device\n    }\n}\n```\n\n**Additional Considerations**:\n1. Update INACTIVITY_TIMEOUT to 180000 (3 minutes) in Constants.h\n2. Implement state persistence using Preferences library for seamless wake experience\n3. Consider adding visual/LED indication before entering deep sleep\n4. Test with external button (GPIO19) wake source for consistency with Task 12\n5. Monitor power consumption to verify deep sleep achieves <10mA current draw",
         "testStrategy": "1. **Extended Duration Testing**:\n   - Set inactivity timeout to 30 seconds for rapid testing\n   - Let device enter sleep, wait 5 minutes, test all wake sources\n   - Extend test to 2+ hours to verify long-term stability\n   - Monitor serial output to confirm wake source detection\n\n2. **Wake Source Validation**:\n   - Touch wake: Tap screen after 1+ hour sleep, verify immediate response\n   - Encoder wake: Rotate encoder after extended sleep, confirm wake without reboot\n   - Power button: Verify AXP2101 wake still functions correctly\n   - External button (GPIO19): Test wake compatibility if implemented\n\n3. **Power Consumption Measurement**:\n   - Use USB power meter to measure sleep current\n   - Light sleep target: <5mA\n   - Deep sleep target: <100μA (excluding display standby)\n   - Verify no phantom power draw from misconfigured GPIOs\n\n4. **State Persistence Testing**:\n   - Set custom timer duration before sleep\n   - Wake device and verify timer duration preserved\n   - Test project selection persistence across sleep cycles\n   - Confirm WiFi reconnection after wake\n\n5. **Regression Testing**:\n   - Verify power button sleep (Task 9) still works\n   - Test that timer completion doesn't trigger false sleep\n   - Confirm encoder/touch responsiveness immediately after wake\n   - Validate LED animations resume correctly\n\n6. **Stress Testing**:\n   - Rapid sleep/wake cycles (100+ iterations)\n   - Mixed wake sources in sequence\n   - Test with active timer paused during sleep\n   - Verify no memory leaks or state corruption",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           9
         ],
@@ -816,7 +816,7 @@
             "description": "Investigate and document the exact mechanism causing GPIO wake configuration to be lost during extended light sleep periods on ESP32-S3",
             "dependencies": [],
             "details": "Deep dive into ESP32-S3 Arduino Core 3.2.0 source code to understand GPIO module power-down behavior during light sleep. Analyze RTC peripheral retention settings and identify why gpio_wakeup_enable() fails after extended periods. Review ESP-IDF documentation for known issues and workarounds. Test current implementation with debug logging to capture exact point of failure.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -827,7 +827,7 @@
               "13.1"
             ],
             "details": "Design RTC memory structure to store: current timer state, active project ID, timer progress, UI state flags, and wake reason. Implement state serialization/deserialization functions. Create RTC_DATA_ATTR variables for persistent storage. Add CRC validation to detect corrupted RTC memory. Ensure smooth state restoration after wake.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -838,7 +838,7 @@
               "13.2"
             ],
             "details": "Configure GPIO11 as ext0 wake source using esp_sleep_enable_ext0_wakeup() with LOW level trigger. Set up GPIO17/18 as ext1 wake sources using esp_sleep_enable_ext1_wakeup() with ANY_HIGH mode for encoder rotation detection. Ensure all wake GPIOs are properly configured as RTC IOs. Test wake source priority and conflicts between ext0/ext1.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -849,7 +849,7 @@
               "13.3"
             ],
             "details": "Create wake reason detection using esp_sleep_get_wakeup_cause(). Implement different restoration paths for: touch wake (return to idle screen), encoder wake (restore previous UI state), power button wake (full initialization). Add serial logging for wake source identification. Ensure LED and display properly reinitialize after deep sleep wake.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -860,7 +860,7 @@
               "13.4"
             ],
             "details": "Test matrix: 30-second timeout for rapid iteration, 5-minute sleep verification, 1-hour extended test, 2+ hour overnight test. Verify each wake source (touch, encoder, power button) works reliably after all durations. Monitor power consumption during deep sleep. Test state preservation accuracy across multiple sleep/wake cycles. Document any edge cases or limitations.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -935,7 +935,7 @@
     ],
     "metadata": {
       "created": "2025-07-10T18:41:14.931Z",
-      "updated": "2025-08-04T19:38:37.110Z",
+      "updated": "2025-08-04T21:53:51.157Z",
       "description": "Tasks for master context"
     }
   }

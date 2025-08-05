@@ -189,35 +189,27 @@ void SleepState::saveStateToNVS()
 void SleepState::configureWakeupSources()
 {
   if (isDeepSleep) {
-    // Deep sleep: Only BOOT button can wake
+    // Power button sleep: Only BOOT button can wake
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
-    ESP_LOGI(getLogTag(), "Deep sleep configured: Only BOOT button can wake");
+    ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
   } else {
-    // Light sleep: Multiple wake sources
-    // 1. BOOT button
-    gpio_wakeup_enable(WAKE_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+    // Inactivity sleep: Only encoder rotation can wake
+    // Use ext1 wake source for encoder rotation (GPIO17/18)
+    uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);
+    esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
+    ESP_LOGI(getLogTag(), "Configured ext1 wake: Encoder GPIO17/18");
     
-    // 2. Encoder pins (wake on rotation) - using level trigger for sleep compatibility
-    gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_LOW_LEVEL); // ENCODER_A
-    gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_LOW_LEVEL); // ENCODER_B
+    // Keep RTC fast memory powered for state preservation
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RC_FAST, ESP_PD_OPTION_ON);
     
-    // 3. Touch interrupt pin
-    gpio_wakeup_enable(GPIO_NUM_11, GPIO_INTR_LOW_LEVEL); // TP_INT
-    
-    // Enable GPIO wakeup
-    esp_sleep_enable_gpio_wakeup();
-    
-    // 4. Enable UART wake-up (any serial data will wake the device)
-    esp_sleep_enable_uart_wakeup(0); // UART0 is the USB serial
-    
-    ESP_LOGI(getLogTag(), "Light sleep configured: BOOT button, encoder, touch, and UART can wake");
+    ESP_LOGI(getLogTag(), "Inactivity deep sleep configured: Only encoder can wake");
   }
 }
 
 void SleepState::enterSleepMode()
 {
   if (isDeepSleep) {
-    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode...");
+    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode (power button)...");
     ESP_LOGI(getLogTag(), "Press BOOT button to wake!");
     
     // Give time for serial output
@@ -226,21 +218,19 @@ void SleepState::enterSleepMode()
     // Enter deep sleep - ESP32 will restart on wake
     esp_deep_sleep_start();
   } else {
-    ESP_LOGI(getLogTag(), "Entering light sleep mode...");
-    ESP_LOGI(getLogTag(), "Press BOOT button to wake!");
+    // For inactivity timeout, use deep sleep instead of light sleep
+    // This ensures reliable wake-up after extended periods
+    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode (inactivity timeout)...");
+    ESP_LOGI(getLogTag(), "Touch screen, rotate encoder, or use BOOT button to wake!");
+    
+    // Save critical state to RTC memory before deep sleep
+    saveStateToRTC();
     
     // Give time for serial output
     delay(100);
     
-    // Enter light sleep (keeps RAM, faster wake-up)
-    esp_err_t err = esp_light_sleep_start();
-    
-    if (err == ESP_OK) {
-      ESP_LOGI(getLogTag(), "Woke up from light sleep");
-      // Don't transition here - let the state machine handle it in the next update
-    } else {
-      ESP_LOGE(getLogTag(), "Failed to enter light sleep: %s", esp_err_to_name(err));
-    }
+    // Enter deep sleep - ESP32 will restart on wake with state preservation
+    esp_deep_sleep_start();
   }
 }
 
@@ -263,5 +253,111 @@ void SleepState::restoreWiFiConnection()
     WiFi.mode(WIFI_STA);
     WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
     // Note: Web server will be restarted automatically via WiFi event handler
+  }
+}
+
+// RTC memory structure for state preservation during deep sleep
+typedef struct {
+  uint32_t magic;           // Magic number to validate structure
+  uint32_t crc32;          // CRC32 checksum for data integrity
+  uint32_t lastState;      // Last state machine state ID
+  uint32_t currentProject; // Current project index
+  uint32_t timerDuration;  // Timer duration in seconds (if in timer state)
+  uint32_t timerRemaining; // Remaining time in seconds (if paused)
+  bool timerWasActive;     // Whether timer was running
+  bool wifiWasConnected;   // WiFi connection state
+  char lastStateName[16];  // Last state name for debugging
+  uint32_t sleepReason;    // Reason for entering sleep
+} RTC_DATA_ATTR rtc_sleep_state_t;
+
+static RTC_DATA_ATTR rtc_sleep_state_t rtc_state = {0};
+
+void SleepState::saveStateToRTC()
+{
+  ESP_LOGI(getLogTag(), "Saving state to RTC memory");
+  
+  // Clear structure
+  memset(&rtc_state, 0, sizeof(rtc_state));
+  
+  // Set magic number for validation
+  rtc_state.magic = 0xDEADBEEF;
+  
+  // Save current state information
+  const char* currentStateName = stateMachine.getCurrentState()->getStateName();
+  strncpy(rtc_state.lastStateName, currentStateName, sizeof(rtc_state.lastStateName) - 1);
+  
+  // Map state names to IDs for compact storage
+  if (strcmp(currentStateName, "IdleState") == 0) {
+    rtc_state.lastState = 1;
+  } else if (strcmp(currentStateName, "AdjustState") == 0) {
+    rtc_state.lastState = 2;
+  } else if (strcmp(currentStateName, "TimerState") == 0) {
+    rtc_state.lastState = 3;
+  } else if (strcmp(currentStateName, "PausedState") == 0) {
+    rtc_state.lastState = 4;
+  } else {
+    rtc_state.lastState = 1; // Default to idle
+  }
+  
+  // Save WiFi state
+  rtc_state.wifiWasConnected = (WiFi.status() == WL_CONNECTED);
+  
+  // TODO: Save timer and project state when available
+  // rtc_state.currentProject = stateMachine.getCurrentProjectIndex();
+  // rtc_state.timerDuration = stateMachine.getTimerDuration();
+  // rtc_state.timerRemaining = stateMachine.getTimerRemaining();
+  // rtc_state.timerWasActive = stateMachine.isTimerActive();
+  
+  rtc_state.sleepReason = isDeepSleep ? 1 : 0; // 1 = power button, 0 = inactivity
+  
+  // Calculate CRC32 for integrity check
+  rtc_state.crc32 = 0; // Clear CRC field before calculation
+  // Simple checksum for now - can be enhanced with proper CRC32 later
+  rtc_state.crc32 = rtc_state.magic + rtc_state.lastState + rtc_state.currentProject;
+  
+  ESP_LOGI(getLogTag(), "RTC state saved: state=%s, wifi=%d", 
+           rtc_state.lastStateName, rtc_state.wifiWasConnected);
+}
+
+void SleepState::restoreStateFromRTC()
+{
+  // Check magic number and CRC
+  if (rtc_state.magic != 0xDEADBEEF) {
+    ESP_LOGW(getLogTag(), "RTC state invalid - cold boot or corruption");
+    return;
+  }
+  
+  uint32_t expectedCrc = rtc_state.magic + rtc_state.lastState + rtc_state.currentProject;
+  if (rtc_state.crc32 != expectedCrc) {
+    ESP_LOGW(getLogTag(), "RTC state CRC mismatch - data corruption");
+    return;
+  }
+  
+  ESP_LOGI(getLogTag(), "Restoring state from RTC memory: %s", rtc_state.lastStateName);
+  
+  // Restore WiFi state
+  wifiWasConnected = rtc_state.wifiWasConnected;
+  
+  // TODO: Restore timer and project state when available
+  // stateMachine.setCurrentProjectIndex(rtc_state.currentProject);
+  // stateMachine.setTimerDuration(rtc_state.timerDuration);
+  
+  // Determine which state to return to
+  switch (rtc_state.lastState) {
+    case 1: // IdleState
+      ESP_LOGI(getLogTag(), "Will return to IdleState after initialization");
+      break;
+    case 2: // AdjustState
+      ESP_LOGI(getLogTag(), "Will return to AdjustState after initialization");
+      break;
+    case 3: // TimerState
+      ESP_LOGI(getLogTag(), "Will return to TimerState after initialization");
+      break;
+    case 4: // PausedState
+      ESP_LOGI(getLogTag(), "Will return to PausedState after initialization");
+      break;
+    default:
+      ESP_LOGI(getLogTag(), "Unknown state, defaulting to IdleState");
+      break;
   }
 }

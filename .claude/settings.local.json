@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__task-master-ai__get_task",
+      "mcp__task-master-ai__set_task_status",
+      "mcp__task-master-ai__update_subtask"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "task-master-ai"
+  ]
+}

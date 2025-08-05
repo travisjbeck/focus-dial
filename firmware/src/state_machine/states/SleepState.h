@@ -14,6 +14,9 @@ public:
   // Configuration
   void setDeepSleep(bool deep) { isDeepSleep = deep; }
   bool getDeepSleep() const { return isDeepSleep; }
+  
+  // State restoration for deep sleep wake
+  void restoreStateFromRTC();
 
 protected:
   void onEnter() override;
@@ -30,6 +33,7 @@ private:
   String savedPassword;
   
   void saveStateToNVS();
+  void saveStateToRTC();
   void configureWakeupSources();
   void enterSleepMode();
   void saveWiFiState();

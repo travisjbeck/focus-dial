@@ -438,13 +438,19 @@ void setup() {
         USBSerial.print("Wake-up reason at boot: ");
         switch(wakeup_reason) {
             case ESP_SLEEP_WAKEUP_EXT0:
-                USBSerial.println("External GPIO (BOOT button)");
+                USBSerial.println("External GPIO ext0 (Touch or BOOT button)");
+                break;
+            case ESP_SLEEP_WAKEUP_EXT1:
+                USBSerial.println("External GPIO ext1 (Encoder rotation)");
                 break;
             case ESP_SLEEP_WAKEUP_GPIO:
-                USBSerial.println("GPIO wake-up");
+                USBSerial.println("GPIO wake-up (legacy light sleep)");
                 break;
             case ESP_SLEEP_WAKEUP_TIMER:
                 USBSerial.println("Timer wake-up");
+                break;
+            case ESP_SLEEP_WAKEUP_UART:
+                USBSerial.println("UART wake-up (serial data)");
                 break;
             default:
                 USBSerial.println("Other");
@@ -637,6 +643,16 @@ void setup() {
     // Initialize state machine
     USBSerial.println("Initializing state machine...");
     stateMachine.begin();
+    
+    // Handle wake-up from deep sleep and restore state if needed
+    if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0 || wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) {
+        USBSerial.println("Deep sleep wake detected - restoring state from RTC memory");
+        if (stateMachine.sleepState) {
+            stateMachine.sleepState->restoreStateFromRTC();
+        }
+        // Update activity time since user interaction woke the device
+        stateMachine.updateActivityTime();
+    }
     
     // Set the StateMachine's project index to match ProjectManager
     stateMachine.setSelectedProjectIndex(savedProjectIndex);
