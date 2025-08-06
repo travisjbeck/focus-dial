@@ -76,6 +76,17 @@ void SleepState::onEnter()
     }
   }
   
+  // Disable all GPIO interrupts before configuring wake sources
+  if (!isDeepSleep) {
+    // Disable encoder interrupts to prevent interference with sleep wake
+    gpio_intr_disable(GPIO_NUM_17);
+    gpio_intr_disable(GPIO_NUM_18);
+    // Disable touch interrupt
+    gpio_intr_disable(GPIO_NUM_11);
+    // Disable button interrupt  
+    gpio_intr_disable(GPIO_NUM_21);
+  }
+  
   // Configure wake sources
   configureWakeupSources();
   
@@ -160,6 +171,17 @@ void SleepState::onExit()
     ESP_LOGI(getLogTag(), "Woken by other source: %d", wakeup_reason);
   }
   
+  // Re-enable GPIO interrupts after wake from light sleep
+  if (!isDeepSleep) {
+    // Re-enable encoder interrupts
+    gpio_intr_enable(GPIO_NUM_17);
+    gpio_intr_enable(GPIO_NUM_18);
+    // Re-enable touch interrupt
+    gpio_intr_enable(GPIO_NUM_11);
+    // Re-enable button interrupt
+    gpio_intr_enable(GPIO_NUM_21);
+  }
+  
   // Clear power management interrupts
   if (power.isBatteryConnect()) {
     power.clearIrqStatus();
@@ -198,28 +220,15 @@ void SleepState::configureWakeupSources()
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
     ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
   } else {
-    // Inactivity sleep: Configure encoder wake using proven Stack Overflow solution
+    // Use GPIO wake instead of ext1 - more reliable for light sleep
+    // Configure encoder pins as regular GPIO wake sources
+    gpio_wakeup_enable(GPIO_NUM_17, GPIO_INTR_LOW_LEVEL);
+    gpio_wakeup_enable(GPIO_NUM_18, GPIO_INTR_LOW_LEVEL);
     
-    // Configure RTC GPIO pins properly (Stack Overflow proven solution)
-    rtc_gpio_pullup_en(GPIO_NUM_17);   // Encoder A - enable pullup
-    rtc_gpio_pullup_en(GPIO_NUM_18);   // Encoder B - enable pullup
-    rtc_gpio_pulldown_dis(GPIO_NUM_17); // Encoder A - disable pulldown
-    rtc_gpio_pulldown_dis(GPIO_NUM_18); // Encoder B - disable pulldown
+    // Enable GPIO wake source for light sleep
+    esp_sleep_enable_gpio_wakeup();
     
-    // Keep RTC peripherals powered for pullup resistors to work
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    
-    // Use ext1 wake source for encoder rotation (GPIO17/18)
-    uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);
-    esp_err_t wake_result = esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
-    
-    if (wake_result == ESP_OK) {
-      ESP_LOGI(getLogTag(), "Configured ext1 wake: Encoder GPIO17/18 with RTC pullups");
-    } else {
-      ESP_LOGE(getLogTag(), "Failed to configure ext1 wake: %s", esp_err_to_name(wake_result));
-    }
-    
-    ESP_LOGI(getLogTag(), "Inactivity light sleep configured: Encoder rotation will wake device");
+    ESP_LOGI(getLogTag(), "Encoder wake configured: GPIO17/18 with GPIO wake (LOW trigger)");
   }
 }
 
