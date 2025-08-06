@@ -10,6 +10,8 @@
 #include <esp_bt.h>
 #include <esp_bt_main.h>
 #include <Arduino.h>
+#include "driver/rtc_io.h"
+#include <cmath>
 
 extern XPowersAXP2101 power;
 extern LEDController* g_ledController;
@@ -136,17 +138,20 @@ void SleepState::onExit()
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   
   if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-    ESP_LOGI(getLogTag(), "Woken by BOOT button");
-  } else if (wakeup_reason == ESP_SLEEP_WAKEUP_GPIO) {
-    // Determine which GPIO caused the wake
-    uint64_t wakeup_pin_mask = 0; // GPIO wake status not directly available
-    if (wakeup_pin_mask & (1ULL << GPIO_NUM_11)) {
-      ESP_LOGI(getLogTag(), "Woken by touch interrupt");
-    } else if (wakeup_pin_mask & ((1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18))) {
-      ESP_LOGI(getLogTag(), "Woken by encoder rotation");
-    } else if (wakeup_pin_mask & (1ULL << GPIO_NUM_0)) {
-      ESP_LOGI(getLogTag(), "Woken by BOOT button (GPIO)");
+    ESP_LOGI(getLogTag(), "Woken by BOOT button (ext0)");
+  } else if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) {
+    // ext1 wake - get which GPIO caused the wake using proven method
+    uint64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
+    int wakeup_pin = (int)(log(GPIO_reason) / log(2));
+    
+    if (wakeup_pin == 17) {
+      ESP_LOGI(getLogTag(), "Woken by encoder A rotation (GPIO17)");
+    } else if (wakeup_pin == 18) {
+      ESP_LOGI(getLogTag(), "Woken by encoder B rotation (GPIO18)");
+    } else {
+      ESP_LOGI(getLogTag(), "Woken by ext1 on GPIO: %d", wakeup_pin);
     }
+    
     // Update activity time since user interacted with device
     stateMachine.updateActivityTime();
   } else if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
@@ -193,16 +198,28 @@ void SleepState::configureWakeupSources()
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
     ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
   } else {
-    // Inactivity sleep: Only encoder rotation can wake
+    // Inactivity sleep: Configure encoder wake using proven Stack Overflow solution
+    
+    // Configure RTC GPIO pins properly (Stack Overflow proven solution)
+    rtc_gpio_pullup_en(GPIO_NUM_17);   // Encoder A - enable pullup
+    rtc_gpio_pullup_en(GPIO_NUM_18);   // Encoder B - enable pullup
+    rtc_gpio_pulldown_dis(GPIO_NUM_17); // Encoder A - disable pulldown
+    rtc_gpio_pulldown_dis(GPIO_NUM_18); // Encoder B - disable pulldown
+    
+    // Keep RTC peripherals powered for pullup resistors to work
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    
     // Use ext1 wake source for encoder rotation (GPIO17/18)
     uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);
-    esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
-    ESP_LOGI(getLogTag(), "Configured ext1 wake: Encoder GPIO17/18");
+    esp_err_t wake_result = esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
     
-    // Keep RTC fast memory powered for state preservation
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RC_FAST, ESP_PD_OPTION_ON);
+    if (wake_result == ESP_OK) {
+      ESP_LOGI(getLogTag(), "Configured ext1 wake: Encoder GPIO17/18 with RTC pullups");
+    } else {
+      ESP_LOGE(getLogTag(), "Failed to configure ext1 wake: %s", esp_err_to_name(wake_result));
+    }
     
-    ESP_LOGI(getLogTag(), "Inactivity deep sleep configured: Only encoder can wake");
+    ESP_LOGI(getLogTag(), "Inactivity light sleep configured: Encoder rotation will wake device");
   }
 }
 
@@ -218,19 +235,29 @@ void SleepState::enterSleepMode()
     // Enter deep sleep - ESP32 will restart on wake
     esp_deep_sleep_start();
   } else {
-    // For inactivity timeout, use deep sleep instead of light sleep
-    // This ensures reliable wake-up after extended periods
-    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode (inactivity timeout)...");
-    ESP_LOGI(getLogTag(), "Touch screen, rotate encoder, or use BOOT button to wake!");
-    
-    // Save critical state to RTC memory before deep sleep
-    saveStateToRTC();
+    // For inactivity timeout, use LIGHT sleep (proven working in Session 5)
+    // Light sleep works where deep sleep fails on this ESP32-S3 hardware
+    ESP_LOGI(getLogTag(), "Entering LIGHT sleep mode (inactivity timeout)...");
+    ESP_LOGI(getLogTag(), "Rotate encoder to wake!");
     
     // Give time for serial output
     delay(100);
     
-    // Enter deep sleep - ESP32 will restart on wake with state preservation
-    esp_deep_sleep_start();
+    // Enter light sleep - device maintains RAM and wakes to same state
+    esp_light_sleep_start();
+    
+    // After waking from light sleep, we continue execution here
+    ESP_LOGI(getLogTag(), "=== WOKE FROM LIGHT SLEEP ===");
+    
+    // Check what caused the wake
+    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+    ESP_LOGI(getLogTag(), "Wake cause: %d", wakeup_reason);
+    
+    if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) {
+      uint64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
+      int wakeup_pin = (int)(log(GPIO_reason) / log(2));
+      ESP_LOGI(getLogTag(), "Woken by encoder on GPIO: %d", wakeup_pin);
+    }
   }
 }
 
