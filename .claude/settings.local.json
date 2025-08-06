@@ -3,7 +3,10 @@
     "allow": [
       "mcp__task-master-ai__get_task",
       "mcp__task-master-ai__set_task_status",
-      "mcp__task-master-ai__update_subtask"
+      "mcp__task-master-ai__update_subtask",
+      "WebFetch(domain:www.waveshare.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:docs.espressif.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

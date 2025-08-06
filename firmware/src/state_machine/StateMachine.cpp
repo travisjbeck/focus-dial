@@ -124,13 +124,9 @@ void StateMachine::begin()
     ESP_LOGW(TAG, "Memory monitor initialization failed, continuing without it");
   }
   
-  // Initialize input controller for rotary encoder
-  ESP_LOGI(TAG, "=== Initializing Input Controller ===");
-  if (!initializeInputController()) {
-    ESP_LOGW(TAG, "Input controller initialization failed, continuing without it");
-  } else {
-    ESP_LOGI(TAG, "SUCCESS: Input controller initialized");
-  }
+  // DISABLED: InputController conflicts with SimpleEncoder and sleep wake
+  // InputController interrupts interfere with GPIO wake functionality
+  ESP_LOGI(TAG, "Input Controller DISABLED - using SimpleEncoder for sleep compatibility");
   
   // Initialize LED controller for NeoPixel ring
   ESP_LOGI(TAG, "=== Initializing LED Controller ===");
@@ -167,8 +163,8 @@ void StateMachine::update()
     lastMemoryCheck = currentTime;
   }
   
-  // Update input controller
-  updateInputController();
+  // DISABLED: InputController conflicts with sleep wake
+  // updateInputController();
   
   // Update LED controller
   updateLEDController();
