@@ -224,14 +224,17 @@ void SleepState::configureWakeupSources()
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
     ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
   } else {
-    // Use ESP32-S3 specific ext1 wake method with RTC GPIO
-    // Configure RTC GPIO pins for wake - ESP32-S3 supports GPIO0-21 as RTC GPIO
+    // Use ESP32-S3 compatible wake configuration
+    // For light sleep, also enable UART wake (allows serial communication to wake device)
+    esp_sleep_enable_uart_wakeup(0);
+    
+    // Configure encoder wake with ext1 for GPIO17/18
     rtc_gpio_pullup_en(GPIO_NUM_17);
     rtc_gpio_pullup_en(GPIO_NUM_18);
     
-    // Use ESP32-S3 specific ext1 wake function
+    // Use standard ext1 wake function for ESP32-S3
     uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);
-    esp_sleep_enable_ext1_wakeup_io(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
+    esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
     
     // Keep RTC peripherals powered
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
