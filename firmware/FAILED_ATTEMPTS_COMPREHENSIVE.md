@@ -130,9 +130,196 @@
 - **SOLUTION**: Shut down LED controller BEFORE state transition to sleep
 - This allows RMT to finish cleanly before sleep mode preparation begins
 
+## FAILED SLEEP CRASH FIXES (Latest Attempts - Session 3):
+
+### Disabled InputController to Fix Duplicate Interrupts
+- **Problem**: Both SimpleEncoder and InputController attach interrupts to pins 17/18
+- **Attempted**: Disabled InputController initialization in StateMachine.cpp
+- **Result**: FAILED - Device still crashes and reboots after "entering sleep"
+- **Evidence**: Device shows "Inactivity timeout - entering sleep" then immediately reboots
+
+### Added Serial.flush() Before Deep Sleep
+- **Problem**: Research showed Serial buffer can cause interrupt watchdog timeout
+- **Attempted**: Added Serial.flush() and esp_task_wdt_delete(NULL) in SleepState::enterSleepMode()
+- **Result**: FAILED - No improvement, device still crashes
+- **Note**: Common fix from ESP32 forums but didn't work here
+
+### Added esp_task_wdt_delete(NULL) Before Sleep
+- **Problem**: Task watchdog might be causing the crash
+- **Attempted**: Delete current task from watchdog before sleep
+- **Result**: FAILED - Device still crashes and reboots
+- **Issue**: The crash happens even with watchdog deleted
+
+### Improved Encoder Pin Configuration for ext1 Wake
+- **Attempted**: Added explicit GPIO configuration with pull-ups before ext1 setup
+- **Code**: gpio_set_direction(), gpio_set_pull_mode(), error checking on esp_sleep_enable_ext1_wakeup()
+- **Result**: FAILED - Device crashes before even reaching deep sleep
+- **Power domain**: Added esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON)
+- **Still crashes**: Device never actually enters sleep mode
+
+## WHAT'S ACTUALLY HAPPENING (Verified by monitoring):
+1. Device shows "Inactivity timeout - entering sleep"  
+2. Device shows "[SCREEN] Turning display OFF"
+3. Device shows "WiFi disconnected" and "Web Server stopped"
+4. Within 5-10 seconds, device reboots completely
+5. Device shows normal boot sequence with "Boot count: 1"
+6. Device returns to IdleState as if freshly started
+7. NO ACTUAL SLEEP OCCURS - just crash and reboot
+
+## The Real Problem:
+- The device NEVER enters deep sleep
+- Something between "Web Server stopped" and esp_deep_sleep_start() causes a crash
+- The crash is silent - no error message, no guru meditation, just reboot
+- This suggests a hardware-level issue or fundamental ESP32-S3 sleep bug
+- All "fixes" have been cosmetic - the core issue remains
+
+## CRITICAL DISCOVERY - esp_deep_sleep_start() ITSELF IS CRASHING:
+
+### Complete State Machine Bypass Test
+- **Problem**: Suspected state machine was causing the crash
+- **Attempted**: Bypassed state machine entirely, implemented sleep directly in loop()
+- **Code**: Direct calls to turnOffDisplay(), WiFi.disconnect(), esp_deep_sleep_start()
+- **Result**: FAILED - Device still crashes and reboots
+- **Evidence**: Device prints "Entering deep sleep NOW" then immediately reboots
+- **Conclusion**: The crash is IN esp_deep_sleep_start() itself, not in our code
+
+### What This Means:
+1. esp_deep_sleep_start() is broken on this ESP32-S3 device
+2. The crash happens at the hardware/ESP-IDF level
+3. No amount of code fixes will solve this
+4. This could be:
+   - A bug in ESP32 Arduino Core 3.2.0
+   - A hardware defect in this specific ESP32-S3 board
+   - An incompatibility with the Waveshare ESP32-S3-Touch-AMOLED-1.75
+   - A conflict with PSRAM, display driver, or other hardware components
+
+### Evidence of Hardware/Firmware Bug:
+- Device reaches esp_deep_sleep_start() successfully
+- All peripherals are properly shut down before sleep
+- Serial flush, watchdog deletion, interrupt detachment - all tried
+- State machine completely bypassed - still crashes
+- The crash is instant and silent - typical of low-level hardware fault
+
+## FAILED SLEEP CRASH FIXES (Latest Attempts - Session 2):
+
+### Interrupt Detachment Before Sleep
+- **Problem**: Device crashes/reboots instead of sleeping
+- **Attempted**: Detach ALL interrupts before sleep (encoder, button, PMU, touch)
+- **Code**: Added detachInterrupt() for all pins before sleep
+- **Result**: FAILED - Arduino CLI compilation hangs/times out
+- **Issue**: Can't even test because compilation is broken
+
+### Minimal Sleep Test
+- **Problem**: Too many things could be causing the crash
+- **Attempted**: Strip everything down to just esp_sleep_enable_timer_wakeup + esp_deep_sleep_start
+- **Result**: FAILED - Arduino CLI compilation still hangs
+- **Root issue**: Arduino development environment appears broken
+
+### WiFi/BT Shutdown Sequence
+- **Attempted**: Proper shutdown of WiFi and Bluetooth before sleep
+- **Includes**: esp_wifi_stop/deinit, esp_bluedroid_disable/deinit, esp_bt_controller_disable/deinit
+- **Result**: UNTESTED - Can't compile
+- **Note**: This might be necessary but can't verify
+
+## COMPILATION ISSUES:
+- Arduino CLI hangs indefinitely during compilation
+- Happens with --clean flag and without
+- Happens even with minimal code changes
+- Device wake doesn't help
+- No error messages, just timeouts after 2-3 minutes
+
+## FAILED SLEEP CRASH FIXES (Previous Session):
+
+### State Machine Memory Logging Crash
+- **Problem**: Interrupt watchdog timeout when transitioning to SleepState
+- **Attempted**: Override enter() method in SleepState to bypass memory logging
+- **Result**: FAILED - Device still crashes and reboots
+- **Root cause**: State::enter() calls logMemoryAndStack which takes too long during sleep transition
+
+### Direct Sleep Transition in firmware.ino
+- **Problem**: State machine transition causes crash before reaching sleep
+- **Attempted**: Bypass state machine entirely, implement sleep directly in loop()
+- **Code added**: Direct esp_deep_sleep_start() after turning off peripherals
+- **Result**: FAILED - Device appears to sleep but immediately reboots
+- **What happens**: Device shows "Preparing for inactivity deep sleep..." then reboots with Boot count: 1
+
+### Wake Configuration Issues
+- **ext1 wake for encoder**: Configured (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18)
+- **ESP_EXT1_WAKEUP_ANY_LOW**: Used for encoder wake
+- **Result**: Device doesn't wake from encoder - it just crashes/reboots on sleep entry
+
+### Deep Sleep vs Light Sleep
+- **Changed from light sleep to deep sleep**: Thinking it would be more reliable
+- **Result**: Still crashes/reboots immediately
+- **Both sleep modes fail**: Whether using light or deep sleep, device reboots instead of sleeping
+
+## WHAT'S ACTUALLY HAPPENING:
+1. Inactivity timer reaches 3 minutes
+2. Code attempts to enter sleep (either via state machine or direct)
+3. Device shows sleep messages
+4. Device immediately reboots (Boot count: 1)
+5. No actual sleep occurs - just a crash/reboot cycle
+
+## ROOT PROBLEM NOT SOLVED:
+- The device NEVER actually enters sleep mode
+- It crashes/reboots during the sleep transition
+- This happens whether using state machine or direct sleep
+- The interrupt watchdog timeout is just a symptom - the real issue is sleep entry fails
+
+## PARTIAL SUCCESS - SLEEP WORKS BUT WAKE DOESN'T (Session 4):
+
+### Fixed the Crash - Device Enters Sleep Successfully!
+- **Problem**: Device was crashing with power domain assertion failure
+- **Solution**: Removed all power domain configs except ESP_PD_DOMAIN_RTC_PERIPH
+- **Code**: Only kept `esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON)`
+- **Result**: SUCCESS - Device enters deep sleep without crashing!
+- **Evidence**: Device prints "Entering deep sleep NOW" and actually sleeps
+
+### Disabled Brownout Detector
+- **Added**: `REG_WRITE(RTC_CNTL_BROWN_OUT_REG, 0)` before esp_deep_sleep_start()
+- **Result**: Helps prevent brownout during sleep transition
+
+### BUT Wake-Up Still Broken:
+1. **Encoder wake doesn't work** - ext1 wake with GPIO 17/18 configured but device doesn't wake
+2. **Device shows Boot count: 1** - This means it's doing full restart, not proper wake
+3. **BOOT button wake also fails** - Device stays asleep indefinitely
+4. **Device requires physical RESET** - Only way to recover from sleep state
+
+### What This Means:
+- We've fixed the crash but wake sources aren't configured properly
+- The RTC GPIO configuration might need different approach
+- ext1 wake might not work with these specific pins on ESP32-S3
+- May need to use GPIO wake instead of ext1 wake
+
+## BREAKTHROUGH - LIGHT SLEEP WORKS! (Session 5):
+
+### Light Sleep Successfully Works Where Deep Sleep Fails
+- **Problem**: esp_deep_sleep_start() causes immediate reboot/crash on this ESP32-S3
+- **Solution**: Use esp_light_sleep_start() instead
+- **Result**: SUCCESS - Device sleeps and wakes properly!
+- **Evidence**: 
+  - Device prints "=== WOKE FROM LIGHT SLEEP ==="
+  - Wake cause: 4 (timer) confirmed working
+  - Display turns back on after wake
+  - Device continues normal operation
+
+### Why Deep Sleep Fails but Light Sleep Works:
+1. **ESP32-S3 with OPI PSRAM** - Known issues with deep sleep
+2. **Hardware conflicts** - Display, touch, or other peripherals interfere with deep sleep
+3. **Power domain issues** - Deep sleep requires more complex power management
+4. **Light sleep maintains RAM** - Less disruptive to system state
+
+### Remaining Issues with Light Sleep:
+- Watchdog error after wake (task was deleted before sleep)
+- Need to test encoder wake (ext1) with light sleep
+- Power consumption higher than deep sleep but functional
+
 ## POTENTIAL SOLUTIONS NOT YET TRIED:
 1. **SPI with DMA method** - Use hardware SPI instead of RMT for WS2812 control
 2. **I2S method** - Use I2S peripheral instead of RMT (library exists for ESP32-S3)
 3. **Disable encoder interrupts** - Use polling instead of interrupts for encoder
 4. **Use FreeRTOS task** - Move all LED operations to dedicated task with proper priority
 5. **Downgrade to ESP32 Arduino Core 2.x** - May have better RMT implementation
+6. **Check for conflicts with WiFi/BT shutdown** - May need different shutdown sequence
+7. **Disable all interrupts before sleep** - gpio_intr_disable() on all pins
+8. **Check PMU/power configuration** - Power management may be interfering
