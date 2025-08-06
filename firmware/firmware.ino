@@ -665,7 +665,7 @@ void setup() {
     stateMachine.setTouchManager(&touchManager);
     USBSerial.println("TouchManager initialized - zero touch bleeding guaranteed");
     
-    // Initialize simple encoder
+    // Re-enable SimpleEncoder for sleep wake compatibility
     simpleEncoder.begin();
     USBSerial.println("Simple encoder initialized");
     
@@ -772,11 +772,11 @@ void loop() {
         }
         else if (command.equalsIgnoreCase("SLEEP") || command.equalsIgnoreCase("sleep")) {
             USBSerial.println("=== MANUAL SLEEP COMMAND ===");
-            USBSerial.println("Transitioning to deep sleep immediately (inactivity mode)...");
-            // Get the sleep state and configure it for inactivity mode (deep sleep, not power button)
+            USBSerial.println("Transitioning to light sleep immediately (inactivity mode)...");
+            // Get the sleep state and configure it for inactivity mode (light sleep)
             SleepState* sleepState = stateMachine.sleepState;
             if (sleepState) {
-                sleepState->setDeepSleep(true); // Use deep sleep like inactivity timeout
+                sleepState->setDeepSleep(false); // Use light sleep for inactivity timeout
                 // Transition to sleep state
                 stateMachine.changeState(sleepState);
             }
