@@ -32,7 +32,13 @@ void SleepState::onEnter()
   sleepInitiated = false;
   hasWokenUp = false;
   
+  ESP_LOGI(getLogTag(), "=== SLEEP STATE ENTERED ===");
   ESP_LOGI(getLogTag(), "Preparing for %s sleep", isDeepSleep ? "deep" : "light");
+  
+  // Check GPIO states immediately on entry
+  int gpio17_state = digitalRead(17);
+  int gpio18_state = digitalRead(18);
+  ESP_LOGI(getLogTag(), "GPIO states on entry: GPIO17=%d, GPIO18=%d", gpio17_state, gpio18_state);
   
   // Save current state before sleep
   saveStateToNVS();
@@ -98,25 +104,32 @@ void SleepState::onEnter()
 
 void SleepState::onUpdate()
 {
+  ESP_LOGI(getLogTag(), "onUpdate called: sleepInitiated=%d, hasWokenUp=%d", sleepInitiated, hasWokenUp);
+  
   if (!sleepInitiated) {
     sleepInitiated = true;
     ESP_LOGI(getLogTag(), "About to enter sleep mode (deep=%d)", isDeepSleep);
     
+    // Check GPIO states before sleep
+    if (!isDeepSleep) {
+      int gpio17_state = digitalRead(17);
+      int gpio18_state = digitalRead(18);
+      ESP_LOGI(getLogTag(), "GPIO states before sleep: GPIO17=%d, GPIO18=%d", gpio17_state, gpio18_state);
+    }
+    
     // Small delay to ensure everything is ready
     yieldMs(100);
     
-    // Enter sleep mode
+    // Enter sleep mode - this will block until wake for light sleep
     enterSleepMode();
     
-    // If we're here and it's light sleep, we've woken up
+    // If we reach here, we've woken from light sleep (deep sleep restarts device)
     if (!isDeepSleep) {
-      hasWokenUp = true;
+      ESP_LOGI(getLogTag(), "Light sleep completed - transitioning to IdleState");
+      stateMachine.transitionTo("IdleState");
     }
-  } else if (hasWokenUp) {
-    // We've woken from light sleep, transition to idle
-    ESP_LOGI(getLogTag(), "Transitioning to IdleState after wake");
-    stateMachine.transitionTo("IdleState");
   }
+  // For light sleep, we should not reach this else block in normal operation
   
   yieldMs(100);
 }
@@ -224,17 +237,31 @@ void SleepState::configureWakeupSources()
     esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
     ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
   } else {
-    // Use ESP32-S3 compatible wake configuration
-    // For light sleep, also enable UART wake (allows serial communication to wake device)
-    esp_sleep_enable_uart_wakeup(0);
-    
+    // Use ESP32-S3 compatible wake configuration  
     // Configure encoder wake with ext1 for GPIO17/18
     rtc_gpio_pullup_en(GPIO_NUM_17);
     rtc_gpio_pullup_en(GPIO_NUM_18);
     
+    // Check current GPIO states to determine wake condition
+    int gpio17_state = digitalRead(17);
+    int gpio18_state = digitalRead(18);
+    ESP_LOGI(getLogTag(), "GPIO states: GPIO17=%d, GPIO18=%d", gpio17_state, gpio18_state);
+    
+    // If both pins are HIGH, wake on LOW. If either is LOW, wake on HIGH
+    esp_sleep_ext1_wakeup_mode_t wake_mode = ESP_EXT1_WAKEUP_ANY_HIGH;
+    if (gpio17_state == 1 && gpio18_state == 1) {
+      wake_mode = ESP_EXT1_WAKEUP_ANY_LOW;
+      ESP_LOGI(getLogTag(), "Both pins HIGH - wake on ANY_LOW");
+    } else {
+      wake_mode = ESP_EXT1_WAKEUP_ANY_HIGH; 
+      ESP_LOGI(getLogTag(), "Pin(s) LOW - wake on ANY_HIGH");
+    }
+    
     // Use standard ext1 wake function for ESP32-S3
     uint64_t ext1_mask = (1ULL << GPIO_NUM_17) | (1ULL << GPIO_NUM_18);
-    esp_sleep_enable_ext1_wakeup(ext1_mask, ESP_EXT1_WAKEUP_ANY_LOW);
+    esp_sleep_enable_ext1_wakeup(ext1_mask, wake_mode);
+    
+    ESP_LOGI(getLogTag(), "Light sleep configured: encoder wake on GPIO17/18 (ext1)");
     
     // Keep RTC peripherals powered
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
@@ -260,9 +287,15 @@ void SleepState::enterSleepMode()
     ESP_LOGI(getLogTag(), "Entering LIGHT sleep mode (inactivity timeout)...");
     ESP_LOGI(getLogTag(), "Rotate encoder to wake!");
     
+    // Check GPIO states right before sleep
+    int gpio17_state = digitalRead(17);
+    int gpio18_state = digitalRead(18);
+    ESP_LOGI(getLogTag(), "Final GPIO check: GPIO17=%d, GPIO18=%d", gpio17_state, gpio18_state);
+    
     // Give time for serial output
     delay(100);
     
+    ESP_LOGI(getLogTag(), "Calling esp_light_sleep_start() NOW...");
     // Enter light sleep - device maintains RAM and wakes to same state
     esp_light_sleep_start();
     
@@ -271,7 +304,14 @@ void SleepState::enterSleepMode()
     
     // Check what caused the wake
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-    ESP_LOGI(getLogTag(), "Wake cause: %d", wakeup_reason);
+    ESP_LOGI(getLogTag(), "Wake cause: %d (%s)", wakeup_reason, 
+      (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) ? "EXT0" :
+      (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) ? "EXT1" :
+      (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) ? "TIMER" :
+      (wakeup_reason == ESP_SLEEP_WAKEUP_TOUCHPAD) ? "TOUCH" :
+      (wakeup_reason == ESP_SLEEP_WAKEUP_ULP) ? "ULP" : 
+      (wakeup_reason == ESP_SLEEP_WAKEUP_GPIO) ? "GPIO" :
+      (wakeup_reason == ESP_SLEEP_WAKEUP_UART) ? "UART" : "UNKNOWN");
     
     if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) {
       uint64_t GPIO_reason = esp_sleep_get_ext1_wakeup_status();
