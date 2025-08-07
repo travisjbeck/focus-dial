@@ -6,7 +6,12 @@
       "mcp__task-master-ai__update_subtask",
       "WebFetch(domain:www.waveshare.com)",
       "WebFetch(domain:stackoverflow.com)",
-      "WebFetch(domain:docs.espressif.com)"
+      "WebFetch(domain:docs.espressif.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(*)",
+      "WebFetch(domain:esp32.com)",
+      "WebFetch(domain:www.esp32.com)",
+      "WebFetch(domain:files.waveshare.com)"
     ]
   },
   "enableAllProjectMcpServers": true,
