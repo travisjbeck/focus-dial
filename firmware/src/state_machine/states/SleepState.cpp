@@ -57,8 +57,9 @@ void SleepState::onEnter()
   
   // Disable WiFi and Bluetooth to save power
   if (!isDeepSleep) {
-    // For light sleep, just stop WiFi to save power
-    WiFi.mode(WIFI_OFF);
+    // For light sleep, properly stop WiFi driver (ESP-IDF requirement)
+    ESP_LOGI(getLogTag(), "Stopping WiFi for light sleep");
+    esp_wifi_stop();
   } else {
     // For deep sleep, fully disable WiFi and Bluetooth
     WiFi.disconnect(true);
@@ -148,13 +149,16 @@ void SleepState::onExit()
     screenManager.turnOnDisplay();
     ESP_LOGI(getLogTag(), "turnOnDisplay() called");
     
-    // TEMPORARILY DISABLED - WiFi reconnection after wake was causing reboots
     // Restore WiFi connection if it was connected before sleep
-    // if (wifiWasConnected) {
-    //   ESP_LOGI(getLogTag(), "Restoring WiFi connection after light sleep");
-    //   restoreWiFiConnection();
-    // }
-    ESP_LOGI(getLogTag(), "WiFi reconnection disabled - manual restart required if web access needed");
+    if (wifiWasConnected) {
+      ESP_LOGI(getLogTag(), "Restarting WiFi driver after light sleep");
+      esp_wifi_start();  // Required: restart WiFi driver first
+      delay(100);        // Stability delay based on community reports
+      ESP_LOGI(getLogTag(), "Restoring WiFi connection after light sleep");
+      restoreWiFiConnection();  // Web server will auto-restart via WiFi event handler
+    } else {
+      ESP_LOGI(getLogTag(), "WiFi was not connected before sleep - no reconnection needed");
+    }
   } else {
     ESP_LOGI(getLogTag(), "Deep sleep wake - display will be reinitialized in setup()");
   }
