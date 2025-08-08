@@ -11,7 +11,8 @@
       "WebFetch(*)",
       "WebFetch(domain:esp32.com)",
       "WebFetch(domain:www.esp32.com)",
-      "WebFetch(domain:files.waveshare.com)"
+      "WebFetch(domain:files.waveshare.com)",
+      "mcp__task-master-ai__update_task"
     ]
   },
   "enableAllProjectMcpServers": true,

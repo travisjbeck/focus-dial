@@ -47,6 +47,9 @@
 // Audio System
 #include "src/audio/AlarmController.h"
 
+// Pin Configuration
+#include "pin_config.h"
+
 // File System
 #include <FS.h>
 
@@ -87,6 +90,10 @@ bool is_sleeping = false;  // Keep for now to avoid breaking other code
 // Wake-up configuration
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
 #define PMU_IRQ_PIN GPIO_NUM_6      // AXP2101 IRQ pin (potentially direct connection)
+
+// External Sleep/Wake Button
+volatile bool externalButtonPressed = false;
+unsigned long lastExternalButtonPress = 0;
 
 RTC_DATA_ATTR int bootCount = 0;   // RTC memory variable to track boot count
 
@@ -185,6 +192,7 @@ void setPMUFlag(void);
 void goToSleep(bool deep_sleep = false);
 void resetActivityTimer();
 void handleWakeUp();
+void IRAM_ATTR onExternalButtonPress();
 
 // Web Server
 WebServer apiServer(80);
@@ -421,12 +429,21 @@ void handleWakeUp() {
     USBSerial.println(current);
 }
 
+// External button interrupt handler - keep ISR minimal (no millis or heavy ops)
+void IRAM_ATTR onExternalButtonPress() {
+    externalButtonPressed = true;
+}
+
 void setup() {
     USBSerial.begin(115200);
     // USBSerial.setDebugOutput(true);
     // while(!USBSerial);
     USBSerial.println("Timer Arduino - Starting");
     USBSerial.println("==== FONT DEBUG INFO ====");
+
+    // Mitigate stray LED on boot: drive NeoPixel pin low early
+    pinMode(NEOPIXEL_PIN, OUTPUT);
+    digitalWrite(NEOPIXEL_PIN, LOW);
     
     // Check wake-up reason at startup
     ++bootCount;
@@ -438,7 +455,7 @@ void setup() {
         USBSerial.print("Wake-up reason at boot: ");
         switch(wakeup_reason) {
             case ESP_SLEEP_WAKEUP_EXT0:
-                USBSerial.println("External GPIO ext0 (Touch or BOOT button)");
+                USBSerial.println("External GPIO ext0 (External button, Touch, or BOOT button)");
                 break;
             case ESP_SLEEP_WAKEUP_EXT1:
                 USBSerial.println("External GPIO ext1 (Encoder rotation)");
@@ -627,6 +644,12 @@ void setup() {
     
     // Setup GPIO 0 (BOOT button) as secondary wake source
     pinMode(0, INPUT);
+    
+    // Setup external sleep/wake button (GPIO16) 
+    pinMode(EXTERNAL_SLEEP_BUTTON_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(EXTERNAL_SLEEP_BUTTON_PIN), onExternalButtonPress, FALLING);
+    USBSerial.print("External button configured on GPIO");
+    USBSerial.println(EXTERNAL_SLEEP_BUTTON_PIN);
     
     // wake_time = millis(); // Disabled
 
@@ -1015,6 +1038,19 @@ void loop() {
         // WiFi is connected but web server is not running - restart it
         // USBSerial.println("WiFi connected but web server not running - restarting...");
         // startWebServer();
+    }
+    
+    // Check for external button press to trigger deep sleep (via SleepState to centralize logic)
+    if (externalButtonPressed) {
+        externalButtonPressed = false;
+        USBSerial.println("=== EXTERNAL BUTTON PRESSED ===");
+        USBSerial.println("Delegating deep sleep to SleepState (GPIO16 ext0)...");
+        SleepState* sleepState = stateMachine.sleepState;
+        if (sleepState) {
+            sleepState->setDeepSleep(true);
+            sleepState->setUseExternalWake(true); // use GPIO16 ext0 as wake source
+            stateMachine.changeState(sleepState);
+        }
     }
     
     delay(5);  // 5ms as per working example

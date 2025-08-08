@@ -25,5 +25,8 @@
 #define ENCODER_BUTTON 21  // Optional push button on encoder
 
 // NeoPixel LED Ring (24 LEDs on 3.3V power)
-#define NEOPIXEL_PIN 16
+#define NEOPIXEL_PIN 43  // Moved from GPIO16 to GPIO43 (TXD) to free GPIO16 for external button
 #define NEOPIXEL_COUNT 24
+
+// External Sleep/Wake Button (connects GPIO16 to GND)
+#define EXTERNAL_SLEEP_BUTTON_PIN 16  // GPIO16 is RTC GPIO, can wake from deep sleep

@@ -18,6 +18,7 @@ extern LEDController* g_ledController;
 extern ScreenManager screenManager;
 
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
+#define EXT_SLEEP_GPIO  GPIO_NUM_16 // External sleep/wake button (RTC capable)
 
 SleepState::SleepState() : sleepInitiated(false), isDeepSleep(false), hasWokenUp(false), wifiWasConnected(false)
 {
@@ -83,15 +84,17 @@ void SleepState::onEnter()
     }
   }
   
-  // Disable all GPIO interrupts before configuring wake sources
-  if (!isDeepSleep) {
-    // Disable encoder interrupts to prevent interference with sleep wake
-    gpio_intr_disable(GPIO_NUM_17);
-    gpio_intr_disable(GPIO_NUM_18);
-    // Disable touch interrupt
-    gpio_intr_disable(GPIO_NUM_11);
-    // Disable button interrupt  
-    gpio_intr_disable(GPIO_NUM_21);
+  // Disable all GPIO interrupts before configuring wake sources (both light and deep)
+  // Disable encoder interrupts to prevent interference with sleep wake
+  gpio_intr_disable(GPIO_NUM_17);
+  gpio_intr_disable(GPIO_NUM_18);
+  // Disable touch interrupt
+  gpio_intr_disable(GPIO_NUM_11);
+  // Disable encoder button interrupt
+  gpio_intr_disable(GPIO_NUM_21);
+  // Detach external GPIO16 ISR if we will use it for ext0 wake
+  if (isDeepSleep && useExternalWake) {
+    detachInterrupt(digitalPinToInterrupt(16));
   }
   
   // Configure wake sources
@@ -236,10 +239,25 @@ void SleepState::saveStateToNVS()
 
 void SleepState::configureWakeupSources()
 {
+  // Ensure no stale wake sources are active
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   if (isDeepSleep) {
-    // Power button sleep: Only BOOT button can wake
-    esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
-    ESP_LOGI(getLogTag(), "Power button deep sleep configured: Only BOOT button can wake");
+    // Deep sleep: choose wake source
+    if (useExternalWake) {
+      // Configure RTC GPIO16 with pull-up, no pulldown, and hold during deep sleep
+      rtc_gpio_init(EXT_SLEEP_GPIO);
+      rtc_gpio_set_direction(EXT_SLEEP_GPIO, RTC_GPIO_MODE_INPUT_ONLY);
+      rtc_gpio_pullup_en(EXT_SLEEP_GPIO);
+      rtc_gpio_pulldown_dis(EXT_SLEEP_GPIO);
+      rtc_gpio_hold_en(EXT_SLEEP_GPIO);
+      // Wake on LOW (button press to GND)
+      esp_sleep_enable_ext0_wakeup(EXT_SLEEP_GPIO, 0);
+      ESP_LOGI(getLogTag(), "Deep sleep configured: ext0 on GPIO16 (LOW)");
+    } else {
+      // BOOT button wake
+      esp_sleep_enable_ext0_wakeup(WAKE_BUTTON_PIN, 0); // Wake on LOW
+      ESP_LOGI(getLogTag(), "Deep sleep configured: ext0 on BOOT (GPIO0)");
+    }
   } else {
     // Use ESP32-S3 compatible wake configuration  
     // Configure encoder wake with ext1 for GPIO17/18
@@ -277,8 +295,23 @@ void SleepState::configureWakeupSources()
 void SleepState::enterSleepMode()
 {
   if (isDeepSleep) {
-    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode (power button)...");
-    ESP_LOGI(getLogTag(), "Press BOOT button to wake!");
+    // If using external wake (GPIO16), require release-to-sleep so ext0 isn't active
+    if (useExternalWake) {
+      ESP_LOGI(getLogTag(), "Deep sleep via external button: waiting for release to avoid instant wake");
+      // Make sure digital read uses pull-up and sees HIGH before arming wake
+      pinMode(16, INPUT_PULLUP);
+      unsigned long start = millis();
+      while (digitalRead(16) == LOW && (millis() - start) < 1000) {
+        delay(5);
+      }
+      delay(50); // stabilize
+      if (digitalRead(16) == LOW) {
+        ESP_LOGW(getLogTag(), "Button still low after debounce. Aborting deep sleep this cycle.");
+        return;
+      }
+    }
+
+    ESP_LOGI(getLogTag(), "Entering DEEP sleep mode...");
     
     // Give time for serial output
     delay(100);
