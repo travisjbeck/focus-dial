@@ -1064,8 +1064,10 @@ void startWebServer() {
     
     // LittleFS already initialized in setup()
     
-    // Start mDNS
+    // Restart mDNS cleanly then start
+    MDNS.end();
     if (MDNS.begin("thetimer")) {
+        MDNS.addService("http", "tcp", 80);
         USBSerial.println("mDNS responder started: http://thetimer.local");
     }
     
@@ -1432,6 +1434,8 @@ void onWiFiEvent(WiFiEvent_t event) {
                 webServerRunning = false;
                 USBSerial.println("Web Server stopped");
             }
+            // Stop mDNS on disconnect to avoid stale state
+            MDNS.end();
             break;
     }
 }

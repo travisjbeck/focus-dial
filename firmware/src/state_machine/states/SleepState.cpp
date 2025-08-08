@@ -7,6 +7,8 @@
 #include <XPowersLib.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
 #include <esp_bt.h>
 #include <esp_bt_main.h>
 #include <Arduino.h>
@@ -16,6 +18,9 @@
 extern XPowersAXP2101 power;
 extern LEDController* g_ledController;
 extern ScreenManager screenManager;
+// Web server objects are defined in firmware.ino
+extern WebServer apiServer;
+extern bool webServerRunning;
 
 #define WAKE_BUTTON_PIN GPIO_NUM_0  // BOOT button as wake source
 #define EXT_SLEEP_GPIO  GPIO_NUM_16 // External sleep/wake button (RTC capable)
@@ -54,6 +59,14 @@ void SleepState::onEnter()
   if (g_ledController) {
     ESP_LOGI(getLogTag(), "Turning off LEDs");
     g_ledController->turnOff();
+  }
+
+  // Ensure web server and mDNS are stopped before altering WiFi state
+  if (webServerRunning) {
+    ESP_LOGI(getLogTag(), "Stopping Web Server and mDNS before sleep");
+    apiServer.stop();
+    MDNS.end();
+    webServerRunning = false;
   }
   
   // Disable WiFi and Bluetooth to save power
